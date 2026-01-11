@@ -1,37 +1,41 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import { NewAppScreen } from '@react-native/new-app-screen';
+import React, { useState } from 'react';
 import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NewAppScreen } from '@react-native/new-app-screen';
+
+// Import your new component
+import SplashScreen from './SplashScreen';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
+  
+  // State to track if we are in the Splash Screen or Main App
+  const [showSplash, setShowSplash] = useState(true);
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <StatusBar barStyle="light-content" backgroundColor="#050508" />
+      
+      {showSplash ? (
+        // Show Splash Screen
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+      ) : (
+        // Show Main App Content
+        <AppContent />
+      )}
+      
     </SafeAreaProvider>
   );
 }
 
 function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
   return (
     <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
+      {/* 
+         Replace NewAppScreen with your actual Editor Layout later. 
+         For now, this is the default React Native template.
+      */}
+      <NewAppScreen />
     </View>
   );
 }
@@ -39,6 +43,7 @@ function AppContent() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#050508', // Match background to prevent white flash
   },
 });
 
