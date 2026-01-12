@@ -1,30 +1,26 @@
-import axios, { AxiosInstance } from 'axios';
+// Define the structure of the API exposed by preload.js
+declare global {
+  interface Window {
+    api: {
+      signup: (data: SignupRequest) => Promise<SignupResponse>;
+      login: (credentials: LoginRequest) => Promise<LoginResponse>;
+      logout: () => Promise<LogoutResponse>;
+      getAppInfo: () => Promise<AppInfo>;
+    };
+  }
+}
 
-// Backend URL configuration
-const API_BASE_URL = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:5000' 
-  : process.env.REACT_APP_API_URL ;
-
-const apiClient: AxiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Type definitions
 export interface LoginResponse {
+  success: boolean;
   msg: string;
-  token: string;
-  user: {
+  token?: string;
+  user?: {
     _id: string;
     name: string;
     email: string;
     role: {
       role_name: string;
     };
-    pinCode?: string;
     status: string;
   };
 }
@@ -33,7 +29,12 @@ export interface SignupRequest {
   name: string;
   email: string;
   password: string;
-  pinCode?: string;
+  role?: string;
+}
+
+export interface SignupResponse {
+  success: boolean;
+  msg: string;
 }
 
 export interface LoginRequest {
@@ -41,170 +42,96 @@ export interface LoginRequest {
   password: string;
 }
 
-// Storage using localStorage for web/Electron
+export interface LogoutResponse {
+  success: boolean;
+  msg: string;
+}
+
+export interface AppInfo {
+  appVersion: string;
+  platform: string;
+  nodeVersion: string;
+  isDev: boolean;
+}
+
+// Local storage helper
 const storage = {
-  setItem: async (key: string, value: string) => {
-    if (typeof localStorage !== 'undefined') {
+  setItem: (key: string, value: string) => {
+    try {
       localStorage.setItem(key, value);
-    }
-    return Promise.resolve();
+    } catch (e) { console.error(e); }
   },
-  getItem: async (key: string) => {
-    if (typeof localStorage !== 'undefined') {
-      return Promise.resolve(localStorage.getItem(key) || null);
-    }
-    return Promise.resolve(null);
+  getItem: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) { return null; }
   },
-  removeItem: async (key: string) => {
-    if (typeof localStorage !== 'undefined') {
+  removeItem: (key: string) => {
+    try {
       localStorage.removeItem(key);
-    }
-    return Promise.resolve();
-  },
+    } catch (e) { console.error(e); }
+  }
 };
 
 class AuthService {
-  /**
-   * Login with email and password
-   */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
-
-      // Store token
-      if (response.data.token) {
-        await storage.setItem('authToken', response.data.token);
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      if (!window.api) {
+        throw new Error('Electron API not available');
       }
 
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-      throw error;
-    }
-  }
+      // Call Electron Main Process
+      const response = await window.api.login(credentials);
 
-  /**
-   * NGO Login with email and password
-   */
-  async ngoLogin(credentials: LoginRequest): Promise<LoginResponse> {
-    try {
-      const response = await apiClient.post<LoginResponse>('/auth/ngo-login', credentials);
-
-      if (response.data.token) {
-        await storage.setItem('authToken', response.data.token);
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      if (response.success && response.token) {
+        storage.setItem('authToken', response.token);
       }
 
-      return response.data;
+      return response;
     } catch (error) {
-      this.handleError(error);
-      throw error;
+      console.error('Login error:', error);
+      return {
+        success: false,
+        msg: error instanceof Error ? error.message : 'Login failed',
+      };
     }
   }
 
-  /**
-   * Sign up a new user
-   */
-  async signup(data: SignupRequest): Promise<{ msg: string }> {
+  async signup(data: SignupRequest): Promise<SignupResponse> {
     try {
-      const response = await apiClient.post<{ msg: string }>('/auth/signup', data);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-      throw error;
-    }
-  }
-
-  /**
-   * Request password reset
-   */
-  async forgotPassword(email: string): Promise<{ msg: string }> {
-    try {
-      const response = await apiClient.post<{ msg: string }>('/auth/forgot-password', {
-        email,
-      });
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-      throw error;
-    }
-  }
-
-  /**
-   * Reset password with code
-   */
-  async resetPassword(
-    email: string,
-    code: string,
-    newPassword: string
-  ): Promise<{ msg: string }> {
-    try {
-      const response = await apiClient.post<{ msg: string }>('/auth/reset-password', {
-        email,
-        code,
-        newPassword,
-      });
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get current auth token from storage
-   */
-  async getToken(): Promise<string | null> {
-    try {
-      const token = await storage.getItem('authToken');
-      if (token) {
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      if (!window.api) {
+        throw new Error('Electron API not available');
       }
-      return token;
+
+      const response = await window.api.signup(data);
+      return response;
     } catch (error) {
-      console.error('Error retrieving token:', error);
-      return null;
+      console.error('Signup error:', error);
+      return {
+        success: false,
+        msg: error instanceof Error ? error.message : 'Signup failed',
+      };
     }
   }
 
-  /**
-   * Set authorization header with token
-   */
-  async setAuthToken(token: string): Promise<void> {
+  async logout(): Promise<LogoutResponse> {
     try {
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      await storage.setItem('authToken', token);
-    } catch (error) {
-      console.error('Error setting auth token:', error);
-    }
-  }
-
-  /**
-   * Clear auth token
-   */
-  async clearToken(): Promise<void> {
-    try {
-      await storage.removeItem('authToken');
-      delete apiClient.defaults.headers.common['Authorization'];
-    } catch (error) {
-      console.error('Error clearing auth token:', error);
-    }
-  }
-
-  /**
-   * Handle API errors
-   */
-  private handleError(error: any): string {
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        return error.response.data?.msg || 'An error occurred';
-      } else if (error.request) {
-        return 'No response from server. Please check your connection.';
+      storage.removeItem('authToken');
+      if (window.api) {
+        return await window.api.logout();
       }
-      return error.message || 'An error occurred';
+      return { success: true, msg: 'Logged out locally' };
+    } catch (error) {
+      return { success: false, msg: 'Logout failed' };
     }
-    return 'An unexpected error occurred';
+  }
+
+  getToken(): string | null {
+    return storage.getItem('authToken');
+  }
+
+  setAuthToken(token: string): void {
+    storage.setItem('authToken', token);
   }
 }
 

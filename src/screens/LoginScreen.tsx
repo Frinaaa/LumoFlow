@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import authService from '../services/authService';
-import './LoginScreen.css';
+import '../styles/LoginScreen.css';
 
 interface LoginScreenProps {
   setIsAuthenticated: (value: boolean) => void;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,12 +30,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
         password,
       });
 
-      // Store user data and navigate to app
-      await authService.setAuthToken(response.token);
-      setIsAuthenticated(true);
-      navigate('/app');
+      if (response.success && response.token) {
+        await authService.setAuthToken(response.token);
+        setIsAuthenticated(true);
+      } else {
+        setError(response.msg || 'Login failed');
+      }
     } catch (error: any) {
-      setError(error.response?.data?.msg || 'An error occurred. Please try again.');
+      setError(error instanceof Error ? error.message : 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

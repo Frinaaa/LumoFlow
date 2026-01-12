@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './SplashScreen.css';
+import '../styles/SplashScreen.css';
 
 const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
