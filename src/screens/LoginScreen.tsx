@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import '../styles/LoginScreen.css';
 
@@ -7,154 +8,124 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [generalError, setGeneralError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-      setError('Please enter both email and password');
-      return;
-    }
-
+    setGeneralError('');
     setLoading(true);
-    setError('');
-    
-    try {
-      const response = await authService.login({
-        email: email.toLowerCase().trim(),
-        password,
-      });
 
+    try {
+      const response = await authService.login({ email, password });
       if (response.success && response.token) {
-        await authService.setAuthToken(response.token);
+        authService.setAuthToken(response.token);
         setIsAuthenticated(true);
       } else {
-        setError(response.msg || 'Login failed');
+        setGeneralError(response.msg || 'Login failed');
       }
-    } catch (error: any) {
-      setError(error instanceof Error ? error.message : 'An error occurred. Please try again.');
+    } catch (error) {
+      setGeneralError('Server connection error');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="login-container">
-      {/* Background Grid */}
-      <div className="bg-grid" />
+  // ... imports ...
 
-      {/* Header */}
-      <header className="login-header">
-        <div className="brand-container">
-          <div className="logo-icon">
-            <span className="logo-symbol">⚡</span>
-          </div>
-          <h1 className="brand-text">
-            LUMO<span className="brand-text-highlight">FLOW</span>
-          </h1>
+return (
+  <div className="login-screen-wrapper">
+    <div className="bg-grid"></div>
+
+    {/* --- HEADER START --- */}
+    <header className="login-header">
+      
+      {/* Container matching Splash style */}
+      <div className="login-brand-wrapper">
+        
+        {/* Neon Circle */}
+        <div className="login-logo-circle">
+          <i className="fa-solid fa-bolt"></i>
         </div>
-      </header>
+        
+        {/* Text with exact font and glow */}
+        <h1 className="login-brand-text">
+          LUMO<span className="login-brand-highlight">FLOW</span>
+        </h1>
+        
+      </div>
 
-      {/* Main Content */}
-      <main className="login-main">
+    </header>
+    {/* --- HEADER END --- */}
+
+    {/* ... Rest of your login card code ... */}
+      {/* ------------------------------------------- */}
+
+      <div className="login-content-container">
         <div className="login-card">
-          
-          {/* Visual Neon Shape */}
-          <div className="visual-side">
-            <div className="neon-shape">
-              <div className="inner-shape" />
-            </div>
-          </div>
+          <h1>Welcome Back</h1>
+          <p className="subtitle">Access your neural workspace</p>
 
-          {/* Form */}
-          <div className="content-side">
-            <h2 className="login-title">Welcome Back</h2>
-            <p className="login-subtitle">Access your secure workspace</p>
+          {generalError && <div className="error-text" style={{fontSize: '14px', marginBottom: '15px'}}>{generalError}</div>}
 
-            <form onSubmit={handleLogin} className="login-form">
-              {/* Error Message */}
-              {error && <div className="error-message">{error}</div>}
-
-              {/* Email Input */}
-              <input
-                type="email"
-                className="login-input"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                required
+          <form onSubmit={handleLogin}>
+            <div className="input-group">
+              <input 
+                type="text" className="lumo-input" placeholder="Email Address"
+                value={email} onChange={(e) => setEmail(e.target.value)} required 
               />
+              <i className="fa-regular fa-user input-icon"></i>
+            </div>
 
-              {/* Password Input */}
-              <div className="password-container">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="password-input"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-                <button
-                  type="button"
-                  className="eye-icon"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
-                  aria-label="Toggle password visibility"
-                >
-                  {showPassword ? '👁️' : '🔒'}
-                </button>
-              </div>
+            <div className="input-group">
+              <input 
+                type={showPassword ? 'text' : 'password'} className="lumo-input" placeholder="Password"
+                value={password} onChange={(e) => setPassword(e.target.value)} required 
+              />
+              <i 
+                className={`fa-regular ${showPassword ? 'fa-eye-slash' : 'fa-eye'} input-icon`}
+                onClick={() => setShowPassword(!showPassword)} style={{cursor:'pointer', zIndex:5}}
+              ></i>
+            </div>
 
-              {/* Login Button */}
-              <button
-                type="submit"
-                className="login-btn"
-                disabled={loading}
-              >
-                {loading ? (
-                  <span className="button-spinner" />
-                ) : (
-                  <span>LOGIN →</span>
-                )}
-              </button>
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'PROCESSING...' : 'LOGIN'}
+            </button>
+            
+            <div className="links-row">
+                <button 
+  type="button" 
+  className="text-link" 
+  onClick={() => navigate('/forgot-password')} // <--- Added Navigation
+>
+  Forgot Password?
+</button>
 
-              {/* Signup Link */}
-              <div className="signup-container">
-                <span className="signup-text">Don't have an account? </span>
-                <button type="button" className="signup-link" disabled={loading}>
-                  SignUp
-                </button>
-              </div>
-            </form>
+  <button 
+  type="button" 
+  className="text-link" 
+  style={{ color: 'var(--neon-blue)' }}
+  onClick={() => navigate('/signup')} // <--- Change this line
+>
+  Sign Up
+</button>
+            </div>
+          </form>
+
+          <div className="divider">OR CONTINUE WITH</div>
+
+          <div className="social-login">
+            <div className="social-btn"><i className="fa-brands fa-google"></i></div>
+            <div className="social-btn"><i className="fa-brands fa-github"></i></div>
           </div>
-
         </div>
-      </main>
+      </div>
 
-      {/* Footer */}
-      <footer className="login-footer">
-        <button className="footer-link">Privacy Policy</button>
-
-        <div className="footer-center">
-          <button className="footer-link">Terms of Service</button>
-          <div className="social-icons">
-            <span className="social-icon">🐦</span>
-            <span className="social-icon">📸</span>
-            <span className="social-icon">📘</span>
-          </div>
-          <p className="copyright">© 2024 Lumoflow. All rights reserved.</p>
-        </div>
-
-        <button className="footer-link">Contact Us</button>
-      </footer>
+      
     </div>
   );
 };

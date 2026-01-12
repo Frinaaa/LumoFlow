@@ -1,138 +1,68 @@
-// Define the structure of the API exposed by preload.js
+// --- 1. Type Definitions for Electron Bridge ---
 declare global {
   interface Window {
     api: {
-      signup: (data: SignupRequest) => Promise<SignupResponse>;
-      login: (credentials: LoginRequest) => Promise<LoginResponse>;
-      logout: () => Promise<LogoutResponse>;
-      getAppInfo: () => Promise<AppInfo>;
+      signup: (data: any) => Promise<any>;
+      login: (credentials: any) => Promise<any>;
+      logout: () => Promise<any>;
+      forgotPassword: (email: string) => Promise<{ success: boolean; msg: string }>;
+      getAppInfo: () => Promise<any>;
     };
   }
 }
 
-export interface LoginResponse {
-  success: boolean;
-  msg: string;
-  token?: string;
-  user?: {
-    _id: string;
-    name: string;
-    email: string;
-    role: {
-      role_name: string;
-    };
-    status: string;
-  };
-}
-
-export interface SignupRequest {
-  name: string;
-  email: string;
-  password: string;
-  role?: string;
-}
-
-export interface SignupResponse {
-  success: boolean;
-  msg: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LogoutResponse {
-  success: boolean;
-  msg: string;
-}
-
-export interface AppInfo {
-  appVersion: string;
-  platform: string;
-  nodeVersion: string;
-  isDev: boolean;
-}
-
-// Local storage helper
-const storage = {
-  setItem: (key: string, value: string) => {
-    try {
-      localStorage.setItem(key, value);
-    } catch (e) { console.error(e); }
-  },
-  getItem: (key: string) => {
-    try {
-      return localStorage.getItem(key);
-    } catch (e) { return null; }
-  },
-  removeItem: (key: string) => {
-    try {
-      localStorage.removeItem(key);
-    } catch (e) { console.error(e); }
-  }
-};
-
+// --- 2. The Service Class ---
 class AuthService {
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
+  async login(credentials: any) {
     try {
-      if (!window.api) {
-        throw new Error('Electron API not available');
-      }
-
-      // Call Electron Main Process
+      if (!window.api) throw new Error('Electron API not available');
       const response = await window.api.login(credentials);
-
       if (response.success && response.token) {
-        storage.setItem('authToken', response.token);
+        localStorage.setItem('authToken', response.token);
       }
-
       return response;
     } catch (error) {
-      console.error('Login error:', error);
-      return {
-        success: false,
-        msg: error instanceof Error ? error.message : 'Login failed',
-      };
+      return { success: false, msg: 'Login failed' };
     }
   }
 
-  async signup(data: SignupRequest): Promise<SignupResponse> {
+  async signup(data: any) {
     try {
-      if (!window.api) {
-        throw new Error('Electron API not available');
-      }
-
-      const response = await window.api.signup(data);
-      return response;
+      if (!window.api) throw new Error('Electron API not available');
+      return await window.api.signup(data);
     } catch (error) {
-      console.error('Signup error:', error);
-      return {
-        success: false,
-        msg: error instanceof Error ? error.message : 'Signup failed',
-      };
+      return { success: false, msg: 'Signup failed' };
     }
   }
 
-  async logout(): Promise<LogoutResponse> {
+  async forgotPassword(email: string) {
     try {
-      storage.removeItem('authToken');
-      if (window.api) {
-        return await window.api.logout();
-      }
-      return { success: true, msg: 'Logged out locally' };
+      if (!window.api) throw new Error('Electron API not available');
+      return await window.api.forgotPassword(email);
+    } catch (error) {
+      console.error('Forgot Password error:', error);
+      return { success: false, msg: 'Failed to request reset' };
+    }
+  }
+
+  async logout() {
+    try {
+      localStorage.removeItem('authToken');
+      if (window.api) return await window.api.logout();
+      return { success: true, msg: 'Logged out' };
     } catch (error) {
       return { success: false, msg: 'Logout failed' };
     }
   }
 
   getToken(): string | null {
-    return storage.getItem('authToken');
+    return localStorage.getItem('authToken');
   }
 
   setAuthToken(token: string): void {
-    storage.setItem('authToken', token);
+    localStorage.setItem('authToken', token);
   }
 }
 
+// --- 3. THE CRITICAL LINE (The fix for your error) ---
 export default new AuthService();

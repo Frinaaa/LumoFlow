@@ -61,6 +61,8 @@ app.on('activate', () => {
 ipcMain.handle('auth:login', authController.login);
 ipcMain.handle('auth:signup', authController.signup);
 ipcMain.handle('auth:logout', authController.logout);
+ipcMain.handle('auth:google-login', authController.googleLogin);
+ipcMain.handle('auth:forgot-password', authController.forgotPassword);
 ipcMain.handle('app:info', () => ({
   appVersion: app.getVersion(),
   isDev

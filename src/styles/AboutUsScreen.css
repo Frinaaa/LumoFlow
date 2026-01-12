@@ -1,0 +1,278 @@
+.about-screen-wrapper {
+  background-color: #050508;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #fff;
+}
+/* --- The Header Container --- */
+.about-header {
+  height: 80px;
+  padding: 0 40px;
+  display: flex;
+  align-items: center; /* Centers items vertically */
+  background: rgba(5, 5, 8, 0.95);
+  backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* --- Forces Arrow and Logo into one line --- */
+.header-left-content {
+  display: flex;
+  flex-direction: row; /* Horizontal layout */
+  align-items: center; /* Vertical center alignment */
+  gap: 30px; /* Space between Arrow and Logo */
+}
+
+/* --- Clean Circular Back Button --- */
+.back-nav-btn-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  flex-shrink: 0; /* Prevents button from getting squashed */
+}
+
+.back-nav-btn-icon:hover {
+  background: rgba(0, 242, 255, 0.1);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+  transform: translateX(-5px); /* Clean feedback movement */
+}
+
+/* --- Ensure the LumoFlow Brand is also a row --- */
+.app-brand.small {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 15px;
+}
+/* Scroll Container */
+.about-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 60px;
+}
+
+.about-content-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+/* Hero Section */
+.about-hero-section {
+  text-align: center;
+  padding: 80px 20px;
+  background: radial-gradient(circle at center, rgba(188, 19, 254, 0.1) 0%, transparent 70%);
+}
+
+.about-main-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.8rem;
+  margin-bottom: 15px;
+  background: linear-gradient(90deg, #fff, var(--accent-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.about-subtitle {
+  color: #aaa;
+  max-width: 600px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+
+/* Officials */
+.about-section-title {
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
+  margin: 60px 0 30px;
+  letter-spacing: 2px;
+}
+
+.officials-row {
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+}
+
+.official-card {
+  text-align: center;
+  width: 180px;
+}
+
+.official-avatar-wrapper {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  border: 2px solid var(--accent-purple);
+  padding: 5px;
+  background: rgba(188, 19, 254, 0.1);
+}
+
+.official-avatar-wrapper img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+}
+
+.official-card h3 { font-size: 1.1rem; margin-bottom: 5px; }
+.official-card p { color: var(--accent-cyan); font-size: 0.8rem; text-transform: uppercase; }
+
+/* Values Grid */
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.value-box-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 30px 20px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.value-box-card:hover {
+  border-color: var(--accent-purple);
+  transform: translateY(-5px);
+  background: rgba(188, 19, 254, 0.05);
+}
+
+.value-box-card i { font-size: 2rem; color: var(--accent-cyan); margin-bottom: 15px; }
+.value-box-card h4 { font-family: 'Orbitron', sans-serif; margin-bottom: 10px; }
+.value-box-card p { color: #888; font-size: 0.9rem; margin-bottom: 15px; }
+.click-hint { font-size: 0.7rem; color: var(--accent-purple); font-weight: bold; }
+
+/* Stories */
+.stories-grid {
+  display: flex;
+  gap: 20px;
+}
+
+.story-image-card {
+  flex: 1;
+  height: 250px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.story-img-container img { width: 100%; height: 100%; object-fit: cover; }
+
+.story-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.9));
+  padding: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Modal Styling */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-card {
+  background: #0e0e12;
+  border: 1px solid var(--accent-purple);
+  width: 90%;
+  max-width: 500px;
+  border-radius: 20px;
+  padding: 40px;
+  position: relative;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(188, 19, 254, 0.3);
+}
+
+.modal-hero-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.modal-icon-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(0, 242, 255, 0.1);
+    margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent-cyan);
+    font-size: 2rem;
+}
+
+.modal-text { line-height: 1.6; color: #ccc; margin-top: 15px; }
+.modal-close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+
+.modal-action-btn {
+  margin-top: 30px;
+  background: var(--accent-purple);
+  color: #fff;
+  border: none;
+  padding: 10px 30px;
+  border-radius: 5px;
+  font-family: 'Orbitron', sans-serif;
+  cursor: pointer;
+}
+
+.about-footer-simple {
+  text-align: center;
+  margin-top: 80px;
+  color: #444;
+  font-size: 0.8rem;
+}
+/* --- Circular Icon-Only Back Button --- */
+.back-nav-btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Makes it a circle */
+  background: transparent;
+  border: 1px solid rgba(0, 242, 255, 0.5); /* Cyan border */
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 242, 255, 0.1);
+  font-size: 1.1rem;
+}
+
+.back-nav-btn-icon:hover {
+  background: rgba(0, 242, 255, 0.1);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+  /* Subtle "nudge" to the left to indicate going back */
+  transform: translateX(-4px); 
+}
+
+.back-nav-btn-icon:active {
+  transform: scale(0.9); /* Squish effect when clicked */
+}

@@ -4,12 +4,14 @@ import SplashScreen from './screens/SplashScreen';
 import LoginScreen from './screens/LoginScreen';
 import authService from './services/authService';
 import './styles/App.css';
-
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import SignUpScreen from './screens/SignUpScreen';
+import AboutUsScreen from './screens/AboutUsScreen';
+// --- Dashboard Component ---
 function AppContent() {
   return (
     <div className="app-container">
       <h1 className="main-text">LumoFlow Dashboard</h1>
-      <p className="subtitle">Welcome to the main application.</p>
       <button
         className="login-btn"
         style={{ width: '200px', marginTop: '20px' }}
@@ -23,34 +25,37 @@ function AppContent() {
   );
 }
 
-// Create an inner component to handle the logic. 
-// This allows us to use Router context if needed, and ensures SplashScreen is inside Router.
+// --- Main Layout Logic ---
 function AppLayout() {
-  const [isReady, setIsReady] = useState(false);
+  // 1. STATE: Start by showing the Splash Screen
+  const [showSplash, setShowSplash] = useState(true);
+  
+  // 2. STATE: Track authentication
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const initApp = async () => {
+    const checkAuth = async () => {
       const token = await authService.getToken();
       if (token) {
         setIsAuthenticated(true);
       }
-
-      // NOTE: We increased this to 3.5s to match the SplashScreen animation time (approx 3s).
-      // If you want the "Enter" button in SplashScreen to control this, 
-      // you would need to pass a prop to SplashScreen instead of using setTimeout.
-      setTimeout(() => setIsReady(true), 3500);
+      // CRITICAL: We do NOT set showSplash(false) here.
+      // We wait for the user to click the button in SplashScreen.tsx
     };
-
-    initApp();
+    checkAuth();
   }, []);
 
-  if (!isReady) {
-    return <SplashScreen />;
+  // 3. LOGIC: If showSplash is true, render ONLY the splash screen.
+  // We pass a function "onComplete" that sets showSplash to false.
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
+  // 4. LOGIC: Once Splash is gone, show the Router
   return (
     <Routes>
+       <Route path="/signup" element={<SignUpScreen />} />
+   
       <Route
         path="/login"
         element={
@@ -71,13 +76,14 @@ function AppLayout() {
           )
         }
       />
+        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+        <Route path="/about" element={<AboutUsScreen />} />
     </Routes>
   );
 }
 
 function App() {
   return (
-    // Router must be at the very top level
     <Router>
       <AppLayout />
     </Router>
