@@ -1,15 +1,14 @@
-// backend/routes/auth.js
-
 const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 // const bcrypt = require('bcryptjs'); // Hashing is intentionally disabled per your request.
 const jwt = require('jsonwebtoken'); // Kept for secure session tokens
-const { User, Role } = require('../models');
+
+// [FIX] Destructure User because models.js now exports { User, CodeProject, ... }
+const { User } = require('../models');
 
 // Helper to fetch and validate the JWT secret from environment variables.
-// Returns the secret string or null if not configured.
 function getJwtSecret() {
     if (!process.env.JWT_SECRET) {
         console.error('🔴 [Backend Config] JWT_SECRET is not set in the environment. Set JWT_SECRET in your .env or environment variables.');
@@ -18,7 +17,7 @@ function getJwtSecret() {
     return process.env.JWT_SECRET;
 }
 
-// This configures how your app will send emails through your Gmail account.
+// Configure email transporter
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
@@ -29,39 +28,34 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
 // @route   POST api/auth/signup
-// [CORRECT] This route correctly accepts and saves the pinCode.
 router.post('/signup', async (req, res) => {
-    const { name, email, password, pinCode } = req.body;
-  try {
-    if (!name || !email || !password) return res.status(400).json({ msg: 'Please enter all fields' });
-    if (await User.findOne({ email })) return res.status(400).json({ msg: 'User already exists' });
+    const { name, email, password, pinCode, role } = req.body;
+    try {
+        if (!name || !email || !password) return res.status(400).json({ msg: 'Please enter all fields' });
+        if (await User.findOne({ email })) return res.status(400).json({ msg: 'User already exists' });
 
-    const familyRole = await Role.findOne({ role_name: 'Family' });
-    if (!familyRole) return res.status(500).json({ msg: 'Default role not found.' });
+        // Default to 'Student' role if not provided
+        const userRole = role || 'Student';
 
-    // Password is assigned directly without hashing
-    // pinCode is optional but saved when provided
-    const newUser = new User({ name, email, password, role: familyRole._id, pinCode });
-    
-    await newUser.save();
-    res.status(201).json({ msg: 'User registered successfully' });
-  } catch (err) {
-    console.error("🔴 [Backend Error] /api/auth/signup:", err);
-    res.status(500).json({ msg: 'Server Error' });
-  }
+        // Password is assigned directly without hashing (as requested)
+        const newUser = new User({ name, email, password, role: userRole, pinCode });
+        
+        await newUser.save();
+        res.status(201).json({ msg: 'User registered successfully' });
+    } catch (err) {
+        console.error("🔴 [Backend Error] /api/auth/signup:", err);
+        res.status(500).json({ msg: 'Server Error' });
+    }
 });
 
-
 // @route   POST api/auth/login
-// [CORRECT] This route correctly returns the pinCode on successful login.
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         if (!email || !password) return res.status(400).json({ msg: 'Please provide email and password' });
 
-        const user = await User.findOne({ email }).populate('role');
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
@@ -71,11 +65,11 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        const payload = { user: { id: user.id, role: user.role.role_name } };
+        const payload = { user: { id: user.id, role: user.role } };
         
         const jwtSecret = getJwtSecret();
         if (!jwtSecret) {
-            return res.status(500).json({ msg: 'Server misconfiguration: JWT secret is not set. Please set JWT_SECRET and restart the server.' });
+            return res.status(500).json({ msg: 'Server misconfiguration: JWT secret is not set.' });
         }
 
         jwt.sign(payload, jwtSecret, { expiresIn: '5d' }, (err, token) => {
@@ -90,8 +84,8 @@ router.post('/login', async (req, res) => {
                     _id: user._id,
                     name: user.name,
                     email: user.email,
-                    role: user.role,
-                    pinCode: user.pinCode, // Correctly included
+                    role: { role_name: user.role },
+                    pinCode: user.pinCode,
                     status: user.status
                 }
             });
@@ -103,7 +97,6 @@ router.post('/login', async (req, res) => {
 });
 
 // @route   POST /api/auth/ngo-login
-// [CORRECT] This route correctly returns the pinCode on successful NGO login.
 router.post('/ngo-login', async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -111,15 +104,11 @@ router.post('/ngo-login', async (req, res) => {
             return res.status(400).json({ msg: 'Please provide email and password' });
         }
 
-        const ngoRole = await Role.findOne({ role_name: 'NGO' });
-        if (!ngoRole) return res.status(500).json({ msg: 'NGO role not found in database.' });
-
-        const user = await User.findOne({ email, role: ngoRole._id });
+        const user = await User.findOne({ email, role: 'NGO' });
         if (!user) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        // Simple string comparison for password
         if (password !== user.password) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
@@ -132,7 +121,7 @@ router.post('/ngo-login', async (req, res) => {
 
         const jwtSecret = getJwtSecret();
         if (!jwtSecret) {
-            return res.status(500).json({ msg: 'Server misconfiguration: JWT secret is not set. Please set JWT_SECRET and restart the server.' });
+            return res.status(500).json({ msg: 'Server misconfiguration: JWT secret is not set.' });
         }
 
         jwt.sign(payload, jwtSecret, { expiresIn: '5d' }, (err, token) => {
@@ -147,7 +136,7 @@ router.post('/ngo-login', async (req, res) => {
                     _id: user.id,
                     name: user.name,
                     email: user.email,
-                    pinCode: user.pinCode, // Correctly included
+                    pinCode: user.pinCode,
                     role: { role_name: 'NGO' },
                     status: user.status
                 }
@@ -160,13 +149,13 @@ router.post('/ngo-login', async (req, res) => {
     }
 });
 
-
 // @route   POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
         const user = await User.findOne({ email });
         if (!user) {
+            // Security: Don't reveal if user exists or not
             return res.json({ msg: 'If an account with that email exists, a reset code has been sent.' });
         }
 
@@ -190,7 +179,6 @@ router.post('/forgot-password', async (req, res) => {
         res.status(500).json({ msg: 'Server Error' });
     }
 });
-
 
 // @route   POST /api/auth/reset-password
 router.post('/reset-password', async (req, res) => {
