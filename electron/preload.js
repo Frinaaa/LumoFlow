@@ -17,3 +17,15 @@ contextBridge.exposeInMainWorld('api', {
 
   getAppInfo: () => ipcRenderer.invoke('app:info'),
 });
+contextBridge.exposeInMainWorld('api', {
+  // Existing Auth/Profile bridge...
+  login: (creds) => ipcRenderer.invoke('auth:login', creds),
+  getProfile: () => ipcRenderer.invoke('user:getProfile'),
+  updateProfile: (data) => ipcRenderer.invoke('user:updateProfile'),
+
+  // --- NEW IDE BRIDGE ---
+  readProjectFiles: () => ipcRenderer.invoke('files:readProject'),
+  readFile: (filePath) => ipcRenderer.invoke('files:readOne', filePath),
+  saveFile: (filePath, content) => ipcRenderer.invoke('files:save', filePath, content),
+  runCode: (code) => ipcRenderer.invoke('terminal:run', code),
+});

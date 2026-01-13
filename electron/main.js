@@ -6,7 +6,8 @@ const http = require('http');
 const url = require('url');
 const { OAuth2Client } = require('google-auth-library');
 const userController = require('./controllers/userController');
-
+const fs = require('fs');
+const projectDir = path.join(app.getPath('documents'), 'LumoFlow_Project');
 // Load .env from root
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
@@ -150,3 +151,34 @@ ipcMain.handle('app:info', () => ({
   appVersion: app.getVersion(),
   isDev
 }));
+
+if (!fs.existsSync(projectDir)) {
+  fs.mkdirSync(projectDir);
+  fs.writeFileSync(path.join(projectDir, 'main.py'), 'import lumoflow as lf\n\ndef main():\n    print("Hello LumoFlow")');
+  fs.writeFileSync(path.join(projectDir, 'config.py'), 'DEBUG = True');
+}
+
+ipcMain.handle('files:get-project', async () => {
+  const files = fs.readdirSync(projectDir);
+  return files.map(file => ({ name: file, path: path.join(projectDir, file) }));
+});
+
+ipcMain.handle('files:read-file', async (event, filePath) => {
+  return fs.readFileSync(filePath, 'utf-8');
+});
+
+ipcMain.handle('files:save-file', async (event, filePath, content) => {
+  fs.writeFileSync(filePath, content, 'utf-8');
+  return { success: true };
+});
+
+ipcMain.handle('terminal:run-code', async (event, filePath) => {
+  // Simulating a terminal execution for the UI
+  return [
+    `user@lumoflow:~/project$ python ${path.basename(filePath)}`,
+    `Initializing LumoFlow Environment...`,
+    `Loading configuration modules [================] 100%`,
+    `Analysis Successful. No memory leaks detected.`,
+    `Optimization Complete.`
+  ];
+});

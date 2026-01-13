@@ -22,12 +22,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
   const [serverError, setServerError] = useState('');
 
   // 1. EFFECT: Real-time validation
+ // 1. EFFECT: Real-time validation
   useEffect(() => {
     // Only validate if user has started typing
     if (email.length > 0) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // ⬇️ STRICT REGEX: Only allows emails ending in .com
+      const emailRegex = /^[^\s@]+@[^\s@]+\.com$/;
+      
       if (!emailRegex.test(email)) {
-        setEmailError("Invalid neural-link format.");
+        setEmailError("Only .com domains are accepted.");
       } else {
         setEmailError("");
       }
@@ -46,6 +49,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
     }
   }, [email, password]);
 
+  
+
   // --- 2. GOOGLE LOGIN (External Browser Flow) ---
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -61,7 +66,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
         if (res.isNewUser) {
             navigate('/signup'); // Navigate to sign up if new
         } else {
-            setIsAuthenticated(true); // Log in if existing
+            setIsAuthenticated(true);
+             navigate('/dashboard'); // Log in if existing
         }
       } else {
         setServerError(res.msg || "Google Login failed.");
@@ -74,11 +80,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
   };
 
   // --- 3. STANDARD LOGIN ---
+ // --- 3. STANDARD LOGIN (DEBUG VERSION) ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Final check before submitting
-    if (emailError || passError || !email || !password) return;
+    // DEBUG LOGS: Check your console for these
+    console.log("--- LOGIN ATTEMPT ---");
+    console.log("Email:", email);
+    console.log("Password:", password);
+    console.log("Email Error:", emailError);
+    console.log("Pass Error:", passError);
+
+    // 1. Check Validation
+    if (emailError || passError) {
+      console.warn("🛑 BLOCKED: Validation errors exist.");
+      return;
+    }
+    
+    // 2. Check Empty Fields
+    if (!email || !password) {
+      console.warn("🛑 BLOCKED: Fields are empty.");
+      return;
+    }
+
+    console.log("✅ Validation Passed. Calling Server...");
 
     setLoading(true);
     setServerError('');
@@ -89,18 +114,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
         password 
       });
       
+      console.log("Server Response:", res);
+
       if (res.success) {
+        console.log("🚀 Success! Navigating to Dashboard...");
         setIsAuthenticated(true);
+        navigate('/dashboard'); 
       } else {
+        console.error("❌ Login Failed:", res.msg);
         setServerError(res.msg || "Access denied.");
       }
     } catch (err) {
+      console.error("❌ CRASH:", err);
       setServerError("Connection error. Database offline?");
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="login-screen-wrapper">
       <div className="bg-grid"></div>

@@ -1,0 +1,63 @@
+.ide-wrapper {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #050508;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+/* HEADER */
+.ide-header {
+  height: 50px;
+  background: #0e0e12;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid #222;
+}
+
+.ide-brand { font-family: 'Orbitron'; font-weight: bold; }
+.ide-brand span { color: #00f2ff; }
+
+.ide-actions { display: flex; gap: 10px; align-items: center; }
+.btn-analyze { background: #bc13fe; border: none; padding: 6px 15px; border-radius: 4px; color: white; cursor: pointer; }
+.btn-run { background: #222; border: 1px solid #444; padding: 6px 15px; border-radius: 4px; color: white; cursor: pointer; }
+.btn-run:hover { background: #333; }
+.btn-icon { background: transparent; border: none; color: #666; font-size: 18px; cursor: pointer; }
+
+/* BODY */
+.ide-body { flex: 1; display: flex; overflow: hidden; }
+
+/* SIDEBAR */
+.ide-sidebar { width: 220px; background: #0a0a0e; border-right: 1px solid #222; display: flex; flex-direction: column; }
+.sidebar-tabs { display: flex; border-bottom: 1px solid #222; }
+.sidebar-tabs .tab { flex: 1; padding: 10px; text-align: center; color: #666; cursor: pointer; }
+.sidebar-tabs .tab.active { color: white; border-bottom: 2px solid #bc13fe; }
+
+.file-list { padding: 15px; }
+.project-label { font-size: 10px; color: #555; letter-spacing: 1px; margin-bottom: 10px; }
+.file-item { padding: 8px; font-size: 13px; cursor: pointer; color: #aaa; display: flex; align-items: center; gap: 8px; border-radius: 4px; }
+.file-item:hover { background: #1a1a20; }
+.file-item.active { background: #2a1a35; color: white; }
+.file-item i { color: #bc13fe; }
+
+/* MAIN AREA */
+.ide-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.editor-section { flex: 3; display: flex; flex-direction: column; background: #1e1e1e; }
+.editor-tabs { height: 35px; background: #0a0a0e; display: flex; }
+.editor-tab { padding: 0 20px; line-height: 35px; font-size: 12px; background: #1e1e1e; border-right: 1px solid #000; }
+.editor-tab.active { border-top: 2px solid #bc13fe; }
+
+/* TERMINAL */
+.terminal-section { flex: 1; background: #050508; border-top: 2px solid #222; display: flex; flex-direction: column; }
+.terminal-header { padding: 5px 20px; display: flex; gap: 20px; font-size: 11px; color: #666; text-transform: uppercase; border-bottom: 1px solid #111; }
+.terminal-header .active { color: white; border-bottom: 1px solid white; }
+
+.terminal-body { flex: 1; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 13px; color: #bbb; overflow-y: auto; }
+.terminal-line { margin-bottom: 5px; }
+.terminal-cursor { color: #bc13fe; }
+.blink { animation: blinker 1s linear infinite; color: white; }
+@keyframes blinker { 50% { opacity: 0; } }
