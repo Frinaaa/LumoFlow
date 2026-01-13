@@ -134,12 +134,9 @@ const SignUpScreen: React.FC = () => {
              Already have an account? <span onClick={() => navigate('/login')}>Login</span>
           </div>
 
-          <div className="divider" style={{ marginTop: '15px', fontSize: '0.7rem' }}>OR SIGN UP WITH</div>
+          
 
-          <div className="social-row">
-            <button className="social-rect-btn"><i className="fa-brands fa-google"></i> Google</button>
-            <button className="social-rect-btn"><i className="fa-brands fa-microsoft"></i> Microsoft</button>
-          </div>
+          
         </div>
       </main>
     </div>

@@ -3,10 +3,9 @@
   "version": "0.0.1",
   "main": "electron/main.js",
   "scripts": {
-    "start": "npm run electron-dev",
+    "start": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "dev": "vite",
     "build": "tsc && vite build",
-    "electron-dev": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron-prod": "cross-env NODE_ENV=production electron .",
     "build:win": "npm run build && electron-builder --win --publish never",
     "lint": "eslint ."
@@ -22,7 +21,8 @@
     "nodemailer": "^7.0.12",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.12.0"
+    "react-router-dom": "^7.12.0",
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

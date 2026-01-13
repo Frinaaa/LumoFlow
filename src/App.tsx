@@ -8,6 +8,8 @@ import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen'; // New
 import SignUpScreen from './screens/SignUpScreen';
 import AboutUsScreen from './screens/AboutUsScreen';
+import DashboardScreen from './screens/DashboardScreen';
+
 // --- Dashboard Component ---
 function AppContent() {
   return (
@@ -77,6 +79,17 @@ function AppLayout() {
           )
         }
       />
+       <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            <DashboardScreen /> /* <--- CHANGE THIS (It was <AppContent />) */
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      
         <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
         <Route path="/about" element={<AboutUsScreen />} />
