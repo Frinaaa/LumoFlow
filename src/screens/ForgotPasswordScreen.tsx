@@ -9,36 +9,27 @@ const ForgotPasswordScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [generalError, setGeneralError] = useState('');
 
-  const handleSendCode = async (e: React.FormEvent) => {
+ const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError('');
-
-    // 1. Validation
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      setGeneralError('Please enter a valid email address.');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // 2. Call Backend API (via Electron IPC)
       const response = await authService.forgotPassword(email);
 
       if (response.success) {
-        // --- THIS IS THE CRITICAL FIX (Translated from your RN code) ---
-        // Navigate immediately to the Reset Password screen, passing the email in state
+        // If user exists and email was sent, go to reset screen
         navigate('/reset-password', { state: { email } });
       } else {
-        setGeneralError(response.msg || 'An error occurred.');
+        // This will show "This email is not registered" or "Database failed"
+        setGeneralError(response.msg); 
       }
     } catch (error: any) {
-      setGeneralError('Network error. Is the server running?');
+      setGeneralError('Could not connect to the authentication server.');
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="login-screen-wrapper">
       <div className="bg-grid"></div>

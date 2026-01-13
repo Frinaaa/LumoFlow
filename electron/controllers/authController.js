@@ -1,156 +1,136 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { User } = require('../models');
+const sendEmail = require('../utils/sendEmail');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'lumoflow-secret-fallback';
 
 const authController = {
+  // 1. SIGNUP
   async signup(event, { name, email, password }) {
     try {
-        // 1. Basic check
-        if (!email || !password || !name) {
-            return { success: false, msg: 'Please enter all fields' };
-        }
+      if (!email || !password || !name) return { success: false, msg: 'All fields required' };
+      let user = await User.findOne({ email: email.toLowerCase().trim() });
+      if (user) return { success: false, msg: 'User already exists' };
 
-        // 2. Check if user already exists in MongoDB
-        let user = await User.findOne({ email });
-        if (user) {
-            return { success: false, msg: 'User with this email already exists' };
-        }
-
-        // 3. Hash Password (Secure Storage)
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // 4. Create and Save to MongoDB
-        user = new User({
-            name,
-            email,
-            password: hashedPassword,
-            role: 'student', // Default role
-            isVerified: false
-        });
-
-        await user.save(); // Data is now written to MongoDB!
-
-        return { success: true, msg: 'User registered successfully' };
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      user = new User({ name, email: email.toLowerCase().trim(), password: hashedPassword, role: 'student' });
+      await user.save();
+      return { success: true, msg: 'User registered successfully' };
     } catch (err) {
-        console.error('Signup Error:', err);
-        return { success: false, msg: 'Database connection failed' };
+      return { success: false, msg: 'Signup error' };
     }
-},
+  },
+
+  // 2. LOGIN
   async login(event, { email, password }) {
     try {
-      if (!email || !password) {
-        return { success: false, msg: 'Please enter all fields' };
-      }
-
-      // Check for user
-      const user = await User.findOne({ email });
-      if (!user) {
-        return { success: false, msg: 'Invalid credentials' };
-      }
-
-      // Validate password
+      const user = await User.findOne({ email: email.toLowerCase().trim() });
+      if (!user) return { success: false, msg: 'Invalid credentials' };
       const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return { success: false, msg: 'Invalid credentials' };
-      }
-
-      // Create Token
-      const payload = {
-        user: {
-          id: user.id,
-          role: user.role
-        }
-      };
-
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
-
-      // Return data formatted exactly as Frontend expects
-      return {
-        success: true,
-        msg: 'Login successful',
-        token,
-        user: {
-          _id: user.id,
-          name: user.name,
-          email: user.email,
-          role: { role_name: user.role },
-          status: user.isVerified ? 'verified' : 'pending'
-        }
+      if (!isMatch) return { success: false, msg: 'Invalid credentials' };
+      const token = jwt.sign({ user: { id: user.id } }, JWT_SECRET, { expiresIn: '7d' });
+      return { 
+        success: true, 
+        token, 
+        user: { _id: user.id, name: user.name, email: user.email, role: { role_name: user.role } } 
       };
     } catch (err) {
-      console.error('Login Controller Error:', err);
-      return { success: false, msg: 'Server error during login' };
+      return { success: false, msg: 'Login error' };
     }
   },
 
-  async logout() {
-    return { success: true, msg: 'Logged out successfully' };
-  },
+  // 3. GOOGLE LOGIN
+ // Inside the authController object in authController.js:
 
-    async googleLogin(event, { email, name, googleId }) {
+  async googleLogin(event, { email, name, googleId }) {
     try {
-      let user = await User.findOne({ email });
+      const cleanEmail = email.toLowerCase().trim();
+      
+      // 1. Check if user already exists in MongoDB
+      let user = await User.findOne({ email: cleanEmail });
+      let isNewUser = false;
+
       if (!user) {
+        // 2. If NO account exists, create one automatically (Social Signup)
         user = new User({
           name: name,
-          email: email,
-          password: googleId,
+          email: cleanEmail,
+          password: googleId, // Placeholder password
           role: 'student',
           isVerified: true
         });
         await user.save();
+        isNewUser = true; // Mark that we just created this person
       }
-      const payload = { user: { id: user.id, role: user.role } };
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+      // 3. Create a session token
+      const token = jwt.sign({ user: { id: user.id } }, JWT_SECRET, { expiresIn: '7d' });
+
       return {
         success: true,
-        msg: 'Google Login Successful',
         token,
-        user: { _id: user.id, name: user.name, email: user.email, role: { role_name: user.role } }
+        isNewUser, // <--- Frontend uses this to decide where to go
+        user: { name: user.name, email: user.email }
       };
     } catch (err) {
-      console.error('Google Login Error:', err);
-      return { success: false, msg: 'Server error during Google auth' };
+      return { success: false, msg: 'Google connection failed' };
     }
-  }, // <--- MAKE SURE THIS COMMA IS HERE
-
+  },
+  // 4. FORGOT PASSWORD (OTP SEND)
   async forgotPassword(event, { email }) {
     try {
-      const user = await User.findOne({ email });
-      if (!user) {
-        return { success: false, msg: 'Email not found' };
-      }
+      const cleanEmail = email.toLowerCase().trim();
+      const user = await User.findOne({ email: cleanEmail });
+      if (!user) return { success: false, msg: 'Email not found in database.' };
 
-      const crypto = require('crypto'); // Ensure crypto is available
       const resetToken = crypto.randomBytes(3).toString('hex').toUpperCase();
-
       user.resetPasswordCode = resetToken;
-      user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+      user.resetPasswordExpires = Date.now() + 600000; // 10 mins
       await user.save();
 
-      try {
-        await sendEmail({
-          email: user.email,
-          subject: 'LumoFlow - Password Reset Code',
-          code: resetToken,
-          message: `Your reset code is: ${resetToken}`
-        });
-        return { success: true, msg: 'Reset code sent to email' };
-      } catch (emailError) {
-        user.resetPasswordCode = undefined;
-        user.resetPasswordExpires = undefined;
-        await user.save();
-        return { success: false, msg: 'Email could not be sent' };
-      }
+      await sendEmail({
+        email: user.email,
+        subject: 'LumoFlow Recovery Code',
+        code: resetToken
+      });
+
+      return { success: true, msg: 'OTP sent to your email!' };
     } catch (err) {
-      console.error(err);
-      return { success: false, msg: 'Server Error' };
+      console.error("Forgot Pass Error:", err.message);
+      return { success: false, msg: 'Error sending email.' };
     }
+  },
+
+  // 5. RESET PASSWORD (OTP VERIFY)
+  async resetPassword(event, { email, code, newPassword }) {
+    try {
+      const user = await User.findOne({ 
+        email: email.toLowerCase().trim(),
+        resetPasswordCode: code,
+        resetPasswordExpires: { $gt: Date.now() } 
+      });
+
+      if (!user) return { success: false, msg: 'Invalid or expired code.' };
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+      user.resetPasswordCode = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+
+      return { success: true, msg: 'Password updated successfully!' };
+    } catch (err) {
+      return { success: false, msg: 'Reset failed.' };
+    }
+  },
+
+  // 6. LOGOUT
+  async logout() {
+    return { success: true };
   }
-};// <--- This closing brace must be AFTER forgotPassword
-// This should already be in your authController.js
+};
 
 module.exports = authController;

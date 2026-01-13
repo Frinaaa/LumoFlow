@@ -1,37 +1,46 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
+
+// 🟢 FORCE LOAD .env here to ensure variables are never undefined
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 const sendEmail = async (options) => {
-  // 1. Create Transporter (Configure this in your .env file later)
-  // For Gmail, you often need an "App Password"
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: false, 
-    auth: {
-      user: process.env.SMTP_EMAIL || 'your-email@gmail.com',
-      pass: process.env.SMTP_PASSWORD || 'your-app-password',
-    },
-  });
+  // DEBUG CHECK: This will show in your terminal
+  console.log("--- 📧 SMTP CREDENTIAL CHECK ---");
+  console.log("Email from .env:", process.env.SMTP_EMAIL || "❌ NOT FOUND");
+  console.log("Pass from .env:", process.env.SMTP_PASSWORD ? "✅ LOADED (HIDDEN)" : "❌ NOT FOUND");
 
-  // 2. Define Email Options
-  const message = {
-    from: `${process.env.FROM_NAME || 'LumoFlow AI'} <${process.env.SMTP_EMAIL}>`,
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    html: `
-      <div style="font-family: sans-serif; background: #050508; color: #fff; padding: 20px;">
-        <h1 style="color: #00f2ff;">LumoFlow Password Reset</h1>
-        <p>You requested a password reset. Please use the code below:</p>
-        <h2 style="color: #bc13fe; letter-spacing: 5px;">${options.code}</h2>
-        <p>This code expires in 10 minutes.</p>
-      </div>
-    `
-  };
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_EMAIL,    // modesty.ayah@gmail.com
+        pass: process.env.SMTP_PASSWORD, // pfpnndlpiwpuordx
+      },
+    });
 
-  // 3. Send
-  const info = await transporter.sendMail(message);
-  console.log('Message sent: %s', info.messageId);
+    const mailOptions = {
+      from: `"LumoFlow AI" <${process.env.SMTP_EMAIL}>`,
+      to: options.email,
+      subject: options.subject,
+      html: `
+        <div style="background-color: #050508; color: #fff; padding: 30px; font-family: sans-serif; border: 1px solid #bc13fe;">
+          <h2 style="color: #00f2ff;">LumoFlow Recovery</h2>
+          <p>Your password reset code is:</p>
+          <h1 style="color: #bc13fe; letter-spacing: 5px;">${options.code}</h1>
+          <p style="color: #666; font-size: 12px;">Expires in 10 minutes.</p>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("✅ SUCCESS: Email sent to", options.email);
+    return info;
+
+  } catch (error) {
+    console.error("❌ SMTP ERROR:", error.message);
+    throw error;
+  }
 };
 
 module.exports = sendEmail;

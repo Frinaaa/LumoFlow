@@ -13,7 +13,7 @@ let mainWindow;
 const connectDB = async () => {
   try {
     // Fix: Added fallback string and corrected syntax
-    const dbURI = process.env.MONGO_URI || 'mongodb://localhost:27017/lumoflow';
+    const dbURI = process.env.MONGO_URI ;
     await mongoose.connect(dbURI);
     console.log('✅ MongoDB Connected');
   } catch (err) {
@@ -61,8 +61,9 @@ app.on('activate', () => {
 ipcMain.handle('auth:login', authController.login);
 ipcMain.handle('auth:signup', authController.signup);
 ipcMain.handle('auth:logout', authController.logout);
+ipcMain.handle('auth:forgot-password', authController.forgotPassword); // This must stay here
+ipcMain.handle('auth:reset-password', authController.resetPassword);
 ipcMain.handle('auth:google-login', authController.googleLogin);
-ipcMain.handle('auth:forgot-password', authController.forgotPassword);
 ipcMain.handle('app:info', () => ({
   appVersion: app.getVersion(),
   isDev

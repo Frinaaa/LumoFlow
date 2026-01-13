@@ -5,6 +5,7 @@ import LoginScreen from './screens/LoginScreen';
 import authService from './services/authService';
 import './styles/App.css';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen'; // New
 import SignUpScreen from './screens/SignUpScreen';
 import AboutUsScreen from './screens/AboutUsScreen';
 // --- Dashboard Component ---
@@ -77,6 +78,7 @@ function AppLayout() {
         }
       />
         <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+        <Route path="/reset-password" element={<ResetPasswordScreen />} />
         <Route path="/about" element={<AboutUsScreen />} />
     </Routes>
   );

@@ -44,7 +44,9 @@ class AuthService {
       return { success: false, msg: 'Failed to request reset' };
     }
   }
-
+  async resetPassword(data: any) {
+  return await window.api.resetPassword(data);
+}
   async logout() {
     try {
       localStorage.removeItem('authToken');
