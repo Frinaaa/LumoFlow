@@ -1,31 +1,43 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Store auth listeners
+const authListeners = {};
+
 contextBridge.exposeInMainWorld('api', {
   login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
   signup: (data) => ipcRenderer.invoke('auth:signup', data),
   logout: () => ipcRenderer.invoke('auth:logout'),
-  forgotPassword: (email) => ipcRenderer.invoke('auth:forgot-password', { email }),
-  resetPassword: (data) => ipcRenderer.invoke('auth:reset-password', data),
-    getDashboardStats: (userId) => ipcRenderer.invoke('user:get-dashboard', userId),
-  // 🟢 NEW METHOD
-  startGoogleLogin: () => ipcRenderer.invoke('auth:start-google-flow'),
-
+  googleOAuth: (code) => ipcRenderer.invoke('auth:google-oauth', code),
+  githubOAuth: (code) => ipcRenderer.invoke('auth:github-oauth', code),
+  getDashboardStats: (userId) => ipcRenderer.invoke('user:getDashboardStats', userId),
+  updateProfile: (data) => ipcRenderer.invoke('user:updateProfile', data),
+  // File System
+  readProjectFiles: () => ipcRenderer.invoke('files:readProject'),
+  readFile: (filePath) => ipcRenderer.invoke('files:readFile', filePath),
+  saveFile: (payload) => ipcRenderer.invoke('files:saveFile', payload), 
+  runCode: (payload) => ipcRenderer.invoke('terminal:runCode', payload),
+  
   getAppInfo: () => ipcRenderer.invoke('app:info'),
   
-  // 🟢 DASHBOARD BRIDGE
-  getDashboardStats: (userId) => ipcRenderer.invoke('user:get-dashboard', userId),
-
-  getAppInfo: () => ipcRenderer.invoke('app:info'),
-});
-contextBridge.exposeInMainWorld('api', {
-  // Existing Auth/Profile bridge...
-  login: (creds) => ipcRenderer.invoke('auth:login', creds),
-  getProfile: () => ipcRenderer.invoke('user:getProfile'),
-  updateProfile: (data) => ipcRenderer.invoke('user:updateProfile'),
-
-  // --- NEW IDE BRIDGE ---
-  readProjectFiles: () => ipcRenderer.invoke('files:readProject'),
-  readFile: (filePath) => ipcRenderer.invoke('files:readOne', filePath),
-  saveFile: (filePath, content) => ipcRenderer.invoke('files:save', filePath, content),
-  runCode: (code) => ipcRenderer.invoke('terminal:run', code),
+  // OAuth Browser Flow
+  openExternalURL: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  
+  // Send auth code from callback page
+  sendAuthCode: (provider, code) => ipcRenderer.send('auth:code-received', { provider, code }),
+  sendAuthError: (provider, error) => ipcRenderer.send('auth:error-received', { provider, error }),
+  
+  // Auth callback listeners
+  onAuthCallback: (provider, callback) => {
+    authListeners[provider] = callback;
+    ipcRenderer.on(`auth:${provider}-callback`, (event, data) => {
+      callback(data);
+    });
+  },
+  
+  removeAuthListener: (provider) => {
+    if (authListeners[provider]) {
+      ipcRenderer.removeAllListeners(`auth:${provider}-callback`);
+      delete authListeners[provider];
+    }
+  }
 });

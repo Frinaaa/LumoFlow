@@ -51,36 +51,128 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
 
   
 
-  // --- 2. GOOGLE LOGIN (External Browser Flow) ---
-  const handleGoogleLogin = async () => {
+  // --- 2. GOOGLE LOGIN (Browser Flow) ---
+  const handleGoogleLogin = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     setLoading(true);
     setServerError('');
     
     try {
-      // 🟢 Trigger the browser flow via Main Process
-      const res = await authService.startGoogleLogin();
-
-      if (res.success) {
-        await authService.setAuthToken(res.token);
-        
-        if (res.isNewUser) {
-            navigate('/signup'); // Navigate to sign up if new
-        } else {
-            setIsAuthenticated(true);
-             navigate('/dashboard'); // Log in if existing
+      const GOOGLE_CLIENT_ID = '505727448182-5vg28l0f31h1cfnrmv5unun52g8tgebd.apps.googleusercontent.com';
+      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      const scope = 'openid profile email';
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+      
+      // Open in default browser instead of popup
+      await window.api.openExternalURL(authUrl);
+      
+      // Listen for callback from IPC
+      const handleCallback = (event: any) => {
+        if (event.type === 'GOOGLE_AUTH_CODE') {
+          const { code } = event;
+          window.api.removeAuthListener?.('google');
+          
+          (async () => {
+            try {
+              // Send code to Electron backend
+              const res = await authService.googleOAuth(code);
+              
+              if (res.success) {
+                setIsAuthenticated(true);
+                navigate('/dashboard');
+              } else {
+                setServerError(res.msg || 'Google login failed');
+              }
+            } catch (err) {
+              setServerError('Google authentication error');
+            } finally {
+              setLoading(false);
+            }
+          })();
         }
-      } else {
-        setServerError(res.msg || "Google Login failed.");
-      }
+      };
+      
+      // Register listener for auth callback
+      window.api.onAuthCallback?.('google', handleCallback);
+      
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        window.api.removeAuthListener?.('google');
+        if (loading) {
+          setLoading(false);
+          setServerError('Login timeout');
+        }
+      }, 300000);
+      
     } catch (err) {
-      setServerError("Login window closed or connection failed.");
-    } finally {
+      setServerError("Google login failed.");
       setLoading(false);
     }
   };
 
-  // --- 3. STANDARD LOGIN ---
- // --- 3. STANDARD LOGIN (DEBUG VERSION) ---
+  // --- 3. GITHUB LOGIN (Browser Flow) ---
+  const handleGitHubLogin = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setLoading(true);
+    setServerError('');
+    
+    try {
+      const GITHUB_CLIENT_ID = 'Ov23liH24VR3ImiPJBlv';
+      const redirectUri = `${window.location.origin}/auth/github/callback`;
+      const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&scope=user:email`;
+      
+      // Open in default browser instead of popup
+      await window.api.openExternalURL(authUrl);
+      
+      // Listen for callback from IPC
+      const handleCallback = (event: any) => {
+        if (event.type === 'GITHUB_AUTH_CODE') {
+          const { code } = event;
+          window.api.removeAuthListener?.('github');
+          
+          (async () => {
+            try {
+              // Send code to Electron backend
+              const res = await authService.githubOAuth(code);
+              
+              if (res.success) {
+                setIsAuthenticated(true);
+                navigate('/dashboard');
+              } else {
+                setServerError(res.msg || 'GitHub login failed');
+              }
+            } catch (err) {
+              setServerError('GitHub authentication error');
+            } finally {
+              setLoading(false);
+            }
+          })();
+        }
+      };
+      
+      // Register listener for auth callback
+      window.api.onAuthCallback?.('github', handleCallback);
+      
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        window.api.removeAuthListener?.('github');
+        if (loading) {
+          setLoading(false);
+          setServerError('Login timeout');
+        }
+      }, 300000);
+      
+    } catch (err) {
+      setServerError("GitHub login failed.");
+      setLoading(false);
+    }
+  };
+
+  // --- 3. STANDARD LOGIN (DEBUG VERSION) ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -196,11 +288,27 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
           <div className="divider">OR CONTINUE WITH</div>
 
           <div className="social-login">
-            {/* 🟢 ORIGINAL ICON STYLE - TRIGGERS BROWSER FLOW */}
-            <div className="social-btn" onClick={handleGoogleLogin}>
+            {/* 🟢 GOOGLE LOGIN - FIXED CLICK HANDLER */}
+            <button 
+              type="button"
+              className="social-btn" 
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              title="Login with Google"
+            >
               <i className="fa-brands fa-google"></i>
-            </div>
-            <div className="social-btn"><i className="fa-brands fa-github"></i></div>
+            </button>
+            
+            {/* 🟢 GITHUB LOGIN - OPENS IN BROWSER */}
+            <button 
+              type="button"
+              className="social-btn" 
+              onClick={handleGitHubLogin}
+              disabled={loading}
+              title="Login with GitHub"
+            >
+              <i className="fa-brands fa-github"></i>
+            </button>
           </div>
         </div>
       </div>

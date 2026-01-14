@@ -163,8 +163,15 @@
 .panel-header h3 { font-family: 'Orbitron'; font-size: 16px; margin: 0; }
 .live-tag { color: #666; font-size: 12px; }
 
-/* Chart */
-.chart-container { flex: 1; position: relative; }
+.chart-container {
+  flex: 1;
+  position: relative;
+  min-height: 300px; 
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 .focus-area { text-align: center; margin-top: -10px; font-size: 12px; color: #888; }
 
 /* Recent Flow */
@@ -196,4 +203,20 @@
   font-weight: bold;
   font-size: 12px;
   font-family: 'Orbitron';
+}
+.dashboard-avatar-container {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-cyan);
+  padding: 2px;
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+  overflow: hidden;
+}
+
+.dash-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }

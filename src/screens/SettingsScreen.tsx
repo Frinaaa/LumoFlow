@@ -6,14 +6,11 @@ import '../styles/SettingsScreen.css';
 const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
 
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [showCamera, setShowCamera] = useState(false); // Fixes 'showCamera'
-  
-
+  const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -23,15 +20,16 @@ const SettingsScreen: React.FC = () => {
     name: '',
     email: '',
     bio: '',
-    avatar: '' // Base64 string for image
+    avatar: 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png' // Default fallback
   });
 
+  // --- PREFERENCES STATE ---
   const [preferences, setPreferences] = useState({
     sound: true,
     notifications: false
   });
 
-  // Mock Stats
+  // Mock Stats for UI
   const stats = {
     level: 12,
     role: '<System Architect />',
@@ -39,14 +37,14 @@ const SettingsScreen: React.FC = () => {
     maxXP: 3000
   };
 
-  // 1. Fetch Data
   useEffect(() => {
     const loadProfile = async () => {
       const res = await authService.getProfile();
+      // 🟢 If DB fetch worked, use that data
       if (res.success && res.user) {
         setFormData({
           name: res.user.name || '',
-          email: res.user.email || '',
+          email: res.user.email || '', // This fixes the empty email
           bio: res.user.bio || '',
           avatar: res.user.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
         });
@@ -55,13 +53,12 @@ const SettingsScreen: React.FC = () => {
     };
     loadProfile();
   }, []);
-
   // 2. Handle Text Input
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 3. Handle Image Upload (Convert to Base64)
+  // 3. Handle Image Upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -77,12 +74,22 @@ const SettingsScreen: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  // 4. Handle Toggles
-  const togglePreference = (key: 'sound' | 'notifications') => {
-    setPreferences(prev => ({ ...prev, [key]: !prev[key] }));
+  // 4. Camera Logic
+  const startCamera = async () => {
+    setShowCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera access denied", err);
+      setMessage("ERROR: CAMERA ACCESS DENIED");
+      setShowCamera(false);
+    }
   };
 
-  const stopCamera = () => { // Fixes 'stopCamera'
+  const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
@@ -90,7 +97,7 @@ const SettingsScreen: React.FC = () => {
     setShowCamera(false);
   };
 
-  const capturePhoto = () => { // Fixes 'capturePhoto'
+  const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
       if (context) {
@@ -102,23 +109,44 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  // 5. Handle Save & Redirect
+  // 5. Handle Toggles
+  const togglePreference = (key: 'sound' | 'notifications') => {
+    setPreferences(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // 6. 🟢 HANDLE SAVE (FIXED)
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setMessage('');
 
-    const payload = { ...formData, ...preferences };
-    const res = await authService.updateProfile(payload);
-    
-    if (res.success) {
-      setMessage('SYSTEM UPDATED. REDIRECTING...');
+    try {
+      // Only send name, bio, avatar (not preferences for now)
+      const payload = { 
+        name: formData.name,
+        bio: formData.bio,
+        avatar: formData.avatar
+      };
+
+      console.log("Saving profile with payload:", { ...payload, avatar: payload.avatar.substring(0, 50) + '...' });
+
+      const res = await authService.updateProfile(payload);
       
-      // Wait 1.5s then go to Dashboard
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
-    } else {
+      console.log("Update response:", res);
+
+      if (res.success) {
+        setMessage('SYSTEM UPDATED. REDIRECTING...');
+        // 1.5s delay to let user see success message before moving
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+      } else {
+        console.error("Update failed:", res.msg);
+        setMessage(`ERROR: ${res.msg || 'COULD NOT SAVE DATA'}`);
+        setSaving(false);
+      }
+    } catch (err) {
+      console.error("Save error:", err);
       setMessage('ERROR: COULD NOT SAVE DATA');
       setSaving(false);
     }
@@ -130,8 +158,6 @@ const SettingsScreen: React.FC = () => {
 
   return (
     <div className="settings-wrapper">
-      
-      {/* FIXED HEADER */}
       <header className="settings-header">
         <div className="settings-brand">
           <i className="fa-solid fa-bolt"></i> LUMO<span>FLOW</span>
@@ -141,18 +167,19 @@ const SettingsScreen: React.FC = () => {
         </button>
       </header>
 
-      {/* SCROLLABLE CONTENT */}
       <div className="settings-scroll-area">
         <div className="settings-content">
           
-          {/* --- LEFT: PROFILE CARD --- */}
+          {/* LEFT: PROFILE CARD */}
           <div className="profile-card">
             <div className="avatar-container">
               <div className="avatar-glow"></div>
-              {/* Image Preview */}
-              <img src={formData.avatar} alt="Avatar" className="user-avatar" />
+              <img 
+                src={formData.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'} 
+                alt="Avatar" 
+                className="user-avatar" 
+              />
               
-              {/* Hidden File Input */}
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -161,10 +188,14 @@ const SettingsScreen: React.FC = () => {
                 onChange={handleImageUpload}
               />
               
-              {/* Trigger Button */}
-              <button className="camera-btn" onClick={triggerFileInput} type="button">
-                <i className="fa-solid fa-camera"></i>
-              </button>
+              <div className="avatar-actions">
+                <button className="action-btn camera" onClick={startCamera} type="button" title="Take Photo">
+                  <i className="fa-solid fa-camera"></i>
+                </button>
+                <button className="action-btn upload" onClick={triggerFileInput} type="button" title="Upload Image">
+                  <i className="fa-solid fa-upload"></i>
+                </button>
+              </div>
             </div>
 
             <h2 className="profile-name">{formData.name || 'User'}</h2>
@@ -192,7 +223,7 @@ const SettingsScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* --- RIGHT: SETTINGS FORM --- */}
+          {/* RIGHT: SETTINGS FORM */}
           <div className="settings-form-card">
             <h2 className="form-title">Profile Settings</h2>
             
@@ -212,6 +243,7 @@ const SettingsScreen: React.FC = () => {
                 </div>
                 <div className="form-group">
                   <label>Email Address</label>
+                  {/* Email is disabled (read-only) but populated via state */}
                   <input 
                     type="email" 
                     name="email" 
@@ -247,7 +279,11 @@ const SettingsScreen: React.FC = () => {
               </div>
 
               <div className="form-actions">
-                {message && <span className={`save-msg ${message.includes('ERROR') ? 'error' : 'success'}`}>{message}</span>}
+                {message && (
+                  <span className={`save-msg ${message.includes('ERROR') ? 'error' : 'success'}`}>
+                    {message}
+                  </span>
+                )}
                 <button type="submit" className="save-btn" disabled={saving}>
                   {saving ? <i className="fa-solid fa-spinner fa-spin"></i> : 'SAVE CHANGES'}
                 </button>
@@ -255,22 +291,22 @@ const SettingsScreen: React.FC = () => {
             </form>
           </div>
          
-      {/* --- CAMERA MODAL --- */}
-      {showCamera && (
-        <div className="camera-modal-overlay">
-          <div className="camera-modal">
-            <h3>Capture Profile</h3>
-            <div className="video-container">
-              <video ref={videoRef} autoPlay playsInline></video>
-              <canvas ref={canvasRef} width="300" height="300" style={{display:'none'}}></canvas>
+          {/* CAMERA MODAL */}
+          {showCamera && (
+            <div className="camera-modal-overlay">
+              <div className="camera-modal">
+                <h3>Capture Profile</h3>
+                <div className="video-container">
+                  <video ref={videoRef} autoPlay playsInline></video>
+                  <canvas ref={canvasRef} width="300" height="300" style={{display:'none'}}></canvas>
+                </div>
+                <div className="modal-actions">
+                  <button className="cancel-btn" onClick={stopCamera}>Cancel</button>
+                  <button className="snap-btn" onClick={capturePhoto}>SNAP</button>
+                </div>
+              </div>
             </div>
-            <div className="modal-actions">
-              <button className="cancel-btn" onClick={stopCamera}>Cancel</button>
-              <button className="snap-btn" onClick={capturePhoto}>SNAP</button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
         </div>
       </div>
     </div>

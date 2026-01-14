@@ -4,23 +4,23 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer 
 } from 'recharts';
 import authService from '../services/authService';
-import '../styles/DashboardScreen.css'; // Make sure this points to your new CSS file
+import '../styles/DashboardScreen.css'; 
 
-
-// 1. Add avatar to interface
+// Interface for type safety
 interface UserProfile {
   name: string;
   email: string;
-  avatar?: string; // Add this
+  avatar?: string;
 }
 
 const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  
+  // 🟢 STATE: We only need 'user', I removed the conflicting 'userData'
   const [user, setUser] = useState<UserProfile | null>(null);
 
-  // --- 1. MOCK DATA FOR VISUALS ---
-  // (Stats are 0 as requested, Chart data is static for now)
+  // MOCK DATA FOR VISUALS
   const [stats] = useState({
     lines: 0,
     bugs: 0,
@@ -44,25 +44,33 @@ const DashboardScreen: React.FC = () => {
     { id: 4, title: 'Logic Builder', type: 'Level 5 • 2d ago', xp: 200, color: '#00ff88', icon: 'fa-puzzle-piece' },
   ];
 
-  // --- 2. FETCH REAL USERNAME ---
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        const res = await authService.getProfile();
-        if (res.success && res.user) {
+  // 🟢 FETCH LOGIC: Gets latest data from backend
+  const fetchUser = async () => {
+    try {
+      const res = await authService.getProfile();
+      if (res.success && res.user) {
         setUser({ 
-            name: res.user.name, 
-            email: res.user.email,
-            avatar: res.user.avatar // Get avatar
+          name: res.user.name, 
+          email: res.user.email,
+          avatar: res.user.avatar 
         });
-    }
-      } catch (e) {
-        console.error("Failed to load user");
-      } finally {
-        setLoading(false);
       }
-    };
-    initData();
+    } catch (e) {
+      console.error("Failed to load user");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🟢 EFFECT: Initial Load + Event Listener for Parallel Updates
+  useEffect(() => {
+    fetchUser(); // Run once on mount
+
+    // Listen for the 'profile-updated' event from SettingsScreen
+    window.addEventListener('profile-updated', fetchUser);
+
+    // Cleanup listener when leaving dashboard
+    return () => window.removeEventListener('profile-updated', fetchUser);
   }, []);
 
   const handleLogout = async () => {
@@ -70,7 +78,7 @@ const DashboardScreen: React.FC = () => {
     window.location.href = '/'; 
   };
 
-  if (loading) return <div style={{background:'#050508', height:'100vh', color:'#00f2ff', display:'flex', alignItems:'center', justifyContent:'center'}}>CONNECTING...</div>;
+  if (loading) return <div className="loading-screen">CONNECTING...</div>;
 
   return (
     <div className="dashboard-wrapper">
@@ -86,20 +94,19 @@ const DashboardScreen: React.FC = () => {
           <button className="nav-item active"><i className="fa-solid fa-chart-line"></i> Dashboard</button>
           <button className="nav-item"><i className="fa-solid fa-gamepad"></i> Arcade</button>
           <button className="nav-item" onClick={() => navigate('/terminal')}>
-  <i className="fa-solid fa-terminal"></i> Terminal
-</button>
+            <i className="fa-solid fa-terminal"></i> Terminal
+          </button>
           <button className="nav-item"><i className="fa-solid fa-eye"></i> Visuals</button>
         </nav>
 
         <div className="sidebar-footer">
           <button className="nav-item" onClick={() => navigate('/settings')}>
-    <i className="fa-solid fa-gear"></i> Settings
-  </button>
-  
-           <button className="nav-item logout" onClick={handleLogout}>
-    <i className="fa-solid fa-right-from-bracket"></i> Logout
-  </button>
-  </div>
+            <i className="fa-solid fa-gear"></i> Settings
+          </button>
+          <button className="nav-item logout" onClick={handleLogout}>
+            <i className="fa-solid fa-right-from-bracket"></i> Logout
+          </button>
+        </div>
       </aside>
 
       {/* --- MAIN CONTENT --- */}
@@ -107,34 +114,24 @@ const DashboardScreen: React.FC = () => {
         
         {/* HEADER */}
         <header className="dashboard-header">
-  <div className="header-text">
-    <h1>Hello, <span style={{color:'white'}}>{user?.name || "User"}</span></h1>
-    <p>Your neural network is expanding. Keep flowing.</p>
-  </div>
-  <div className="level-badge">{stats.level}</div>
-  
-   {/* 3. UPDATE PROFILE PICTURE DISPLAY */}
-            <div style={{
-              width: '50px', height: '50px', borderRadius: '50%', 
-              overflow: 'hidden', border: '2px solid #00f2ff',
-              background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-               {user?.avatar ? (
-                 <img src={user.avatar} alt="Profile" style={{width:'100%', height:'100%', objectFit:'cover'}} />
-               ) : (
-                 <i className="fa-solid fa-user-astronaut" style={{color:'#888', fontSize:'24px'}}></i>
-               )}
-            </div>
+          <div className="header-text">
+            <h1>Hello, <span style={{color:'white'}}>{user?.name || "User"}</span></h1>
+            <p>Your neural network is expanding. Keep flowing.</p>
+          </div>
           
-  {/* UPDATE PROFILE PIC HERE */}
-  <div className="profile-pic" style={{overflow:'hidden', border: '2px solid #00f2ff'}}>
-     {user?.avatar ? (
-        <img src={user.avatar} alt="Profile" style={{width:'100%', height:'100%', objectFit:'cover'}} />
-     ) : (
-        <i className="fa-solid fa-user-astronaut"></i>
-     )}
-  </div>
-  </header>
+          <div className="dashboard-right-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="level-badge">{stats.level}</div>
+            
+            <div className="dashboard-avatar-container">
+              {/* 🟢 FIX: Uses 'user.avatar' instead of 'userData' (which was undefined) */}
+              <img 
+                src={user?.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'} 
+                alt="Profile" 
+                className="dash-avatar-img" 
+              />
+            </div>
+          </div>
+        </header>
 
         {/* STATS ROW */}
         <section className="stats-row">
@@ -169,7 +166,9 @@ const DashboardScreen: React.FC = () => {
               <h3>SKILL MATRIX</h3>
               <span className="live-tag">Live Analysis</span>
             </div>
-            <div className="chart-container">
+            
+            {/* Added fixed height to prevent Recharts warning */}
+            <div className="chart-container" style={{ height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={skillData}>
                   <PolarGrid stroke="#222" />
@@ -184,7 +183,9 @@ const DashboardScreen: React.FC = () => {
                   />
                 </RadarChart>
               </ResponsiveContainer>
-              <div className="focus-area">Focus Area: <span style={{color: '#bc13fe'}}>Debugging Efficiency</span></div>
+            </div>
+            <div className="focus-area" style={{marginTop: '10px', fontSize:'0.9rem', color:'#888'}}>
+              Focus Area: <span style={{color: '#bc13fe'}}>Debugging Efficiency</span>
             </div>
           </div>
 

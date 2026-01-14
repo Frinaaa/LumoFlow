@@ -9,20 +9,42 @@ import SignUpScreen from './screens/SignUpScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import AboutUsScreen from './screens/AboutUsScreen';
-import SettingsScreen from './screens/SettingsScreen'; // Import the new screen
+import SettingsScreen from './screens/SettingsScreen';
+import AuthCallback from './pages/AuthCallback';
 import authService from './services/authService';
-import TerminalScreen from './screens/TerminalScreen';
+import TerminalScreen from './screens/EditorScreen';
 import './styles/App.css';
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const initFlow = async () => {
-      // ⚠️ FORCE LOGOUT: Clear session so Login Screen ALWAYS appears after Splash
-      await authService.logout(); 
-      setIsAuthenticated(false);
+      // 🟢 CHECK FOR EXISTING SESSION instead of forcing logout
+      const token = localStorage.getItem('authToken');
+      const userInfo = localStorage.getItem('user_info');
+      
+      if (token && userInfo) {
+        try {
+          // Verify token is still valid by fetching profile
+          const user = JSON.parse(userInfo);
+          const res = await authService.getProfile();
+          if (res.success) {
+            setIsAuthenticated(true);
+          } else {
+            // Token expired, clear session
+            await authService.logout();
+            setIsAuthenticated(false);
+          }
+        } catch (err) {
+          console.error("Session check failed:", err);
+          await authService.logout();
+          setIsAuthenticated(false);
+        }
+      }
+      setIsLoading(false);
     };
     initFlow();
   }, []);
@@ -32,9 +54,20 @@ function AppLayout() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  // 2. Main Routing
+  // 2. Loading session check
+  if (isLoading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0a0e27' }}>
+      <div style={{ color: '#00f2ff', fontSize: '18px' }}>Restoring session...</div>
+    </div>;
+  }
+
+  // 3. Main Routing
   return (
     <Routes>
+      {/* Auth Callbacks */}
+      <Route path="/auth/google/callback" element={<AuthCallback />} />
+      <Route path="/auth/github/callback" element={<AuthCallback />} />
+
       <Route path="/signup" element={<SignUpScreen />} />
       <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
@@ -75,10 +108,10 @@ function AppLayout() {
   }
 />
       {/* ROOT REDIRECT */}
-      {/* Redirects to Login because we forced logout above */}
+      {/* Redirects to Dashboard if authenticated, otherwise to Login */}
       <Route 
         path="/" 
-        element={<Navigate to="/login" replace />} 
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
       />
 
       <Route path="*" element={<Navigate to="/login" replace />} />

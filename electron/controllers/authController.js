@@ -42,44 +42,43 @@ const authController = {
     }
   },
 
-  // 3. GOOGLE LOGIN
- // Inside the authController object in authController.js:
+  async googleLoginStep2(payload) {
+  try {
+    const { email, name, sub: googleId, picture } = payload;
+    const cleanEmail = email.toLowerCase().trim();
+    
+    let user = await User.findOne({ email: cleanEmail });
 
-  async googleLogin(event, { email, name, googleId }) {
-    try {
-      const cleanEmail = email.toLowerCase().trim();
-      
-      // 1. Check if user already exists in MongoDB
-      let user = await User.findOne({ email: cleanEmail });
-      let isNewUser = false;
-
-      if (!user) {
-        // 2. If NO account exists, create one automatically (Social Signup)
-        user = new User({
-          name: name,
-          email: cleanEmail,
-          password: googleId, // Placeholder password
-          role: 'student',
-          isVerified: true
-        });
-        await user.save();
-        isNewUser = true; // Mark that we just created this person
-      }
-
-      // 3. Create a session token
-      const token = jwt.sign({ user: { id: user.id } }, JWT_SECRET, { expiresIn: '7d' });
-
-      return {
-        success: true,
-        token,
-        isNewUser, // <--- Frontend uses this to decide where to go
-        user: { name: user.name, email: user.email }
-      };
-    } catch (err) {
-      return { success: false, msg: 'Google connection failed' };
+    if (!user) {
+      user = new User({
+        name: name,
+        email: cleanEmail,
+        password: googleId, 
+        avatar: picture, // 🟢 Save Google Profile Picture
+        role: 'student',
+        isVerified: true
+      });
+      await user.save();
     }
-  },
-  // 4. FORGOT PASSWORD (OTP SEND)
+
+    const token = jwt.sign({ user: { id: user._id } }, JWT_SECRET, { expiresIn: '7d' });
+
+    return {
+      success: true,
+      token,
+      user: { 
+        _id: user._id.toString(), // 🟢 Ensure _id is sent as a string
+        name: user.name, 
+        email: user.email,
+        avatar: user.avatar,
+        bio: user.bio || ""
+      }
+    };
+  } catch (err) {
+    return { success: false, msg: 'Google connection failed' };
+  }
+},
+  // 4. FORGOT PASSWORD
   async forgotPassword(event, { email }) {
     try {
       const cleanEmail = email.toLowerCase().trim();
@@ -99,12 +98,11 @@ const authController = {
 
       return { success: true, msg: 'OTP sent to your email!' };
     } catch (err) {
-      console.error("Forgot Pass Error:", err.message);
       return { success: false, msg: 'Error sending email.' };
     }
   },
 
-  // 5. RESET PASSWORD (OTP VERIFY)
+  // 5. RESET PASSWORD
   async resetPassword(event, { email, code, newPassword }) {
     try {
       const user = await User.findOne({ 

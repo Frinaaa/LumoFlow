@@ -1,85 +1,103 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, protocol } = require('electron');
 const isDev = require('electron-is-dev');
 const path = require('path');
 const mongoose = require('mongoose');
-const http = require('http');
-const url = require('url');
-const { OAuth2Client } = require('google-auth-library');
-const userController = require('./controllers/userController');
+const axios = require('axios');
 const fs = require('fs');
-const projectDir = path.join(app.getPath('documents'), 'LumoFlow_Project');
-// Load .env from root
+const { exec } = require('child_process');
+const userController = require('./controllers/userController');
+const authController = require('./controllers/authController');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const authController = require('./controllers/authController');
-
 let mainWindow;
+const projectDir = path.join(require('os').homedir(), 'LumoFlow_Projects');
 
-// --- GOOGLE AUTH CONFIG ---
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = 'http://localhost:6060/callback';
+// OAuth Handlers using IPC
+async function handleGoogleOAuth(code) {
+  try {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+    const REDIRECT_URI = 'http://localhost:5173/auth/google/callback';
 
-// Function to handle the Browser Flow
-async function startGoogleFlow() {
-  return new Promise((resolve, reject) => {
-    const server = http.createServer(async (req, res) => {
-      try {
-        if (req.url.startsWith('/callback')) {
-          const parsedUrl = url.parse(req.url, true);
-          const code = parsedUrl.query.code;
+    console.log('Exchanging Google code for token...');
 
-          if (code) {
-            res.end('<h1>Login Successful! You can close this tab and return to LumoFlow.</h1>');
-            server.close();
-            resolve(code);
-          } else {
-            res.end('<h1>Login Failed. No code returned.</h1>');
-            server.close();
-            reject(new Error('No code found'));
-          }
-        }
-      } catch (e) {
-        server.close();
-        reject(e);
-      }
+    // Exchange code for token
+    const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      code: code,
+      redirect_uri: REDIRECT_URI,
+      grant_type: 'authorization_code'
     });
 
-    server.listen(6060, () => {
-      // Create OAuth Client
-      const oAuth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
-      
-      // Generate the URL for Google
-      const authorizeUrl = oAuth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: [
-          'https://www.googleapis.com/auth/userinfo.profile',
-          'https://www.googleapis.com/auth/userinfo.email'
-        ],
-      });
+    const accessToken = tokenRes.data.access_token;
 
-      // Open System Browser (Chrome/Edge)
-      shell.openExternal(authorizeUrl);
+    // Get user info
+    const userRes = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
     });
-  });
+
+    console.log('Google user info received:', userRes.data.email);
+
+    // Create/update user in DB
+    const result = await authController.googleLoginStep2({
+      email: userRes.data.email,
+      name: userRes.data.name,
+      sub: userRes.data.id.toString(),
+      picture: userRes.data.picture
+    });
+
+    return result;
+  } catch (err) {
+    console.error("Google OAuth error:", err.message);
+    return { success: false, msg: "Google authentication failed: " + err.message };
+  }
 }
 
-const connectDB = async () => {
+async function handleGitHubOAuth(code) {
   try {
-    const dbURI = process.env.MONGO_URI || 'mongodb://localhost:27017/lumoflow';
-    await mongoose.connect(dbURI);
-    console.log('✅ MongoDB Connected');
+    const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+    const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+
+    console.log('Exchanging GitHub code for token...');
+
+    // Exchange code for token
+    const tokenRes = await axios.post('https://github.com/login/oauth/access_token', {
+      client_id: GITHUB_CLIENT_ID,
+      client_secret: GITHUB_CLIENT_SECRET,
+      code: code
+    }, { headers: { Accept: 'application/json' } });
+
+    const accessToken = tokenRes.data.access_token;
+
+    // Get user info
+    const userRes = await axios.get('https://api.github.com/user', {
+      headers: { Authorization: `token ${accessToken}` }
+    });
+
+    console.log('GitHub user info received:', userRes.data.login);
+
+    // Create/update user in DB
+    const result = await authController.googleLoginStep2({
+      email: userRes.data.email || `${userRes.data.login}@github.com`,
+      name: userRes.data.name || userRes.data.login,
+      sub: userRes.data.id.toString(),
+      picture: userRes.data.avatar_url
+    });
+
+    return result;
   } catch (err) {
-    console.error('🔴 MongoDB Error:', err);
+    console.error("GitHub OAuth error:", err.message);
+    return { success: false, msg: "GitHub authentication failed: " + err.message };
   }
-};
+}
 
 const createWindow = async () => {
-  await connectDB();
+  const dbURI = process.env.MONGO_URI || 'mongodb://localhost:27017/lumoflow';
+  await mongoose.connect(dbURI);
 
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1200, height: 800,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -88,97 +106,90 @@ const createWindow = async () => {
     show: false,
   });
 
-  const startUrl = isDev
-    ? 'http://localhost:5173'
-    : `file://${path.join(__dirname, '../dist/index.html')}`;
-
+  const startUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
   mainWindow.loadURL(startUrl);
   mainWindow.once('ready-to-show', () => mainWindow.show());
-  if (isDev) mainWindow.webContents.openDevTools();
 };
 
 app.on('ready', createWindow);
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+app.on('before-quit', () => {
+  // Cleanup if needed
 });
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
-
-// --- IPC HANDLERS ---
+// IPC Handlers
 ipcMain.handle('auth:login', authController.login);
 ipcMain.handle('auth:signup', authController.signup);
 ipcMain.handle('auth:logout', authController.logout);
-ipcMain.handle('auth:forgot-password', authController.forgotPassword);
-ipcMain.handle('auth:reset-password', authController.resetPassword);
-ipcMain.handle('user:get-dashboard', userController.getDashboardData);
-// 🟢 NEW GOOGLE HANDLER
-ipcMain.handle('auth:start-google-flow', async () => {
-  try {
-    const code = await startGoogleFlow();
-    
-    // Exchange code for tokens
-    const oAuth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI);
-    const { tokens } = await oAuth2Client.getToken(code);
-    oAuth2Client.setCredentials(tokens);
+ipcMain.handle('auth:google-oauth', async (event, code) => handleGoogleOAuth(code));
+ipcMain.handle('auth:github-oauth', async (event, code) => handleGitHubOAuth(code));
+ipcMain.handle('user:getDashboardStats', userController.getDashboardData);
+ipcMain.handle('user:updateProfile', userController.updateProfile);
 
-    // Get User Profile
-    const ticket = await oAuth2Client.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
-
-    // Process logic in controller
-    const result = await authController.googleLoginStep2(payload);
-
-    // Bring app to front
-    if (mainWindow) {
-        mainWindow.show();
-        mainWindow.focus();
-    }
-
-    return result;
-  } catch (error) {
-    console.error("Google Flow Failed:", error);
-    return { success: false, msg: "Login cancelled or failed." };
-  }
-});
-
-ipcMain.handle('app:info', () => ({
-  appVersion: app.getVersion(),
-  isDev
-}));
-
-if (!fs.existsSync(projectDir)) {
-  fs.mkdirSync(projectDir);
-  fs.writeFileSync(path.join(projectDir, 'main.py'), 'import lumoflow as lf\n\ndef main():\n    print("Hello LumoFlow")');
-  fs.writeFileSync(path.join(projectDir, 'config.py'), 'DEBUG = True');
-}
-
-ipcMain.handle('files:get-project', async () => {
+// File System
+ipcMain.handle('files:readProject', async () => {
+  if (!fs.existsSync(projectDir)) fs.mkdirSync(projectDir, { recursive: true });
   const files = fs.readdirSync(projectDir);
   return files.map(file => ({ name: file, path: path.join(projectDir, file) }));
 });
 
-ipcMain.handle('files:read-file', async (event, filePath) => {
+ipcMain.handle('files:readFile', async (event, filePath) => {
   return fs.readFileSync(filePath, 'utf-8');
 });
 
-ipcMain.handle('files:save-file', async (event, filePath, content) => {
+ipcMain.handle('files:saveFile', async (event, { filePath, content }) => {
   fs.writeFileSync(filePath, content, 'utf-8');
   return { success: true };
 });
 
-ipcMain.handle('terminal:run-code', async (event, filePath) => {
-  // Simulating a terminal execution for the UI
-  return [
-    `user@lumoflow:~/project$ python ${path.basename(filePath)}`,
-    `Initializing LumoFlow Environment...`,
-    `Loading configuration modules [================] 100%`,
-    `Analysis Successful. No memory leaks detected.`,
-    `Optimization Complete.`
-  ];
+// Terminal Execution
+ipcMain.handle('terminal:runCode', async (event, { filePath, code }) => {
+  return new Promise((resolve) => {
+    fs.writeFileSync(filePath, code, 'utf-8');
+    const cmd = filePath.endsWith('.py') ? `python "${filePath}"` : `node "${filePath}"`;
+    exec(cmd, (error, stdout, stderr) => {
+      let output = [];
+      if (stdout) output.push(stdout);
+      if (stderr) output.push(`❌ ERROR: ${stderr}`);
+      if (error && !stderr) output.push(`❌ SYSTEM ERROR: ${error.message}`);
+      resolve(output.length ? output : ["Process finished with no output."]);
+    });
+  });
 });
+
+ipcMain.handle('app:info', () => ({ appVersion: app.getVersion(), isDev }));
+
+// Shell - Open External URL
+ipcMain.handle('shell:openExternal', async (event, url) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (err) {
+    console.error('Error opening external URL:', err);
+    return { success: false, msg: err.message };
+  }
+});
+
+// Auth Code Received from Callback Page
+ipcMain.on('auth:code-received', (event, { provider, code }) => {
+  console.log(`Auth code received for ${provider}`);
+  // Send to main window
+  if (mainWindow) {
+    mainWindow.webContents.send(`auth:${provider}-callback`, { type: `${provider.toUpperCase()}_AUTH_CODE`, code });
+  }
+});
+
+// Auth Error Received from Callback Page
+ipcMain.on('auth:error-received', (event, { provider, error }) => {
+  console.log(`Auth error received for ${provider}:`, error);
+  // Send to main window
+  if (mainWindow) {
+    mainWindow.webContents.send(`auth:${provider}-callback`, { type: 'AUTH_ERROR', error });
+  }
+});
+
+// Init Project Folder
+if (!fs.existsSync(projectDir)) {
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.writeFileSync(path.join(projectDir, 'main.py'), 'print("Hello LumoFlow")');
+}

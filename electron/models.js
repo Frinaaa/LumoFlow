@@ -6,10 +6,13 @@ const UserSchema = new Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, required: true }, // e.g. 'Student', 'Instructor'
+  role: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
   
-  // Existing auth fields maintained for compatibility
+  // 🟢 ADD THESE TWO LINES
+  avatar: { type: String, default: '' }, // Stores the Base64 image string
+  bio: { type: String, default: '' },    // Stores the user bio
+  
   resetPasswordCode: { type: String },
   resetPasswordExpires: { type: Date },
 }, { 
