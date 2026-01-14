@@ -33,7 +33,6 @@ const EditorScreen: React.FC = () => {
       const projectFiles = await window.api.readProjectFiles();
       setFiles(projectFiles);
       if (projectFiles.length > 0 && !selectedFile) {
-        // Auto-select first file if none selected
         handleFileSelect(projectFiles[0]);
       }
     } catch (e) {
@@ -45,6 +44,11 @@ const EditorScreen: React.FC = () => {
     const content = await window.api.readFile(file.path);
     setSelectedFile(file.path);
     setCode(content);
+  };
+
+  const handleCloseFile = () => {
+    setSelectedFile(null);
+    setCode("// Select a file to start coding");
   };
 
   // --- 1. HANDLE CODE WRITING ---
@@ -60,8 +64,7 @@ const EditorScreen: React.FC = () => {
     try {
       const res = await window.api.createFile({ fileName: newFileName, content: '' });
       if (res.success) {
-        await loadProject(); // Reload list
-        // Open the new file
+        await loadProject(); 
         const newFile = { name: newFileName, path: res.path };
         handleFileSelect(newFile);
         addLog('info', `Created new file: ${newFileName}`);
@@ -125,7 +128,6 @@ const EditorScreen: React.FC = () => {
               <span className="git-status">M</span>
             </div>
           </div>
-          {/* COMMIT BUTTON */}
           <button className="git-btn" onClick={handleCommit}>
             <i className="fa-solid fa-check"></i> Commit Changes
           </button>
@@ -138,7 +140,6 @@ const EditorScreen: React.FC = () => {
       <div className="file-list">
         <div className="sidebar-header sidebar-actions">
           <span>PROJECT</span>
-          {/* ADD FILE BUTTON */}
           <button className="add-file-btn" onClick={() => setIsCreatingFile(true)} title="New File">
             <i className="fa-solid fa-plus"></i>
           </button>
@@ -154,7 +155,7 @@ const EditorScreen: React.FC = () => {
               placeholder="filename.js"
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
-              onBlur={() => setIsCreatingFile(false)} // Close if clicked away
+              onBlur={() => setIsCreatingFile(false)} 
             />
           </form>
         )}
@@ -226,21 +227,23 @@ const EditorScreen: React.FC = () => {
           </div>
         </header>
 
-        {/* EDITOR SPLIT CONTAINER */}
+        {/* EDITOR SPLIT CONTAINER (FIXED STRUCTURE) */}
         <div className="editor-split-container">
           
-          {/* EDITOR (Left/Center) */}
+          {/* CODE EDITOR (Left/Center) */}
           <div className={`editor-area ${showAnalysis ? 'shrink' : ''}`}>
              <CodeEditor 
                code={code}
-               onChange={handleCodeChange} // Enables writing!
+               onChange={handleCodeChange} 
                selectedFile={selectedFile}
                onSave={() => window.api.saveFile({ filePath: selectedFile!, content: code })}
+               onClose={handleCloseFile} 
              />
           </div>
 
-          {/* ANALYSIS PANEL (Right - Slide In) */}
+          {/* ANALYSIS PANEL (Right Side - Conditional) */}
           {showAnalysis && <AnalysisPanel />}
+          
         </div>
 
         {/* 4. BOTTOM TERMINAL */}

@@ -157,46 +157,60 @@
   outline: none;
 }
 
-/* 2. Split Screen Logic */
+
 .editor-split-container {
   display: flex;
   flex: 1;
-  position: relative;
+  position: relative; /* Essential for absolute positioning if needed */
   overflow: hidden;
 }
 
+/* The Code Editor Area */
 .editor-area {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  transition: flex 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth easing */
 }
 
-/* When analysis is open, editor takes 60% width */
+/* When analysis is open, shrink editor to 60% width */
 .editor-area.shrink {
-  flex: 0 0 60%;
-  border-right: 1px solid #333;
+  flex: 0 0 60%; 
+  border-right: 1px solid #222;
 }
 
-/* 3. Analysis Panel (Right Side) */
+/* The Analysis Panel (Right Side Popup) */
 .analysis-panel {
-  flex: 1;
+  flex: 1; /* Takes the remaining 40% */
   background: #0e0e12;
   display: flex;
   flex-direction: column;
   padding: 20px;
-  animation: slideInRight 0.3s ease-out;
   border-left: 1px solid #333;
   overflow-y: auto;
+  
+  /* The Slide-In Animation */
+  animation: slideInFromRight 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+  
+  /* Visual depth */
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5); 
+  z-index: 10;
 }
 
-@keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+/* Keyframes for the slide effect */
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-/* 4. Flowchart Styles */
+/* Flowchart Styles (Keep these) */
 .flow-container {
   margin-top: 20px;
   display: flex;
@@ -211,12 +225,158 @@
 .flow-node {
   background: white; color: black; padding: 8px 16px; border-radius: 20px;
   font-family: monospace; font-size: 12px; font-weight: bold;
-  box-shadow: 0 0 10px rgba(255,255,255,0.1);
+  box-shadow: 0 0 10px rgba(255,255,255,0.1); margin: 5px 0;
 }
-.flow-node.success { background: #00ff88; box-shadow: 0 0 15px rgba(0,255,136,0.3); }
-.flow-node.error { background: #ff4444; color: white; }
-.flow-decision {
-  background: #bc13fe; color: white; padding: 8px 16px; transform: skewX(-10deg);
-  font-family: monospace; font-size: 12px; margin: 10px 0;
+.flow-arrow { color: #666; font-size: 18px; margin: 2px 0; }
+
+
+
+.analysis-panel {
+  flex: 1;
+  background: #050508; /* Dark background matching the app */
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  border-left: 1px solid #222;
+  overflow-y: auto;
+  animation: slideInFromRight 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+  min-width: 400px;
 }
-.flow-arrow { color: #666; font-size: 18px; margin: 5px 0; }
+
+.analysis-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px;
+  color: white;
+  margin-bottom: 25px;
+  font-weight: 500;
+}
+
+/* Tabs */
+.analysis-tabs {
+  display: flex;
+  background: #111;
+  padding: 5px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #222;
+}
+
+.a-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.a-tab-btn:hover { color: #aaa; }
+
+.a-tab-btn.active {
+  background: #2a0a3d; /* Dark purple bg */
+  color: #bc13fe;      /* Neon purple text */
+  border: 1px solid #bc13fe;
+  box-shadow: 0 0 10px rgba(188, 19, 254, 0.2);
+}
+
+.analysis-desc {
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+/* Flowchart Card (The Light Gray Area) */
+.flow-visual-card {
+  background: linear-gradient(135deg, #e0e0e5 0%, #dcdce1 100%);
+  border-radius: 16px;
+  padding: 50px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 350px;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+}
+
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  position: relative;
+  z-index: 2;
+}
+
+.flow-node-pill {
+  background: white;
+  padding: 10px 25px;
+  border-radius: 20px;
+  color: #444;
+  font-family: 'Consolas', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  border: 1px solid transparent;
+}
+
+.flow-node-pill.highlight-cyan {
+  border-color: #00f2ff;
+  border-bottom-width: 3px;
+}
+
+/* Connectors */
+.connector-line {
+  background: #bbb;
+  position: relative;
+  z-index: 1;
+}
+.connector-line.horizontal { width: 40px; height: 2px; }
+.connector-line.vertical { width: 2px; height: 30px; margin: 5px 0; }
+
+/* Popover Card */
+.data-popover-card {
+  position: absolute;
+  top: 80px;
+  right: 60px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  display: flex;
+  overflow: hidden;
+  animation: float 4s ease-in-out infinite;
+  z-index: 10;
+}
+
+.popover-accent {
+  width: 6px;
+  background: linear-gradient(to bottom, #bc13fe, #9b00e8);
+}
+
+.popover-content {
+  padding: 15px 20px;
+  font-size: 12px;
+  color: #333;
+  font-family: 'Inter', sans-serif;
+}
+
+.pop-label { color: #666; margin-right: 5px; }
+
+/* Mock Cursor */
+.cursor-mock {
+  position: absolute;
+  bottom: 80px;
+  right: 100px;
+  font-size: 24px;
+  color: black;
+  transform: rotate(-15deg);
+  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.2));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}

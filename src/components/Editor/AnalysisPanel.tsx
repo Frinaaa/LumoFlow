@@ -5,67 +5,65 @@ const AnalysisPanel: React.FC = () => {
 
   return (
     <div className="analysis-panel">
-      <div className="analysis-header">
-        <h2>LumoFlow Analysis</h2>
+      <div className="analysis-header-row">
+        <h2 className="analysis-title">LumoFlow Analysis</h2>
       </div>
 
+      {/* Navigation Tabs */}
       <div className="analysis-tabs">
-        {['Visualize', 'Explanation', 'Interaction', 'Games'].map(tab => (
-          <div 
-            key={tab} 
-            className={`a-tab ${activeTab === tab ? 'active' : ''}`}
+        {['Visualize', 'Explanation', 'Interaction', 'Games'].map((tab) => (
+          <button
+            key={tab}
+            className={`a-tab-btn ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
             {tab}
-          </div>
+          </button>
         ))}
       </div>
 
-      <div className="analysis-content">
-        <p style={{color: '#888', fontSize: '13px', marginBottom: '20px'}}>
-          Interactive flow diagram of the execution, showing variable states and transitions.
-          Hover over elements for detailed information.
-        </p>
+      <p className="analysis-desc">
+        Interactive flow diagram of the code execution, showing variable states and transitions.
+        Hover over elements for detailed information.
+      </p>
 
-        {/* CSS-BASED FLOWCHART (Mocking the Image) */}
-        <div className="flow-container">
-          
-          {/* Row 1 */}
-          <div className="flow-row">
-            <div className="flow-node">initialize()</div>
-            <div className="connector-h"></div>
-            <div className="flow-node">loadConfig()</div>
-          </div>
-
-          <div className="connector-v"></div>
-
-          {/* Row 2 */}
-          <div className="flow-row" style={{justifyContent: 'center'}}>
-            <div className="flow-node purple">isValid?</div>
-          </div>
-
-          <div className="connector-v"></div>
-
-          {/* Row 3 */}
-          <div className="flow-row" style={{justifyContent: 'center'}}>
-            <div className="flow-node cyan active">Process Data</div>
-          </div>
-
-          {/* Popover Logic Bubble */}
-          <div className="data-popover">
-            <strong>Current Index: 2</strong><br/>
-            <span style={{color: '#666'}}>Buffer Size: 1024kb</span>
-          </div>
-
-          {/* Cursor Mock */}
-          <div style={{
-            position: 'absolute', bottom: '100px', right: '80px', 
-            fontSize: '24px', color: 'black'
-          }}>
-            <i className="fa-solid fa-arrow-pointer"></i>
-          </div>
-
+      {/* Flowchart Container (Light Background) */}
+      <div className="flow-visual-card">
+        
+        {/* Row 1 */}
+        <div className="flow-row top">
+          <div className="flow-node-pill">initialize()</div>
+          <div className="connector-line horizontal"></div>
+          <div className="flow-node-pill">loadConfig()</div>
         </div>
+
+        {/* Vertical Connector */}
+        <div className="connector-line vertical"></div>
+
+        {/* Row 2 */}
+        <div className="flow-row">
+          <div className="flow-node-pill">isValid?</div>
+        </div>
+
+        {/* Vertical Connector */}
+        <div className="connector-line vertical"></div>
+
+        {/* Row 3 */}
+        <div className="flow-row">
+          <div className="flow-node-pill highlight-cyan">Process Data</div>
+        </div>
+
+        {/* Floating Data Popover (The purple-bordered box) */}
+        <div className="data-popover-card">
+          <div className="popover-accent"></div>
+          <div className="popover-content">
+            <span className="pop-label">Current Index:</span> <strong>2</strong><br/>
+            <span className="pop-label">Buffer Size:</span> <strong>1024kb</strong>
+          </div>
+        </div>
+
+        {/* Cursor Icon Mock */}
+        <i className="fa-solid fa-arrow-pointer cursor-mock"></i>
       </div>
     </div>
   );

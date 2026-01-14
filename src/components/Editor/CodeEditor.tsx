@@ -6,9 +6,11 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   selectedFile: string | null;
   onSave: () => void;
+  onClose: () => void; // <--- Add this prop
+
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, selectedFile, onSave }) => {
+const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, selectedFile, onSave, onClose }) => {
   const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
 
   const language = useMemo(() => {
@@ -49,7 +51,16 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, selectedFile, o
           <div className="editor-tab active">
             <i className="fa-solid fa-file-code"></i>
             <span>{fileName}</span>
-            <span className="tab-close">×</span>
+            {/* The Close Button */}
+            <i 
+              className="fa-solid fa-xmark" 
+              style={{marginLeft: 8, fontSize: 10, cursor: 'pointer', color: '#666'}}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent tab selection logic if any
+                onClose();
+              }}
+              title="Close File"
+            ></i>
           </div>
         ) : (
           <div className="editor-tab empty">
