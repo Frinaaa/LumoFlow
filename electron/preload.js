@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   readProjectFiles: () => ipcRenderer.invoke('files:readProject'),
   readFile: (filePath) => ipcRenderer.invoke('files:readFile', filePath),
   saveFile: (payload) => ipcRenderer.invoke('files:saveFile', payload), 
+  createFile: (payload) => ipcRenderer.invoke('files:createFile', payload), // NEW
   runCode: (payload) => ipcRenderer.invoke('terminal:runCode', payload),
   
   getAppInfo: () => ipcRenderer.invoke('app:info'),

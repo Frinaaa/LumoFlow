@@ -5,66 +5,42 @@ interface IDEHeaderProps {
   onAnalyze: () => void;
   onRun: () => void;
   onSave: () => void;
-  isRunning: boolean;
-  hasUnsavedChanges?: boolean;
+  isAnalysisMode: boolean;
 }
 
 const IDEHeader: React.FC<IDEHeaderProps> = ({ 
-  onAnalyze, 
-  onRun, 
-  onSave, 
-  isRunning,
-  hasUnsavedChanges = false
+  onAnalyze, onRun, onSave, isAnalysisMode 
 }) => {
   const navigate = useNavigate();
 
   return (
     <header className="ide-header">
+      {/* Left: Brand */}
       <div className="ide-brand">
         <i className="fa-solid fa-bolt"></i> LUMO<span>FLOW</span>
       </div>
+
+      {/* Right: Actions */}
       <div className="ide-actions">
-        <button 
-          className="btn-analyze" 
-          onClick={onAnalyze} 
-          title="Analyze Code (Ctrl+Shift+A)"
-        >
-          <i className="fa-solid fa-microchip"></i> Analyze
+        {/* Analyze Button - Toggles Split View */}
+        <button className="btn-analyze" onClick={onAnalyze}>
+          <i className="fa-solid fa-microchip"></i> {isAnalysisMode ? 'Close Analysis' : 'Analyze'}
         </button>
 
-        <button 
-          className="btn-run" 
-          onClick={onRun} 
-          disabled={isRunning} 
-          title="Run Code (Ctrl+Enter)"
-        >
-          <i className={`fa-solid ${isRunning ? 'fa-spinner fa-spin' : 'fa-play'}`}></i> 
-          {isRunning ? 'Running...' : 'Run'}
+        {/* Run Button */}
+        <button className="btn-run" onClick={onRun}>
+           <i className="fa-solid fa-play"></i> Run
         </button>
 
-        <button 
-          className={`btn-icon ${hasUnsavedChanges ? 'unsaved' : ''}`}
-          onClick={onSave} 
-          title="Save (Ctrl+S)"
-        >
-          <i className="fa-solid fa-floppy-disk"></i>
-          {hasUnsavedChanges && <span className="unsaved-indicator">●</span>}
+        {/* Standard Actions */}
+        <button className="btn-icon" onClick={onSave} title="Save">
+            <i className="fa-solid fa-floppy-disk"></i>
         </button>
-
-        <button 
-          className="btn-icon" 
-          onClick={() => navigate('/dashboard')} 
-          title="Dashboard"
-        >
-          <i className="fa-solid fa-house"></i>
+        <button className="btn-icon" onClick={() => navigate('/dashboard')} title="Home">
+            <i className="fa-solid fa-house"></i>
         </button>
-
-        <button 
-          className="btn-icon" 
-          onClick={() => navigate('/settings')} 
-          title="Settings"
-        >
-          <i className="fa-solid fa-gear"></i>
+        <button className="btn-icon" title="GitHub Settings">
+            <i className="fa-solid fa-gear"></i>
         </button>
       </div>
     </header>

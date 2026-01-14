@@ -225,3 +225,85 @@
   .subtitle { margin-bottom: 15px; }
   .login-redirect { margin-top: 12px; }
 }
+/* Wrapper to position the success icon inside the input */
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* The Checkmark Icon */
+.input-icon-status {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+}
+.input-icon-status.success {
+  color: #00ff88; /* Bright Neon Green */
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* Success Input Border */
+.signup-input.input-success {
+  border-color: #00ff88;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
+}
+
+/* Error Input Border */
+.signup-input.input-error {
+  border-color: #ff4444 !important;
+  background: rgba(255, 68, 68, 0.05);
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Password Strength Meter */
+.password-criteria {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #666;
+  font-family: 'Inter', sans-serif;
+}
+
+.password-criteria span {
+  transition: color 0.3s ease;
+}
+
+.password-criteria span.valid {
+  color: #00ff88;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0, 255, 136, 0.4);
+}
+
+/* Button States */
+.signup-main-btn {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transition: all 0.3s;
+}
+
+.signup-main-btn.active {
+  opacity: 1;
+  cursor: pointer;
+  background: linear-gradient(90deg, var(--accent-purple), #d000ff);
+  box-shadow: 0 0 20px rgba(188, 19, 254, 0.4);
+}
+
+.server-error-banner {
+  background: rgba(255, 68, 68, 0.15);
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  color: #ff6666;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+  text-align: center;
+}

@@ -187,7 +187,14 @@ ipcMain.on('auth:error-received', (event, { provider, error }) => {
     mainWindow.webContents.send(`auth:${provider}-callback`, { type: 'AUTH_ERROR', error });
   }
 });
-
+ipcMain.handle('files:createFile', async (event, { fileName, content }) => {
+  const filePath = path.join(projectDir, fileName);
+  if (fs.existsSync(filePath)) {
+    return { success: false, msg: 'File already exists' };
+  }
+  fs.writeFileSync(filePath, content || '', 'utf-8');
+  return { success: true, path: filePath };
+});
 // Init Project Folder
 if (!fs.existsSync(projectDir)) {
   fs.mkdirSync(projectDir, { recursive: true });

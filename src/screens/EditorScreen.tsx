@@ -1,192 +1,271 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import IDEHeader from '../components/Editor/IDEHeader';
-import FileExplorer from '../components/Editor/FileExplorer';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CodeEditor from '../components/Editor/CodeEditor';
-import Terminal from '../components/Editor/Terminal';
+import AnalysisPanel from '../components/Editor/AnalysisPanel';
 import '../styles/TerminalScreen.css';
 
-interface FileItem {
-  name: string;
-  path: string;
-}
-
 const EditorScreen: React.FC = () => {
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [code, setCode] = useState<string>("");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const navigate = useNavigate();
 
-  // Load project files on mount
+  // --- UI STATES ---
+  const [activeSidebar, setActiveSidebar] = useState('Explorer');
+  const [activeBottomTab, setActiveBottomTab] = useState('Terminal');
+  const [showAnalysis, setShowAnalysis] = useState(false); // Controls Split View
+  
+  // --- EDITOR STATES ---
+  const [files, setFiles] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [code, setCode] = useState<string>("// Select a file to start coding");
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["user@lumoflow:~/project$ _"]);
+  const [isRunning, setIsRunning] = useState(false);
+
+  // --- FILE CREATION STATES ---
+  const [isCreatingFile, setIsCreatingFile] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+
+  // Load project on mount
   useEffect(() => {
     loadProject();
   }, []);
 
-  // Keyboard shortcut for save (Ctrl+S)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedFile, code]);
-
   const loadProject = async () => {
     try {
-      setIsLoading(true);
       const projectFiles = await window.api.readProjectFiles();
       setFiles(projectFiles);
-      addTerminalOutput('✅ Project loaded successfully');
-      
-      // Auto-select first file if available
-      if (projectFiles.length > 0) {
+      if (projectFiles.length > 0 && !selectedFile) {
+        // Auto-select first file if none selected
         handleFileSelect(projectFiles[0]);
-      } else {
-        setCode('// No files in project. Create a new file to get started.');
       }
-    } catch (error) {
-      addTerminalOutput(`❌ Error loading project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (e) {
+      console.error("Load error", e);
+    }
+  };
+
+  const handleFileSelect = async (file: any) => {
+    const content = await window.api.readFile(file.path);
+    setSelectedFile(file.path);
+    setCode(content);
+  };
+
+  // --- 1. HANDLE CODE WRITING ---
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+  };
+
+  // --- 2. HANDLE ADD FILE ---
+  const handleCreateFile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFileName.trim()) return;
+
+    try {
+      const res = await window.api.createFile({ fileName: newFileName, content: '' });
+      if (res.success) {
+        await loadProject(); // Reload list
+        // Open the new file
+        const newFile = { name: newFileName, path: res.path };
+        handleFileSelect(newFile);
+        addLog('info', `Created new file: ${newFileName}`);
+      } else {
+        addLog('error', res.msg);
+      }
+    } catch (err) {
+      addLog('error', "Failed to create file");
     } finally {
-      setIsLoading(false);
+      setIsCreatingFile(false);
+      setNewFileName('');
     }
   };
 
-  const handleFileSelect = async (file: FileItem) => {
-    try {
-      if (hasUnsavedChanges) {
-        const shouldDiscard = window.confirm(
-          'You have unsaved changes. Do you want to discard them?'
-        );
-        if (!shouldDiscard) return;
-      }
-
-      const content = await window.api.readFile(file.path);
-      setSelectedFile(file.path);
-      setCode(content);
-      setHasUnsavedChanges(false);
-      addTerminalOutput(`📂 Opened: ${file.name}`);
-    } catch (error) {
-      addTerminalOutput(`❌ Error reading file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!selectedFile) {
-      addTerminalOutput('⚠️ No file selected to save');
-      return;
-    }
-
-    try {
-      await window.api.saveFile({ filePath: selectedFile, content: code });
-      setHasUnsavedChanges(false);
-      const fileName = selectedFile.split('\\').pop() || selectedFile;
-      addTerminalOutput(`💾 Saved: ${fileName}`);
-    } catch (error) {
-      addTerminalOutput(`❌ Error saving file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
+  // --- 3. HANDLE RUN ---
   const handleRun = async () => {
-    if (!selectedFile) {
-      addTerminalOutput('⚠️ No file selected to run');
-      return;
-    }
+    if (!selectedFile) return;
+    
+    setIsRunning(true);
+    setActiveBottomTab('Terminal'); 
+    
+    const cmd = selectedFile.endsWith('.js') ? `node ${selectedFile}` : `python ${selectedFile}`;
+    addLog('info', `> ${cmd}`);
 
     try {
-      setIsRunning(true);
-      const fileName = selectedFile.split('\\').pop() || selectedFile;
-      addTerminalOutput(`\n▶️ Running: ${fileName}`);
-      addTerminalOutput('─'.repeat(50));
-
       const output = await window.api.runCode({ filePath: selectedFile, code });
-      
       if (Array.isArray(output)) {
-        output.forEach(line => addTerminalOutput(line));
+        output.forEach(line => addLog(line.toLowerCase().includes('error') ? 'error' : 'normal', line));
       } else {
-        addTerminalOutput(String(output));
+        addLog('normal', String(output));
       }
-
-      addTerminalOutput('─'.repeat(50));
-      addTerminalOutput('✅ Execution completed');
-    } catch (error) {
-      addTerminalOutput(`❌ Runtime error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (err: any) {
+      addLog('error', err.message);
     } finally {
       setIsRunning(false);
     }
   };
 
-  const handleAnalyze = () => {
-    if (!selectedFile) {
-      addTerminalOutput('⚠️ No file selected to analyze');
-      return;
-    }
-
-    addTerminalOutput('\n🔍 Starting code analysis...');
-    addTerminalOutput('─'.repeat(50));
-    
-    const lines = code.split('\n').length;
-    const chars = code.length;
-    const functions = (code.match(/def\s+\w+|function\s+\w+/g) || []).length;
-    const imports = (code.match(/^import\s|^from\s/gm) || []).length;
-
-    addTerminalOutput(`📊 Code Statistics:`);
-    addTerminalOutput(`   Lines: ${lines}`);
-    addTerminalOutput(`   Characters: ${chars}`);
-    addTerminalOutput(`   Functions/Methods: ${functions}`);
-    addTerminalOutput(`   Imports: ${imports}`);
-    addTerminalOutput('─'.repeat(50));
-    addTerminalOutput('✅ Analysis complete');
+  // --- 4. HANDLE COMMIT ---
+  const handleCommit = () => {
+    addLog('info', '> git add .');
+    addLog('info', '> git commit -m "Update source code"');
+    setTimeout(() => {
+      addLog('success', 'Changes committed to branch main.');
+    }, 800);
   };
 
-  const addTerminalOutput = useCallback((message: string) => {
-    setTerminalOutput(prev => [...prev, message]);
-  }, []);
+  const addLog = (type: string, msg: string) => {
+    setTerminalOutput(prev => [...prev, msg]);
+  };
 
-  const clearTerminal = () => {
-    setTerminalOutput([]);
-    addTerminalOutput('Terminal cleared');
+  // --- RENDER SIDEBAR ---
+  const renderSidebar = () => {
+    if (activeSidebar === 'Github') {
+      return (
+        <div className="github-panel">
+          <div className="sidebar-header">SOURCE CONTROL</div>
+          <div style={{marginTop: '10px'}}>
+            <div className="git-file">
+              <span>{selectedFile ? selectedFile.split(/[\\/]/).pop() : 'file.js'}</span> 
+              <span className="git-status">M</span>
+            </div>
+          </div>
+          {/* COMMIT BUTTON */}
+          <button className="git-btn" onClick={handleCommit}>
+            <i className="fa-solid fa-check"></i> Commit Changes
+          </button>
+        </div>
+      );
+    }
+
+    // Default: Explorer
+    return (
+      <div className="file-list">
+        <div className="sidebar-header sidebar-actions">
+          <span>PROJECT</span>
+          {/* ADD FILE BUTTON */}
+          <button className="add-file-btn" onClick={() => setIsCreatingFile(true)} title="New File">
+            <i className="fa-solid fa-plus"></i>
+          </button>
+        </div>
+
+        {/* INPUT FOR NEW FILE */}
+        {isCreatingFile && (
+          <form onSubmit={handleCreateFile} className="new-file-form">
+            <input 
+              autoFocus
+              type="text" 
+              className="new-file-input"
+              placeholder="filename.js"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              onBlur={() => setIsCreatingFile(false)} // Close if clicked away
+            />
+          </form>
+        )}
+
+        {files.map(file => (
+          <div 
+            key={file.path} 
+            className={`file-item ${selectedFile === file.path ? 'active' : ''}`}
+            onClick={() => handleFileSelect(file)}
+          >
+            <i className={file.name.endsWith('.js') ? "fa-brands fa-js" : "fa-brands fa-python"} 
+               style={{color: file.name.endsWith('.js') ? '#f7df1e' : '#3776ab'}}></i>
+            {file.name}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
     <div className="ide-wrapper">
-      <IDEHeader 
-        onAnalyze={handleAnalyze}
-        onRun={handleRun}
-        onSave={handleSave}
-        isRunning={isRunning}
-        hasUnsavedChanges={hasUnsavedChanges}
-      />
+      
+      {/* 1. LEFT ACTIVITY BAR */}
+      <aside className="activity-bar">
+        <div className={`activity-icon ${activeSidebar === 'Explorer' ? 'active' : ''}`} onClick={() => setActiveSidebar('Explorer')}>
+          <i className="fa-regular fa-copy"></i>
+        </div>
+        <div className={`activity-icon ${activeSidebar === 'Search' ? 'active' : ''}`} onClick={() => setActiveSidebar('Search')}>
+          <i className="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <div className={`activity-icon ${activeSidebar === 'Github' ? 'active' : ''}`} onClick={() => setActiveSidebar('Github')}>
+          <i className="fa-brands fa-github"></i>
+        </div>
+        <div className="activity-icon" onClick={() => navigate('/dashboard')} title="Home">
+          <i className="fa-solid fa-house"></i>
+        </div>
+        <div className="spacer"></div>
+        <div className="activity-icon" onClick={() => navigate('/settings')}>
+          <i className="fa-solid fa-gear"></i>
+        </div>
+      </aside>
 
-      <div className="ide-body">
-        <FileExplorer 
-          files={files}
-          selectedFile={selectedFile}
-          onFileSelect={handleFileSelect}
-          isLoading={isLoading}
-        />
+      {/* 2. SIDEBAR CONTENT */}
+      <aside className="ide-sidebar">
+        {renderSidebar()}
+      </aside>
 
-        <main className="ide-main">
-          <CodeEditor 
-            code={code}
-            onChange={(value) => {
-              setCode(value);
-              setHasUnsavedChanges(true);
-            }}
-            selectedFile={selectedFile}
-            onSave={handleSave}
-          />
+      {/* 3. MAIN EDITOR AREA */}
+      <div className="ide-main-content">
+        
+        {/* HEADER */}
+        <header className="ide-header">
+          <div className="ide-brand">
+            <i className="fa-solid fa-bolt"></i>
+            <span>LUMO FLOW</span>
+          </div>
+          
+          <div className="ide-actions">
+            {/* ANALYZE BUTTON - TOGGLES RIGHT PANEL */}
+            <button className="btn-analyze" onClick={() => setShowAnalysis(!showAnalysis)}>
+              <i className="fa-solid fa-microchip"></i> {showAnalysis ? 'Close Analysis' : 'Analyze'}
+            </button>
+            
+            {/* RUN BUTTON */}
+            <button className="btn-run" onClick={handleRun}>
+              <i className={`fa-solid ${isRunning ? 'fa-spinner fa-spin' : 'fa-play'}`}></i> 
+              {isRunning ? 'Running' : 'Run'}
+            </button>
+          </div>
+        </header>
 
-          <Terminal 
-            output={terminalOutput}
-            onClear={clearTerminal}
-          />
-        </main>
+        {/* EDITOR SPLIT CONTAINER */}
+        <div className="editor-split-container">
+          
+          {/* EDITOR (Left/Center) */}
+          <div className={`editor-area ${showAnalysis ? 'shrink' : ''}`}>
+             <CodeEditor 
+               code={code}
+               onChange={handleCodeChange} // Enables writing!
+               selectedFile={selectedFile}
+               onSave={() => window.api.saveFile({ filePath: selectedFile!, content: code })}
+             />
+          </div>
+
+          {/* ANALYSIS PANEL (Right - Slide In) */}
+          {showAnalysis && <AnalysisPanel />}
+        </div>
+
+        {/* 4. BOTTOM TERMINAL */}
+        <div className="terminal-section">
+          <div className="terminal-header">
+            <div className={`terminal-tab ${activeBottomTab === 'Terminal' ? 'active' : ''}`} onClick={() => setActiveBottomTab('Terminal')}>Terminal</div>
+            <div className={`terminal-tab ${activeBottomTab === 'Output' ? 'active' : ''}`} onClick={() => setActiveBottomTab('Output')}>Output</div>
+            <div className={`terminal-tab ${activeBottomTab === 'Debug' ? 'active' : ''}`} onClick={() => setActiveBottomTab('Debug')}>Debug Console</div>
+          </div>
+
+          <div className="terminal-body">
+            {activeBottomTab === 'Terminal' && (
+              <>
+                {terminalOutput.map((line, i) => (
+                  <div key={i} className={`terminal-line ${line.toLowerCase().includes('error') ? 'error' : ''}`}>
+                    {line}
+                  </div>
+                ))}
+              </>
+            )}
+            {activeBottomTab === 'Output' && <div style={{color: '#00ff88'}}>[System] Analysis Complete.</div>}
+            {activeBottomTab === 'Debug' && <div style={{color: '#888'}}>No debug session active.</div>}
+          </div>
+        </div>
+
       </div>
     </div>
   );

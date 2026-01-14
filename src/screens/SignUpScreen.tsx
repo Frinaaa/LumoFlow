@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import '../styles/SignUpScreen.css';
 
 const SignUpScreen: React.FC = () => {
   const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -12,32 +13,75 @@ const SignUpScreen: React.FC = () => {
     confirmPassword: ''
   });
 
-  // State for validation errors
-  const [errors, setErrors] = useState<any>({});
+  // --- 1. NEW STATE FOR VALIDATION ---
+  const [touched, setTouched] = useState<any>({}); // Tracks if user clicked a field
+  const [errors, setErrors] = useState<any>({});   // Tracks specific errors
+  const [isFormValid, setIsFormValid] = useState(false); // Disables button if false
+  
+  // Password Strength Checkers
+  const [passwordCriteria, setPasswordCriteria] = useState({
+    length: false,
+    upper: false,
+    number: false,
+    special: false
+  });
+
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- VALIDATION LOGIC ---
-  const validateForm = () => {
-    let tempErrors: any = {};
+  // --- 2. REAL-TIME VALIDATION ENGINE ---
+  useEffect(() => {
+    const newErrors: any = {};
+    const criteria = {
+      length: formData.password.length >= 6,
+      upper: /[A-Z]/.test(formData.password),
+      number: /\d/.test(formData.password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password)
+    };
+    setPasswordCriteria(criteria);
+
+    // Name Validation
+    if (!formData.name.trim()) newErrors.name = "Full Name is required";
+    
+    // Email Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!emailRegex.test(formData.email)) newErrors.email = "Invalid email format";
 
-    if (!formData.name.trim()) tempErrors.name = "Full Name is required";
-    if (!emailRegex.test(formData.email)) tempErrors.email = "Invalid email format";
-    if (formData.password.length < 6) tempErrors.password = "Password must be at least 6 characters";
-    if (formData.password !== formData.confirmPassword) tempErrors.confirmPassword = "Passwords do not match";
+    // Password Validation
+    if (!criteria.length) newErrors.password = "Password must be 6+ chars";
+    else if (!criteria.upper) newErrors.password = "Add an uppercase letter";
+    else if (!criteria.number) newErrors.password = "Add a number";
 
-    setErrors(tempErrors);
-    return Object.keys(tempErrors).length === 0;
+    // Confirm Password
+    if (formData.confirmPassword !== formData.password) newErrors.confirmPassword = "Passwords do not match";
+
+    setErrors(newErrors);
+    
+    // Only enable button if no errors and all fields are filled
+    setIsFormValid(
+      Object.keys(newErrors).length === 0 && 
+      Object.values(formData).every(val => val !== '')
+    );
+  }, [formData]);
+
+  // --- 3. HANDLERS ---
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+    setTouched((prev: any) => ({ ...prev, [name]: true }));
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setServerError('');
-    
-    if (!validateForm()) return; // Stop if frontend validation fails
+    if (!isFormValid) return;
 
     setLoading(true);
+    setServerError('');
+    
     try {
       const res = await authService.signup({
         name: formData.name.trim(),
@@ -46,15 +90,21 @@ const SignUpScreen: React.FC = () => {
       });
 
       if (res.success) {
-        navigate('/login'); // Success!
+        navigate('/login');
       } else {
-        setServerError(res.msg); // Show error from MongoDB (e.g., "User already exists")
+        setServerError(res.msg);
       }
     } catch (err) {
-      setServerError("Connection failed. Check your database.");
+      setServerError("Connection failed.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper for input styling
+  const getInputClass = (field: string) => {
+    if (!touched[field]) return '';
+    return errors[field] ? 'input-error' : 'input-success';
   };
 
   return (
@@ -66,9 +116,7 @@ const SignUpScreen: React.FC = () => {
           <div className="app-brand-icon"><i className="fa-solid fa-bolt"></i></div>
           <h1 className="app-brand-text">LUMO<span className="app-brand-highlight">FLOW</span></h1>
         </div>
-        <button className="about-btn" onClick={() => navigate('/about')}>
-  About Us
-</button>
+        <button className="about-btn" onClick={() => navigate('/about')}>About Us</button>
       </header>
 
       <main className="signup-content">
@@ -76,67 +124,90 @@ const SignUpScreen: React.FC = () => {
           <h1>Create Your Account</h1>
           <p className="subtitle">Start your secure workspace with Lumoflow</p>
 
-          {/* Global Server Error */}
           {serverError && <div className="server-error-banner">{serverError}</div>}
 
           <form onSubmit={handleSignUp}>
+            
+            {/* NAME FIELD */}
             <div className="form-group">
               <label>Full Name</label>
-              <input 
-                type="text" className={`signup-input ${errors.name ? 'input-error' : ''}`}
-                placeholder="Enter your full name" 
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-              {errors.name && <span className="field-error">{errors.name}</span>}
+              <div className="input-wrapper">
+                <input 
+                  type="text" name="name" 
+                  className={`signup-input ${getInputClass('name')}`}
+                  placeholder="Enter your full name" 
+                  value={formData.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+                {/* Visual Icon Logic */}
+                {touched.name && !errors.name && <i className="fa-solid fa-check input-icon-status success"></i>}
+              </div>
+              {touched.name && errors.name && <span className="field-error">{errors.name}</span>}
             </div>
 
+            {/* EMAIL FIELD */}
             <div className="form-group">
               <label>Email Address</label>
-              <input 
-                type="email" className={`signup-input ${errors.email ? 'input-error' : ''}`}
-                placeholder="Enter your email" 
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-              {errors.email && <span className="field-error">{errors.email}</span>}
+              <div className="input-wrapper">
+                <input 
+                  type="email" name="email"
+                  className={`signup-input ${getInputClass('email')}`}
+                  placeholder="Enter your email" 
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+                {touched.email && !errors.email && <i className="fa-solid fa-check input-icon-status success"></i>}
+              </div>
+              {touched.email && errors.email && <span className="field-error">{errors.email}</span>}
             </div>
 
+            {/* PASSWORD FIELD */}
             <div className="form-group">
               <label>Password</label>
               <input 
-                type="password" className={`signup-input ${errors.password ? 'input-error' : ''}`}
+                type="password" name="password"
+                className={`signup-input ${getInputClass('password')}`}
                 placeholder="••••••••" 
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={handleChange}
+                onBlur={handleBlur}
               />
-              {errors.password && <span className="field-error">{errors.password}</span>}
+              {/* Password Requirements List */}
+              <div className="password-criteria">
+                <span className={passwordCriteria.length ? 'valid' : ''}>8+ Chars</span>
+                <span className={passwordCriteria.upper ? 'valid' : ''}>Upper</span>
+                <span className={passwordCriteria.number ? 'valid' : ''}>Number</span>
+                <span className={passwordCriteria.special ? 'valid' : ''}>Symbol</span>
+              </div>
             </div>
 
+            {/* CONFIRM FIELD */}
             <div className="form-group">
               <label>Confirm Password</label>
-              <input 
-                type="password" className={`signup-input ${errors.confirmPassword ? 'input-error' : ''}`}
-                placeholder="••••••••" 
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              />
-              {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
+              <div className="input-wrapper">
+                <input 
+                  type="password" name="confirmPassword"
+                  className={`signup-input ${getInputClass('confirmPassword')}`}
+                  placeholder="••••••••" 
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+                {touched.confirmPassword && !errors.confirmPassword && formData.confirmPassword && <i className="fa-solid fa-check input-icon-status success"></i>}
+              </div>
+              {touched.confirmPassword && errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
             </div>
 
-            <button type="submit" className="signup-main-btn" disabled={loading}>
+            <button type="submit" className={`signup-main-btn ${isFormValid ? 'active' : ''}`} disabled={!isFormValid || loading}>
               {loading ? 'INITIALIZING...' : 'SIGN UP →'}
             </button>
           </form>
 
-          {/* --- NEW: LOGIN NAVIGATION --- */}
           <div className="login-redirect">
              Already have an account? <span onClick={() => navigate('/login')}>Login</span>
           </div>
-
-          
-
-          
         </div>
       </main>
     </div>

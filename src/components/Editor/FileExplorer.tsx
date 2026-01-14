@@ -1,64 +1,87 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface FileExplorerProps {
   files: any[];
   selectedFile: string | null;
   onFileSelect: (file: any) => void;
-  isLoading?: boolean;
+  onCreateFile: (name: string) => void;
 }
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ 
-  files, 
-  selectedFile, 
-  onFileSelect,
-  isLoading = false
+  files, selectedFile, onFileSelect, onCreateFile 
 }) => {
-  const getFileIcon = (fileName: string): string => {
-    if (fileName.endsWith('.py')) return 'fa-brands fa-python';
-    if (fileName.endsWith('.js') || fileName.endsWith('.jsx')) return 'fa-brands fa-js';
-    if (fileName.endsWith('.ts') || fileName.endsWith('.tsx')) return 'fa-brands fa-js';
-    if (fileName.endsWith('.json')) return 'fa-code';
-    if (fileName.endsWith('.md')) return 'fa-file-lines';
-    return 'fa-file';
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+
+  const filteredFiles = files.filter(f => 
+    f.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newFileName.trim()) {
+      onCreateFile(newFileName);
+      setNewFileName('');
+      setIsCreating(false);
+    }
   };
+
+  const getIcon = (name: string) => {
+    if (name.endsWith('.py')) return 'fa-brands fa-python';
+    if (name.endsWith('.js')) return 'fa-brands fa-js';
+    return 'fa-solid fa-file-code';
+  }
 
   return (
     <aside className="ide-sidebar">
-      <div className="sidebar-tabs">
-        <div className="tab active">
-          <i className="fa-regular fa-copy"></i> Explorer
-        </div>
-        <div className="tab">
-          <i className="fa-solid fa-magnifying-glass"></i>
-        </div>
-        <div className="tab">
-          <i className="fa-brands fa-github"></i>
+      {/* Search & Actions */}
+      <div className="explorer-header">
+        <span className="project-label">PROJECT</span>
+        <div style={{display:'flex', gap:'10px'}}>
+             <button className="new-file-btn" onClick={() => setIsCreating(true)} title="New File">
+                <i className="fa-solid fa-plus"></i>
+             </button>
+             <button className="new-file-btn" title="Refresh">
+                <i className="fa-solid fa-rotate-right"></i>
+             </button>
         </div>
       </div>
+
+      <input 
+        type="text" 
+        className="search-box" 
+        placeholder="Search files..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
+      {/* File List */}
       <div className="file-list">
-        <p className="project-label">PROJECT</p>
-        {isLoading ? (
-          <div className="loading-indicator">
-            <i className="fa-solid fa-spinner fa-spin"></i> Loading...
-          </div>
-        ) : files.length === 0 ? (
-          <div className="empty-state">
-            <p>No files found</p>
-            <small>Create a new file to get started</small>
-          </div>
-        ) : (
-          files.map(file => (
-            <div 
-              key={file.path} 
-              className={`file-item ${selectedFile === file.path ? 'active' : ''}`}
-              onClick={() => onFileSelect(file)}
-              title={file.name}
-            >
-              <i className={`${getFileIcon(file.name)}`}></i>
-              <span className="file-name">{file.name}</span>
-            </div>
-          ))
+        {isCreating && (
+          <form onSubmit={handleCreateSubmit} className="file-input-wrapper">
+            <input 
+              autoFocus
+              type="text" 
+              className="new-file-input"
+              placeholder="filename.py"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              onBlur={() => setIsCreating(false)}
+            />
+          </form>
         )}
+
+        {filteredFiles.map(file => (
+          <div 
+            key={file.path} 
+            className={`file-item ${selectedFile === file.path ? 'active' : ''}`}
+            onClick={() => onFileSelect(file)}
+          >
+            <i className={getIcon(file.name)}></i>
+            <span className="file-name">{file.name}</span>
+          </div>
+        ))}
       </div>
     </aside>
   );

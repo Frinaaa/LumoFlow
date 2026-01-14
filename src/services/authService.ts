@@ -1,29 +1,4 @@
 // --- 1. Type Definitions for Electron Bridge ---
-declare global {
-  interface Window {
-    api: {
-      signup: (data: any) => Promise<any>;
-      login: (credentials: any) => Promise<any>;
-      logout: () => Promise<any>;
-      forgotPassword: (email: string) => Promise<{ success: boolean; msg: string }>;
-      resetPassword: (data: any) => Promise<any>;
-      googleOAuth: (code: string) => Promise<any>;
-      githubOAuth: (code: string) => Promise<any>;
-      getDashboardStats: (userId: string) => Promise<any>;
-      updateProfile: (payload: any) => Promise<any>;
-      readProjectFiles: () => Promise<any>;
-      readFile: (filePath: string) => Promise<string>;
-      saveFile: (data: { filePath: string; content: string }) => Promise<any>;
-      runCode: (data: { filePath: string; code: string }) => Promise<string[]>;
-      getAppInfo: () => Promise<any>;
-      openExternalURL: (url: string) => Promise<any>;
-      sendAuthCode: (provider: string, code: string) => void;
-      sendAuthError: (provider: string, error: string) => void;
-      onAuthCallback: (provider: string, callback: (data: any) => void) => void;
-      removeAuthListener: (provider: string) => void;
-    };
-  }
-}
 
 // --- 2. The Service Class ---
 class AuthService {
@@ -130,11 +105,9 @@ class AuthService {
 
   // --- GOOGLE ---
   async startGoogleLogin() {
-    try {
-      return await window.api.startGoogleLogin();
-    } catch (e) {
-      return { success: false, msg: "Google Login unavailable" };
-    }
+    // We now use openExternalURL in LoginScreen.tsx, so this is just a fallback
+    console.warn("startGoogleLogin is deprecated. Use openExternalURL flow.");
+    return { success: false, msg: "Please use the Google button on the login screen." };
   }
 
   // --- GITHUB ---
