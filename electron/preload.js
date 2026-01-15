@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   login: (credentials) => ipcRenderer.invoke('auth:login', credentials).catch(err => ({ success: false, msg: err.message })),
   signup: (data) => ipcRenderer.invoke('auth:signup', data).catch(err => ({ success: false, msg: err.message })),
   logout: () => ipcRenderer.invoke('auth:logout').catch(err => ({ success: false, msg: err.message })),
-  forgotPassword: (email) => ipcRenderer.invoke('auth:forgotPassword', { email }).catch(err => ({ success: false, msg: err.message })),
+  forgotPassword: (email) => ipcRenderer.invoke('auth:forgotPassword', email).catch(err => ({ success: false, msg: err.message })),
   resetPassword: (data) => ipcRenderer.invoke('auth:resetPassword', data).catch(err => ({ success: false, msg: err.message })),
   getDashboardStats: (userId) => ipcRenderer.invoke('user:getDashboardStats', userId).catch(err => ({ success: false, msg: err.message })),
   updateProfile: (data) => ipcRenderer.invoke('user:updateProfile', data).catch(err => ({ success: false, msg: err.message })),

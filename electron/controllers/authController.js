@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'lumoflow-secret-fallback';
 
 const authController = {
   // 1. SIGNUP
-  async signup(event, { name, email, password }) {
+  async signup({ name, email, password }) {
     try {
       if (!email || !password || !name) return { success: false, msg: 'All fields required' };
       let user = await User.findOne({ email: email.toLowerCase().trim() });
@@ -25,7 +25,7 @@ const authController = {
   },
 
   // 2. LOGIN
-  async login(event, { email, password }) {
+  async login({ email, password }) {
     try {
       const user = await User.findOne({ email: email.toLowerCase().trim() });
       if (!user) return { success: false, msg: 'Invalid credentials' };
@@ -85,7 +85,7 @@ const authController = {
     }
   },
   // 4. FORGOT PASSWORD
-  async forgotPassword(event, { email }) {
+  async forgotPassword(email) {
     try {
       const cleanEmail = email.toLowerCase().trim();
       console.log('\n📧 FORGOT PASSWORD REQUEST for:', cleanEmail);
@@ -137,7 +137,7 @@ const authController = {
   },
 
   // 5. RESET PASSWORD
-  async resetPassword(event, { email, code, newPassword }) {
+  async resetPassword({ email, code, newPassword }) {
     try {
       const user = await User.findOne({ 
         email: email.toLowerCase().trim(),
