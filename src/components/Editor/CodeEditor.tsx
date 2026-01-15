@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 
 interface CodeEditorProps {
@@ -6,42 +6,34 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   selectedFile: string | null;
   onSave: () => void;
-  onClose: () => void; // <--- Add this prop
-
+  onClose: () => void;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, selectedFile, onSave, onClose }) => {
+  const editorRef = useRef<any>(null);
   const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
 
   const language = useMemo(() => {
-    if (!fileName) return 'plaintext';
+    if (!fileName) return 'javascript';
     
     const ext = fileName.split('.').pop()?.toLowerCase();
     const languageMap: Record<string, string> = {
-      'py': 'python',
       'js': 'javascript',
       'jsx': 'javascript',
       'ts': 'typescript',
       'tsx': 'typescript',
       'json': 'json',
-      'md': 'markdown',
-      'html': 'html',
-      'css': 'css',
-      'java': 'java',
-      'cpp': 'cpp',
-      'c': 'c',
-      'cs': 'csharp',
-      'rb': 'ruby',
-      'go': 'go',
-      'rs': 'rust',
-      'php': 'php',
-      'sql': 'sql',
-      'xml': 'xml',
-      'yaml': 'yaml',
-      'yml': 'yaml',
+      'mjs': 'javascript',
+      'cjs': 'javascript',
     };
     
-    return languageMap[ext || ''] || 'plaintext';
+    return languageMap[ext || ''] || 'javascript';
+  }, [fileName]);
+
+  const isValidJSFile = useMemo(() => {
+    if (!fileName) return false;
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    return ['js', 'jsx', 'ts', 'tsx', 'json', 'mjs', 'cjs'].includes(ext || '');
   }, [fileName]);
 
   return (
@@ -49,14 +41,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, selectedFile, o
       <div className="editor-tabs">
         {selectedFile ? (
           <div className="editor-tab active">
-            <i className="fa-solid fa-file-code"></i>
-            <span>{fileName}</span>
+            <i className={`fa-solid ${language === 'typescript' ? 'fa-file-code' : 'fa-brands fa-js'}`}></i>
+            <span className="tab-filename">{fileName}</span>
+            <span className="tab-language">{language.toUpperCase()}</span>
             {/* The Close Button */}
             <i 
-              className="fa-solid fa-xmark" 
-              style={{marginLeft: 8, fontSize: 10, cursor: 'pointer', color: '#666'}}
+              className="fa-solid fa-xmark tab-close"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent tab selection logic if any
+                e.stopPropagation();
                 onClose();
               }}
               title="Close File"
@@ -64,35 +56,76 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, selectedFile, o
           </div>
         ) : (
           <div className="editor-tab empty">
+            <i className="fa-solid fa-file"></i>
             <span>No file selected</span>
           </div>
         )}
       </div>
-      <Editor
-        height="100%"
-        theme="vs-dark"
-        language={language}
-        value={code}
-        onChange={(value) => onChange(value || "")}
-        options={{
-          fontSize: 14,
-          minimap: { enabled: true },
-          padding: { top: 20 },
-          wordWrap: 'on',
-          formatOnPaste: true,
-          formatOnType: true,
-          autoClosingBrackets: 'always',
-          autoClosingQuotes: 'always',
-          suggestOnTriggerCharacters: true,
-        }}
-        onMount={(editor) => {
-          // Add keyboard shortcut for save
-          editor.addCommand(
-            1 << 11 | 49, // Ctrl+S
-            () => onSave()
-          );
-        }}
-      />
+
+      {!isValidJSFile && selectedFile ? (
+        <div className="editor-error">
+          <i className="fa-solid fa-circle-exclamation"></i>
+          <p>Only JavaScript/TypeScript files are supported</p>
+          <small>{fileName}</small>
+        </div>
+      ) : (
+        <Editor
+          height="100%"
+          theme="vs-dark"
+          language={language}
+          value={code}
+          onChange={(value) => onChange(value || "")}
+          options={{
+            fontSize: 14,
+            minimap: { enabled: true },
+            padding: { top: 20 },
+            wordWrap: 'on',
+            formatOnPaste: true,
+            formatOnType: true,
+            autoClosingBrackets: 'always',
+            autoClosingQuotes: 'always',
+            suggestOnTriggerCharacters: true,
+            bracketPairColorization: { enabled: true },
+            inlineSuggest: { enabled: true },
+            quickSuggestions: {
+              other: true,
+              comments: false,
+              strings: false,
+            },
+            parameterHints: { enabled: true },
+            codeLens: true,
+            folding: true,
+            foldingStrategy: 'indentation',
+            showUnused: true,
+            showDeprecated: true,
+          }}
+          onMount={(editor) => {
+            editorRef.current = editor;
+            
+            // Ctrl+S for save
+            editor.addCommand(
+              1 << 11 | 49,
+              () => onSave()
+            );
+
+            // Ctrl+/ for comment toggle
+            editor.addCommand(
+              1 << 11 | 191,
+              () => {
+                editor.trigger('keyboard', 'editor.action.commentLine', {});
+              }
+            );
+
+            // Ctrl+Shift+F for format
+            editor.addCommand(
+              1 << 11 | 1 << 10 | 70,
+              () => {
+                editor.trigger('keyboard', 'editor.action.formatDocument', {});
+              }
+            );
+          }}
+        />
+      )}
     </div>
   );
 };

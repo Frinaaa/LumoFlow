@@ -61,37 +61,41 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
     
     try {
       const GOOGLE_CLIENT_ID = '505727448182-5vg28l0f31h1cfnrmv5unun52g8tgebd.apps.googleusercontent.com';
-      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      const redirectUri = 'http://localhost:3000/auth/google/callback';
       const scope = 'openid profile email';
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
       
-      // Open in default browser instead of popup
+      // Open in default browser
       await window.api.openExternalURL(authUrl);
       
       // Listen for callback from IPC
-      const handleCallback = (event: any) => {
-        if (event.type === 'GOOGLE_AUTH_CODE') {
-          const { code } = event;
-          window.api.removeAuthListener?.('google');
-          
-          (async () => {
-            try {
-              // Send code to Electron backend
-              const res = await authService.googleOAuth(code);
-              
-              if (res.success) {
-                setIsAuthenticated(true);
-                navigate('/dashboard');
-              } else {
-                setServerError(res.msg || 'Google login failed');
-              }
-            } catch (err) {
-              setServerError('Google authentication error');
-            } finally {
-              setLoading(false);
-            }
-          })();
+      const handleCallback = (data: any) => {
+        const { code, error } = data;
+        window.api.removeAuthListener?.('google');
+        
+        if (error) {
+          setServerError('Google login cancelled');
+          setLoading(false);
+          return;
         }
+        
+        (async () => {
+          try {
+            // Send code to Electron backend
+            const res = await window.api.googleOAuth(code);
+            
+            if (res.success) {
+              setIsAuthenticated(true);
+              navigate('/dashboard');
+            } else {
+              setServerError(res.msg || 'Google login failed');
+            }
+          } catch (err) {
+            setServerError('Google authentication error');
+          } finally {
+            setLoading(false);
+          }
+        })();
       };
       
       // Register listener for auth callback
@@ -122,36 +126,40 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
     
     try {
       const GITHUB_CLIENT_ID = 'Ov23liH24VR3ImiPJBlv';
-      const redirectUri = `${window.location.origin}/auth/github/callback`;
-      const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&scope=user:email`;
+      const redirectUri = 'http://localhost:3000/auth/github/callback';
+      const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
       
-      // Open in default browser instead of popup
+      // Open in default browser
       await window.api.openExternalURL(authUrl);
       
       // Listen for callback from IPC
-      const handleCallback = (event: any) => {
-        if (event.type === 'GITHUB_AUTH_CODE') {
-          const { code } = event;
-          window.api.removeAuthListener?.('github');
-          
-          (async () => {
-            try {
-              // Send code to Electron backend
-              const res = await authService.githubOAuth(code);
-              
-              if (res.success) {
-                setIsAuthenticated(true);
-                navigate('/dashboard');
-              } else {
-                setServerError(res.msg || 'GitHub login failed');
-              }
-            } catch (err) {
-              setServerError('GitHub authentication error');
-            } finally {
-              setLoading(false);
-            }
-          })();
+      const handleCallback = (data: any) => {
+        const { code, error } = data;
+        window.api.removeAuthListener?.('github');
+        
+        if (error) {
+          setServerError('GitHub login cancelled');
+          setLoading(false);
+          return;
         }
+        
+        (async () => {
+          try {
+            // Send code to Electron backend
+            const res = await window.api.githubOAuth(code);
+            
+            if (res.success) {
+              setIsAuthenticated(true);
+              navigate('/dashboard');
+            } else {
+              setServerError(res.msg || 'GitHub login failed');
+            }
+          } catch (err) {
+            setServerError('GitHub authentication error');
+          } finally {
+            setLoading(false);
+          }
+        })();
       };
       
       // Register listener for auth callback

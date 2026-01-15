@@ -27,6 +27,9 @@ interface Window {
     readFile: (filePath: string) => Promise<string>;
     saveFile: (payload: { filePath: string; content: string }) => Promise<any>;
     createFile: (payload: { fileName: string; content: string }) => Promise<any>;
+    createFolder: (folderName: string) => Promise<any>;
+    deleteFile: (filePath: string) => Promise<any>;
+    renameFile: (oldPath: string, newName: string) => Promise<any>;
     runCode: (payload: { filePath: string; code: string }) => Promise<string[]>;
     
     // --- System ---

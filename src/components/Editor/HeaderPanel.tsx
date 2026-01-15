@@ -33,12 +33,13 @@ const IDEHeader: React.FC<IDEHeaderProps> = ({
         </button>
 
         {/* Standard Actions */}
-        <button className="btn-icon" onClick={onSave} title="Save">
-            <i className="fa-solid fa-floppy-disk"></i>
-        </button>
         <button className="btn-icon" onClick={() => navigate('/dashboard')} title="Home">
             <i className="fa-solid fa-house"></i>
         </button>
+        <button className="btn-icon" onClick={onSave} title="Save">
+            <i className="fa-solid fa-floppy-disk"></i>
+        </button>
+        
         <button className="btn-icon" title="GitHub Settings">
             <i className="fa-solid fa-gear"></i>
         </button>

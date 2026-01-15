@@ -94,7 +94,7 @@ const DashboardScreen: React.FC = () => {
           <button className="nav-item active"><i className="fa-solid fa-chart-line"></i> Dashboard</button>
           <button className="nav-item"><i className="fa-solid fa-gamepad"></i> Arcade</button>
           <button className="nav-item" onClick={() => navigate('/terminal')}>
-            <i className="fa-solid fa-terminal"></i> Terminal
+            <i className="fa-solid fa-terminal"></i> Code Editor
           </button>
           <button className="nav-item"><i className="fa-solid fa-eye"></i> Visuals</button>
         </nav>

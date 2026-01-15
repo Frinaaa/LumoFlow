@@ -75,6 +75,60 @@
   flex-direction: column;
   min-width: 0;
   background: #050508;
+  overflow: hidden;
+}
+
+/* Editor Terminal Wrapper - Contains editor and terminal */
+.editor-terminal-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Editor Split Container - Contains editor and analysis */
+.editor-split-container {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The Code Editor Area */
+.editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Analysis Panel - Full Height */
+.analysis-panel {
+  background: #0e0e12;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #333;
+  overflow: hidden;
+  animation: slideInFromRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  min-height: 0;
+  flex: 0 0 40%;
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Header Adjustments */
@@ -101,11 +155,14 @@
 
 /* --- 4. BOTTOM PANEL (Terminal/Output) --- */
 .terminal-section {
-  height: 250px; /* Fixed height like VS Code */
   border-top: 1px solid #333;
   background: #0a0a0e;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  min-height: 100px;
+  max-height: 600px;
+  overflow: hidden;
 }
 
 .terminal-header {
@@ -117,20 +174,275 @@
 .terminal-tab.active { color: white; border-bottom: 2px solid #bc13fe; }
 
 .terminal-body { 
-  flex: 1; padding: 15px; font-family: 'Consolas', monospace; font-size: 13px; overflow-y: auto; color: #ccc; 
+  flex: 1; 
+  padding: 15px; 
+  font-family: 'Consolas', monospace; 
+  font-size: 13px; 
+  overflow-y: auto; 
+  color: #ccc;
+  min-height: 0;
+}
+
+/* Terminal Output Lines */
+.terminal-line {
+  margin: 2px 0;
+  padding: 2px 0;
+  line-height: 1.5;
+  color: #ccc;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.terminal-line.error {
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+.terminal-line.warning {
+  color: #ffd93d;
+  font-weight: 500;
+}
+
+.terminal-line.success {
+  color: #6bcf7f;
+  font-weight: 500;
+}
+
+.terminal-line.info {
+  color: #4ecdc4;
+  font-weight: 500;
+}
+
+.terminal-line.normal {
+  color: #ccc;
 }
 
 /* GitHub Panel Styles */
 .github-panel { padding: 15px; }
-.git-file { display: flex; justify-content: space-between; color: #ccc; font-size: 13px; padding: 5px 0; border-bottom: 1px solid #222; }
-.git-status { font-size: 10px; background: #e2c08d; color: black; padding: 1px 4px; border-radius: 2px; }
-.git-btn { width: 100%; background: #238636; color: white; border: none; padding: 8px; margin-top: 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+.git-info { margin-bottom: 20px; }
+
+.git-branch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #00f2ff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  background: #1a1a20;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.git-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.git-file { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  color: #ccc; 
+  font-size: 12px; 
+  padding: 8px 10px; 
+  border-bottom: 1px solid #222;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.git-file:hover {
+  background: #1a1a20;
+  color: #fff;
+}
+
+.git-file-name { flex: 1; }
+
+.git-status {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.git-status.m { background: #e2c08d; color: black; }
+.git-status.a { background: #238636; color: white; }
+.git-status.d { background: #da3633; color: white; }
+
+.git-empty {
+  color: #666;
+  font-size: 12px;
+  padding: 10px;
+  text-align: center;
+}
+
+.git-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.git-btn {
+  width: 100%;
+  background: #238636;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.git-btn:hover { background: #2ea043; }
+.git-btn.push { background: #1f6feb; }
+.git-btn.push:hover { background: #388bfd; }
+.git-btn.pull { background: #6e40aa; }
+.git-btn.pull:hover { background: #8957e5; }
+
+.github-connect {
+  border-top: 1px solid #222;
+  padding-top: 15px;
+}
+
+.github-btn {
+  width: 100%;
+  background: #1f6feb;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.github-btn:hover { background: #388bfd; }
+
+/* Search Panel Styles */
+.search-panel { 
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.search-input {
+  width: 100%;
+  background: #1a1a20;
+  border: 1px solid #333;
+  color: white;
+  padding: 10px;
+  font-size: 13px;
+  outline: none;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  border-color: #00f2ff;
+  box-shadow: 0 0 8px rgba(0, 242, 255, 0.2);
+}
+
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.search-result-item {
+  padding: 10px;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  border-left: 2px solid transparent;
+}
+
+.search-result-item:hover {
+  background: #1a1a20;
+  border-left-color: #00f2ff;
+}
+
+.search-result-item.active {
+  background: #2a1a35;
+  border-left-color: #bc13fe;
+  color: #bc13fe;
+}
+
+.search-result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-result-name {
+  font-size: 12px;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-path {
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-empty {
+  color: #666;
+  font-size: 12px;
+  padding: 20px 10px;
+  text-align: center;
+}
 
 /* Reuse existing file list styles */
 .file-list { padding: 10px; }
-.file-item { padding: 5px 10px; font-size: 13px; color: #888; cursor: pointer; display: flex; gap: 8px; align-items: center; }
-.file-item:hover { color: #fff; background: #1a1a20; border-radius: 4px; }
-.file-item.active { background: #2a1a35; color: white; }
+.file-item { 
+  padding: 8px 10px; 
+  font-size: 13px; 
+  color: #888; 
+  cursor: pointer; 
+  display: flex; 
+  gap: 8px; 
+  align-items: center;
+  border-radius: 4px;
+  border-left: 2px solid transparent;
+  transition: all 0.2s;
+}
+.file-item:hover { 
+  color: #fff; 
+  background: #1a1a20;
+  border-left-color: #00f2ff;
+}
+.file-item.active { 
+  background: #2a1a35;
+  color: #bc13fe;
+  border-left-color: #bc13fe;
+  box-shadow: inset 0 0 10px rgba(188, 19, 254, 0.1);
+}
 /* --- EXISTING CSS REMAINS, ADD THESE TO THE BOTTOM --- */
 
 /* 1. New File Input in Sidebar */
@@ -156,9 +468,6 @@
   font-size: 12px;
   outline: none;
 }
-
-
-.editor-split-container {
   display: flex;
   flex: 1;
   position: relative; /* Essential for absolute positioning if needed */
@@ -379,4 +688,742 @@
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
+}
+
+
+/* Editor Tab Styles */
+.editor-tabs {
+  display: flex;
+  background: #0a0a0e;
+  border-bottom: 1px solid #222;
+  padding: 0;
+  height: 40px;
+}
+
+.editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+  background: #0a0a0e;
+  border-right: 1px solid #222;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.editor-tab:hover {
+  background: #15151a;
+  color: #ccc;
+}
+
+.editor-tab.active {
+  background: #050508;
+  color: #fff;
+  border-bottom: 2px solid #bc13fe;
+}
+
+.editor-tab.empty {
+  color: #666;
+  cursor: default;
+}
+
+.tab-filename {
+  font-weight: 500;
+}
+
+.tab-language {
+  font-size: 10px;
+  background: #1a1a20;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #00f2ff;
+  font-weight: 600;
+}
+
+.tab-close {
+  margin-left: auto;
+  font-size: 10px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s;
+  padding: 4px;
+}
+
+.tab-close:hover {
+  color: #ff0055;
+  transform: scale(1.2);
+}
+
+/* Editor Error State */
+.editor-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #050508;
+  color: #ff0055;
+  gap: 15px;
+}
+
+.editor-error i {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.editor-error p {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.editor-error small {
+  color: #666;
+  font-size: 12px;
+}
+
+
+/* Context Menu Styles */
+.context-menu {
+  position: fixed;
+  background: #1a1a20;
+  border: 1px solid #333;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.context-item {
+  padding: 10px 15px;
+  color: #ccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.context-item:hover {
+  background: #2a1a35;
+  color: #bc13fe;
+}
+
+.context-item.delete:hover {
+  background: #3d1a1a;
+  color: #ff0055;
+}
+
+.context-item i {
+  width: 16px;
+  text-align: center;
+}
+
+.context-divider {
+  height: 1px;
+  background: #333;
+  margin: 5px 0;
+}
+
+/* Rename Form */
+.rename-form {
+  padding: 5px 10px;
+}
+
+.rename-input {
+  width: 100%;
+  background: #000;
+  border: 1px solid #00f2ff;
+  color: white;
+  padding: 4px 6px;
+  font-size: 12px;
+  outline: none;
+  border-radius: 3px;
+}
+
+/* Resize Handles */
+.resize-handle {
+  background: transparent;
+  transition: background 0.2s;
+  user-select: none;
+  z-index: 100;
+}
+
+.resize-handle:hover {
+  background: rgba(188, 19, 254, 0.3);
+}
+
+.resize-handle.resize-handle-vertical {
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  border-right: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.resize-handle.resize-handle-vertical:hover {
+  border-right-color: #bc13fe;
+}
+
+.resize-handle.resize-handle-horizontal {
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  border-left: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.resize-handle.resize-handle-horizontal:hover {
+  border-left-color: #bc13fe;
+}
+
+.resize-handle.resize-handle-horizontal-bottom {
+  width: 100%;
+  height: 4px;
+  cursor: row-resize;
+  border-top: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.resize-handle.resize-handle-horizontal-bottom:hover {
+  border-top-color: #bc13fe;
+}
+
+/* Update sidebar width */
+.ide-sidebar {
+  width: 250px;
+}
+
+/* Update terminal height */
+.terminal-section {
+  height: 250px;
+}
+
+/* Update analysis width */
+.analysis-panel {
+  width: 400px;
+}
+
+
+/* Sidebar Buttons */
+.sidebar-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.paste-btn {
+  background: #238636;
+  color: white;
+}
+
+.paste-btn:hover {
+  background: #2ea043;
+}
+
+/* Rename Input Fix */
+.rename-input {
+  width: 100%;
+  background: #000;
+  border: 1px solid #00f2ff;
+  color: white;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.rename-input:focus {
+  box-shadow: 0 0 8px rgba(0, 242, 255, 0.3);
+}
+
+/* Editor area with proper flex */
+.editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.editor-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+
+
+/* Analysis Panel Wrapper - Full Height, No Header */
+.analysis-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #0e0e12;
+  overflow: hidden;
+}
+
+.analysis-panel-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #222;
+  background: linear-gradient(to bottom, #15151a, #0e0e12);
+  flex-shrink: 0;
+  overflow-x: auto;
+  align-items: center;
+  min-height: 44px;
+}
+
+.analysis-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid #333;
+  color: #888;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+  font-weight: 500;
+  position: relative;
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+.analysis-tab-btn i {
+  font-size: 12px;
+}
+
+.analysis-tab-btn span {
+  font-size: 10px;
+}
+
+.analysis-tab-btn:hover {
+  color: #ccc;
+  border-color: #555;
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.analysis-tab-btn.active {
+  background: linear-gradient(135deg, #2a1a35 0%, #1f1428 100%);
+  color: #bc13fe;
+  border-color: #bc13fe;
+  box-shadow: 0 0 12px rgba(188, 19, 254, 0.25), inset 0 0 8px rgba(188, 19, 254, 0.1);
+  animation: tabPulse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tabPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.analysis-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  animation: slideInContent 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideInContent {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar for analysis panel */
+.analysis-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.analysis-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.analysis-panel-content::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.analysis-panel-content::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+.analysis-desc {
+  font-size: 11px;
+  color: #999;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+.analysis-content-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analysis-content-section h4 {
+  color: #bc13fe;
+  font-size: 12px;
+  margin: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.analysis-content-section p {
+  color: #999;
+  font-size: 11px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.analysis-content-section ul {
+  margin: 6px 0 0 0;
+  padding-left: 16px;
+  color: #999;
+  font-size: 11px;
+  list-style: none;
+}
+
+.analysis-content-section li {
+  margin: 4px 0;
+  position: relative;
+  padding-left: 6px;
+}
+
+.analysis-content-section li:before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: #bc13fe;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.interaction-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(135deg, #1a1a20 0%, #15151a 100%);
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #333;
+  border-left: 3px solid #bc13fe;
+}
+
+.demo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  gap: 8px;
+}
+
+.demo-label {
+  color: #bc13fe;
+  font-weight: 600;
+  min-width: 70px;
+  font-size: 10px;
+}
+
+.demo-item code {
+  background: #000;
+  padding: 3px 6px;
+  border-radius: 3px;
+  color: #00ff88;
+  font-family: 'Consolas', monospace;
+  font-size: 10px;
+  flex: 1;
+  text-align: right;
+}
+
+.game-btn {
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #238636 0%, #1a6e2e 100%);
+  color: white;
+  border: 1px solid #2ea043;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  align-self: flex-start;
+}
+
+.game-btn:hover {
+  background: linear-gradient(135deg, #2ea043 0%, #238636 100%);
+  border-color: #3fb950;
+  box-shadow: 0 0 10px rgba(46, 160, 67, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Flowchart Styles - Enhanced */
+.flow-visual-card {
+  background: linear-gradient(135deg, #e8e8ed 0%, #dcdce1 100%);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 180px;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.flow-node-pill {
+  background: white;
+  padding: 8px 14px;
+  border-radius: 16px;
+  color: #333;
+  font-family: 'Consolas', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.flow-node-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.flow-node-pill.highlight-cyan {
+  border: 2px solid #00f2ff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 0 12px rgba(0, 242, 255, 0.3);
+}
+
+.connector-line {
+  background: #bbb;
+  position: relative;
+  z-index: 1;
+}
+
+.connector-line.horizontal {
+  width: 25px;
+  height: 2px;
+}
+
+.connector-line.vertical {
+  width: 2px;
+  height: 12px;
+  margin: 4px 0;
+}
+
+.data-popover-card {
+  position: absolute;
+  top: 70px;
+  right: 15px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  overflow: hidden;
+  animation: float 3.5s ease-in-out infinite;
+  z-index: 10;
+}
+
+.popover-accent {
+  width: 3px;
+  background: linear-gradient(to bottom, #bc13fe, #9b00e8);
+}
+
+.popover-content {
+  padding: 10px 12px;
+  font-size: 10px;
+  color: #333;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+}
+
+.pop-label {
+  color: #666;
+  margin-right: 3px;
+  font-weight: 500;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+
+/* Collapsed Terminal Bar */
+.terminal-collapsed-bar {
+  height: 40px;
+  background: #0a0a0e;
+  border-top: 1px solid #333;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  flex-shrink: 0;
+}
+
+.collapsed-tabs {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.collapsed-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  position: relative;
+}
+
+.collapsed-tab:hover {
+  color: #aaa;
+  background: #1a1a20;
+  border-color: #333;
+}
+
+.collapsed-tab.active {
+  color: #bc13fe;
+  background: #2a1a35;
+  border-color: #bc13fe;
+  box-shadow: 0 0 8px rgba(188, 19, 254, 0.2);
+}
+
+.collapsed-tab i {
+  font-size: 14px;
+}
+
+.tab-label {
+  font-weight: 500;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: #ff0055;
+  color: white;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* Terminal Header Updates */
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 8px 15px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #666;
+  font-weight: 600;
+  border-bottom: 1px solid #222;
+  background: #0a0a0e;
+}
+
+.terminal-header-left {
+  display: flex;
+  gap: 20px;
+}
+
+.terminal-close-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.terminal-close-btn:hover {
+  color: #bc13fe;
+  background: #1a1a20;
+}
+
+/* Terminal Tab Updates */
+.terminal-tab {
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.terminal-tab:hover {
+  color: #ccc;
+}
+
+.terminal-tab.active {
+  color: white;
+  border-bottom: 2px solid #bc13fe;
+  padding-bottom: 2px;
+}
+
+.terminal-tab i {
+  font-size: 12px;
 }

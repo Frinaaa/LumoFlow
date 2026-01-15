@@ -39,17 +39,33 @@ const SettingsScreen: React.FC = () => {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const res = await authService.getProfile();
-      // 🟢 If DB fetch worked, use that data
-      if (res.success && res.user) {
-        setFormData({
-          name: res.user.name || '',
-          email: res.user.email || '', // This fixes the empty email
-          bio: res.user.bio || '',
-          avatar: res.user.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
-        });
+      try {
+        // Get user ID from localStorage
+        const userString = localStorage.getItem('user_info');
+        if (!userString) {
+          setLoading(false);
+          return;
+        }
+        
+        const currentUser = JSON.parse(userString);
+        const userId = currentUser._id || currentUser.id;
+        
+        // Fetch fresh data from backend
+        const res = await authService.getDashboardData(userId);
+        
+        if (res.success && res.user) {
+          setFormData({
+            name: res.user.name || '',
+            email: res.user.email || '',
+            bio: res.user.bio || '',
+            avatar: res.user.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
+          });
+        }
+      } catch (err) {
+        console.error("Error loading profile:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     loadProfile();
   }, []);

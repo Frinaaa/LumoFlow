@@ -1,28 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from "../services/authService";
-import '../styles/LoginScreen.css'; // Reuses your existing neon styles
+import '../styles/LoginScreen.css';
 
 const ForgotPasswordScreen: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [generalError, setGeneralError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
- const handleSendCode = async (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
       const response = await authService.forgotPassword(email);
 
       if (response.success) {
-        // If user exists and email was sent, go to reset screen
-        navigate('/reset-password', { state: { email } });
+        // Code was generated successfully
+        if (response.msg.includes('Email delivery failed')) {
+          // Email failed but code was generated
+          setSuccessMessage('⚠️ Code generated! Check your email or spam folder.');
+        } else {
+          // Email sent successfully
+          setSuccessMessage('✅ Recovery code sent! Redirecting...');
+        }
+        
+        setTimeout(() => {
+          navigate('/reset-password', { state: { email } });
+        }, 1500);
       } else {
-        // This will show "This email is not registered" or "Database failed"
-        setGeneralError(response.msg); 
+        // User not found or other error
+        setGeneralError(response.msg);
       }
     } catch (error: any) {
       setGeneralError('Could not connect to the authentication server.');
@@ -30,6 +42,7 @@ const ForgotPasswordScreen: React.FC = () => {
       setLoading(false);
     }
   };
+
   return (
     <div className="login-screen-wrapper">
       <div className="bg-grid"></div>
@@ -52,6 +65,13 @@ const ForgotPasswordScreen: React.FC = () => {
           <h1>Forgot Password</h1>
           <p className="subtitle">Enter email to restore neural link</p>
 
+          {/* Success Message */}
+          {successMessage && (
+            <div style={{ color: '#00ff88', background: 'rgba(0,255,136,0.1)', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem' }}>
+              <i className="fa-solid fa-check-circle"></i> {successMessage}
+            </div>
+          )}
+
           {/* Error Message */}
           {generalError && (
             <div style={{ color: '#ff4444', background: 'rgba(255,0,0,0.1)', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem' }}>
@@ -68,6 +88,7 @@ const ForgotPasswordScreen: React.FC = () => {
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
                 disabled={loading}
+                required
               />
               <i className="fa-regular fa-envelope input-icon"></i>
             </div>

@@ -31,11 +31,17 @@ const authController = {
       if (!user) return { success: false, msg: 'Invalid credentials' };
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) return { success: false, msg: 'Invalid credentials' };
-      const token = jwt.sign({ user: { id: user.id } }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ user: { id: user._id } }, JWT_SECRET, { expiresIn: '7d' });
       return { 
         success: true, 
         token, 
-        user: { _id: user.id, name: user.name, email: user.email, role: { role_name: user.role } } 
+        user: { 
+          _id: user._id.toString(), 
+          name: user.name, 
+          email: user.email, 
+          avatar: user.avatar || '',
+          bio: user.bio || ''
+        } 
       };
     } catch (err) {
       return { success: false, msg: 'Login error' };
@@ -43,62 +49,90 @@ const authController = {
   },
 
   async googleLoginStep2(payload) {
-  try {
-    const { email, name, sub: googleId, picture } = payload;
-    const cleanEmail = email.toLowerCase().trim();
-    
-    let user = await User.findOne({ email: cleanEmail });
+    try {
+      const { email, name, sub: googleId, picture } = payload;
+      const cleanEmail = email.toLowerCase().trim();
+      
+      let user = await User.findOne({ email: cleanEmail });
 
-    if (!user) {
-      user = new User({
-        name: name,
-        email: cleanEmail,
-        password: googleId, 
-        avatar: picture, // 🟢 Save Google Profile Picture
-        role: 'student',
-        isVerified: true
-      });
-      await user.save();
-    }
-
-    const token = jwt.sign({ user: { id: user._id } }, JWT_SECRET, { expiresIn: '7d' });
-
-    return {
-      success: true,
-      token,
-      user: { 
-        _id: user._id.toString(), // 🟢 Ensure _id is sent as a string
-        name: user.name, 
-        email: user.email,
-        avatar: user.avatar,
-        bio: user.bio || ""
+      if (!user) {
+        user = new User({
+          name: name,
+          email: cleanEmail,
+          password: googleId, 
+          avatar: picture,
+          role: 'student',
+          isVerified: true
+        });
+        await user.save();
       }
-    };
-  } catch (err) {
-    return { success: false, msg: 'Google connection failed' };
-  }
-},
+
+      const token = jwt.sign({ user: { id: user._id } }, JWT_SECRET, { expiresIn: '7d' });
+
+      return {
+        success: true,
+        token,
+        user: { 
+          _id: user._id.toString(),
+          name: user.name, 
+          email: user.email,
+          avatar: user.avatar || '',
+          bio: user.bio || ""
+        }
+      };
+    } catch (err) {
+      return { success: false, msg: 'Google connection failed' };
+    }
+  },
   // 4. FORGOT PASSWORD
   async forgotPassword(event, { email }) {
     try {
       const cleanEmail = email.toLowerCase().trim();
+      console.log('\n📧 FORGOT PASSWORD REQUEST for:', cleanEmail);
+      
       const user = await User.findOne({ email: cleanEmail });
-      if (!user) return { success: false, msg: 'Email not found in database.' };
+      if (!user) {
+        console.log('❌ User not found:', cleanEmail);
+        return { success: false, msg: 'Email not found in database.' };
+      }
 
+      console.log('✅ User found:', user.email);
+      
       const resetToken = crypto.randomBytes(3).toString('hex').toUpperCase();
       user.resetPasswordCode = resetToken;
       user.resetPasswordExpires = Date.now() + 600000; // 10 mins
       await user.save();
+      
+      console.log('✅ Reset code generated:', resetToken);
+      console.log('✅ Reset code saved to database');
 
-      await sendEmail({
-        email: user.email,
-        subject: 'LumoFlow Recovery Code',
-        code: resetToken
-      });
-
-      return { success: true, msg: 'OTP sent to your email!' };
+      try {
+        console.log('📧 Attempting to send email...');
+        await sendEmail({
+          email: user.email,
+          subject: 'LumoFlow Recovery Code',
+          code: resetToken
+        });
+        console.log('✅ Email sent successfully');
+        return { success: true, msg: 'OTP sent to your email!' };
+      } catch (emailErr) {
+        console.error('\n❌ EMAIL SENDING FAILED');
+        console.error('Error message:', emailErr.message);
+        console.error('Error code:', emailErr.code);
+        console.error('Full error:', emailErr);
+        console.log('✅ BUT: Reset code was generated and saved. User can still use it.\n');
+        
+        // Return success because code was generated, even if email failed
+        return { 
+          success: true, 
+          msg: 'Code generated! Email delivery failed - check spam folder or contact support.' 
+        };
+      }
     } catch (err) {
-      return { success: false, msg: 'Error sending email.' };
+      console.error('\n❌ FORGOT PASSWORD ERROR');
+      console.error('Error message:', err.message);
+      console.error('Full error:', err);
+      return { success: false, msg: `Error: ${err.message}` };
     }
   },
 
