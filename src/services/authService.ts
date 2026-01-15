@@ -114,7 +114,7 @@ class AuthService {
   async githubOAuth(code: string) {
     try {
       const res = await window.api.githubOAuth(code);
-      if (res.success && res.token) {
+      if (res.success && res.token && res.user) {
         this.setSession(res.token, res.user);
       }
       return res;
@@ -127,7 +127,7 @@ class AuthService {
   async googleOAuth(code: string) {
     try {
       const res = await window.api.googleOAuth(code);
-      if (res.success && res.token) {
+      if (res.success && res.token && res.user) {
         this.setSession(res.token, res.user);
       }
       return res;

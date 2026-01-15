@@ -16,9 +16,8 @@
   background: rgba(5, 5, 8, 0.95);
   backdrop-filter: blur(15px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  flex-shrink: 0;
+  z-index: 100;
 }
 
 /* --- Forces Arrow and Logo into one line --- */
@@ -189,7 +188,10 @@
 /* Modal Styling */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
+  top: 0; 
+  left: 0; 
+  width: 100vw; 
+  height: 100vh;
   background: rgba(0,0,0,0.85);
   display: flex;
   justify-content: center;

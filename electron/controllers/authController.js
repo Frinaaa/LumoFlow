@@ -8,8 +8,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'lumoflow-secret-fallback';
 
 const authController = {
   // 1. SIGNUP
-  async signup({ name, email, password }) {
+  async signup(event, data) {
     try {
+      const { name, email, password } = data;
       if (!email || !password || !name) return { success: false, msg: 'All fields required' };
       let user = await User.findOne({ email: email.toLowerCase().trim() });
       if (user) return { success: false, msg: 'User already exists' };
@@ -25,8 +26,9 @@ const authController = {
   },
 
   // 2. LOGIN
-  async login({ email, password }) {
+  async login(event, data) {
     try {
+      const { email, password } = data;
       const user = await User.findOne({ email: email.toLowerCase().trim() });
       if (!user) return { success: false, msg: 'Invalid credentials' };
       const isMatch = await bcrypt.compare(password, user.password);
@@ -65,6 +67,12 @@ const authController = {
           isVerified: true
         });
         await user.save();
+      } else {
+        // Update avatar if user exists but logged in via OAuth
+        if (picture && user.avatar !== picture) {
+          user.avatar = picture;
+          await user.save();
+        }
       }
 
       const token = jwt.sign({ user: { id: user._id } }, JWT_SECRET, { expiresIn: '7d' });
@@ -77,16 +85,18 @@ const authController = {
           name: user.name, 
           email: user.email,
           avatar: user.avatar || '',
-          bio: user.bio || ""
+          bio: user.bio || ''
         }
       };
     } catch (err) {
+      console.error('Google OAuth Error:', err);
       return { success: false, msg: 'Google connection failed' };
     }
   },
   // 4. FORGOT PASSWORD
-  async forgotPassword(email) {
+  async forgotPassword(event, data) {
     try {
+      const email = typeof data === 'string' ? data : data.email;
       const cleanEmail = email.toLowerCase().trim();
       console.log('\n📧 FORGOT PASSWORD REQUEST for:', cleanEmail);
       
@@ -137,8 +147,9 @@ const authController = {
   },
 
   // 5. RESET PASSWORD
-  async resetPassword({ email, code, newPassword }) {
+  async resetPassword(event, data) {
     try {
+      const { email, code, newPassword } = data;
       const user = await User.findOne({ 
         email: email.toLowerCase().trim(),
         resetPasswordCode: code,

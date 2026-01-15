@@ -11,7 +11,7 @@ const SettingsScreen: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [showCamera, setShowCamera] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -37,32 +37,76 @@ const SettingsScreen: React.FC = () => {
     maxXP: 3000
   };
 
+  // Load from cache immediately on mount
+  useEffect(() => {
+    const userString = localStorage.getItem('user_info');
+    if (userString) {
+      try {
+        const cachedUser = JSON.parse(userString);
+        console.log('📦 Loaded cached user from localStorage:', cachedUser);
+        setFormData({
+          name: cachedUser.name || '',
+          email: cachedUser.email || '',
+          bio: cachedUser.bio || '',
+          avatar: cachedUser.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
+        });
+      } catch (e) {
+        console.error('Failed to parse cached user:', e);
+      }
+    }
+  }, []);
+
+  // Then fetch fresh data from backend
   useEffect(() => {
     const loadProfile = async () => {
       try {
         // Get user ID from localStorage
         const userString = localStorage.getItem('user_info');
+        console.log('📦 localStorage user_info:', userString);
+        
         if (!userString) {
+          console.error('❌ No user_info in localStorage');
           setLoading(false);
           return;
         }
         
         const currentUser = JSON.parse(userString);
+        console.log('👤 Parsed user:', currentUser);
+        
         const userId = currentUser._id || currentUser.id;
+        console.log('🔑 Using userId:', userId);
+        
+        if (!userId) {
+          console.error('❌ No userId found in user object');
+          setLoading(false);
+          return;
+        }
         
         // Fetch fresh data from backend
+        console.log('🔄 Fetching dashboard data...');
         const res = await authService.getDashboardData(userId);
+        console.log('📥 Dashboard response:', res);
         
         if (res.success && res.user) {
+          console.log('✅ Setting form data with user:', res.user);
           setFormData({
             name: res.user.name || '',
             email: res.user.email || '',
             bio: res.user.bio || '',
             avatar: res.user.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
           });
+        } else {
+          console.error('❌ Failed to load user data:', res.msg);
+          // Fallback to cached data
+          setFormData({
+            name: currentUser.name || '',
+            email: currentUser.email || '',
+            bio: currentUser.bio || '',
+            avatar: currentUser.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
+          });
         }
       } catch (err) {
-        console.error("Error loading profile:", err);
+        console.error("❌ Error loading profile:", err);
       } finally {
         setLoading(false);
       }

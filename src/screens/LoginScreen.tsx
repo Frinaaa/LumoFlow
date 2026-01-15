@@ -84,7 +84,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
             // Send code to Electron backend
             const res = await window.api.googleOAuth(code);
             
-            if (res.success) {
+            if (res.success && res.token && res.user) {
+              // Store session data
+              localStorage.setItem('authToken', res.token);
+              localStorage.setItem('user_info', JSON.stringify(res.user));
+              
               setIsAuthenticated(true);
               navigate('/dashboard');
             } else {
@@ -148,7 +152,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
             // Send code to Electron backend
             const res = await window.api.githubOAuth(code);
             
-            if (res.success) {
+            if (res.success && res.token && res.user) {
+              // Store session data
+              localStorage.setItem('authToken', res.token);
+              localStorage.setItem('user_info', JSON.stringify(res.user));
+              
               setIsAuthenticated(true);
               navigate('/dashboard');
             } else {

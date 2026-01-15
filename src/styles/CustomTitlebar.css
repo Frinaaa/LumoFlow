@@ -1,0 +1,76 @@
+.custom-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333333;
+  padding: 0 12px;
+  user-select: none;
+  -webkit-app-region: drag;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  flex-shrink: 0;
+  z-index: 9999;
+}
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.titlebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #00f2ff;
+  font-size: 12px;
+}
+
+.titlebar-title {
+  color: #e0e0e0;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  font-size: 12px;
+}
+
+.titlebar-right {
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: #b0b0b0;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  border-radius: 2px;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+}
+
+.titlebar-btn.close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+.titlebar-btn:active {
+  background: rgba(255, 255, 255, 0.15);
+}

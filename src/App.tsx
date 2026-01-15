@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // --- SCREENS ---
 import SplashScreen from './screens/SplashScreen';
@@ -13,12 +13,14 @@ import SettingsScreen from './screens/SettingsScreen';
 import AuthCallback from './pages/AuthCallback';
 import authService from './services/authService';
 import TerminalScreen from './screens/EditorScreen';
+import CustomTitlebar from './components/CustomTitlebar';
 import './styles/App.css';
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     const initFlow = async () => {
@@ -51,72 +53,87 @@ function AppLayout() {
 
   // 1. Splash Screen First
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    return (
+      <>
+        <CustomTitlebar />
+        <SplashScreen onComplete={() => setShowSplash(false)} />
+      </>
+    );
   }
 
   // 2. Loading session check
   if (isLoading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0a0e27' }}>
-      <div style={{ color: '#00f2ff', fontSize: '18px' }}>Restoring session...</div>
-    </div>;
+    return (
+      <>
+        <CustomTitlebar />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, background: '#0a0e27' }}>
+          <div style={{ color: '#00f2ff', fontSize: '18px' }}>Restoring session...</div>
+        </div>
+      </>
+    );
   }
 
   // 3. Main Routing
   return (
-    <Routes>
-      {/* Auth Callbacks */}
-      <Route path="/auth/google/callback" element={<AuthCallback />} />
-      <Route path="/auth/github/callback" element={<AuthCallback />} />
+    <>
+      <CustomTitlebar />
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <Routes>
+        {/* Auth Callbacks */}
+        <Route path="/auth/google/callback" element={<AuthCallback />} />
+        <Route path="/auth/github/callback" element={<AuthCallback />} />
 
-      <Route path="/signup" element={<SignUpScreen />} />
-      <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-      <Route path="/reset-password" element={<ResetPasswordScreen />} />
-      <Route path="/about" element={<AboutUsScreen />} />
+        <Route path="/signup" element={<SignUpScreen />} />
+        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+        <Route path="/reset-password" element={<ResetPasswordScreen />} />
+        <Route path="/about" element={<AboutUsScreen />} />
 
-      {/* LOGIN ROUTE */}
-      <Route
-        path="/login"
-        element={
-          !isAuthenticated ? (
-            <LoginScreen setIsAuthenticated={setIsAuthenticated} />
-          ) : (
-            <Navigate to="/dashboard" replace />
-          )
-        }
-      />
+        {/* LOGIN ROUTE */}
+        <Route
+          path="/login"
+          element={
+            !isAuthenticated ? (
+              <LoginScreen setIsAuthenticated={setIsAuthenticated} />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          }
+        />
 
-      {/* DASHBOARD ROUTE (Protected) */}
-      <Route
-        path="/dashboard"
-        element={
-          isAuthenticated ? (
-            <DashboardScreen />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-        {/* 2. ADD THIS ROUTE */}
-<Route
-  path="/settings"
-  element={
-    isAuthenticated ? (
-      <SettingsScreen />
-    ) : (
-      <Navigate to="/login" replace />
-    )
-  }
-/>
-      {/* ROOT REDIRECT */}
-      {/* Redirects to Dashboard if authenticated, otherwise to Login */}
-      <Route 
-        path="/" 
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
-      />
+        {/* DASHBOARD ROUTE (Protected) */}
+        <Route
+          path="/dashboard"
+          element={
+            isAuthenticated ? (
+              <DashboardScreen />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+          {/* 2. ADD THIS ROUTE */}
+  <Route
+    path="/settings"
+    element={
+      isAuthenticated ? (
+        <SettingsScreen />
+      ) : (
+        <Navigate to="/login" replace />
+      )
+    }
+  />
+        {/* ROOT REDIRECT */}
+        {/* Redirects to Dashboard if authenticated, otherwise to Login */}
+        <Route 
+          path="/" 
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
+        />
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
-      <Route path="/terminal" element={isAuthenticated ? <TerminalScreen /> : <Navigate to="/login" />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/terminal" element={isAuthenticated ? <TerminalScreen /> : <Navigate to="/login" />} />
+      </Routes>
+      </div>
+    </>
   );
 }
 

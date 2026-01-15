@@ -34,5 +34,10 @@ interface Window {
     
     // --- System ---
     getAppInfo: () => Promise<any>;
+    
+    // --- Window Controls ---
+    minimizeWindow: () => Promise<void>;
+    maximizeWindow: () => Promise<void>;
+    closeWindow: () => Promise<void>;
   };
 }

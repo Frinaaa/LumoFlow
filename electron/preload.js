@@ -35,6 +35,11 @@ contextBridge.exposeInMainWorld('api', {
   googleOAuth: (code) => ipcRenderer.invoke('auth:google-oauth', code).catch(err => ({ success: false, msg: err.message })),
   githubOAuth: (code) => ipcRenderer.invoke('auth:github-oauth', code).catch(err => ({ success: false, msg: err.message })),
   
+  // Window controls
+  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  
   // Auth callback listeners
   onAuthCallback: (provider, callback) => {
     authListeners[provider] = callback;

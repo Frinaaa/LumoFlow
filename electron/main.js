@@ -110,14 +110,9 @@ const createWindow = async () => {
       enableRemoteModule: false,
       sandbox: true,
     },
+    frame: false,
     show: false,
   });
-
-  // Disable Autofill and other DevTools features
-  mainWindow.webContents.session.setDevToolsWebContents(null);
-  
-  // Disable Autofill protocol
-  mainWindow.webContents.session.setSpellCheckerDictionaries([]);
 
   // Suppress all DevTools protocol warnings
   const originalWarn = console.warn;
@@ -140,19 +135,7 @@ const createWindow = async () => {
   };
 
   // Suppress DevTools protocol warnings from console
-  mainWindow.webContents.on('console-message', (level, message, line, sourceId) => {
-    // Suppress Autofill protocol warnings
-    if (message.includes('Autofill.enable') || 
-        message.includes('Autofill.setAddresses') ||
-        message.includes("wasn't found") ||
-        message.includes('devtools://devtools')) {
-      return; // Suppress these harmless warnings
-    }
-    // Only log actual errors and important messages
-    if (level === 2) { // ERROR level
-      console.log(`[ERROR] ${message}`);
-    }
-  });
+  // Removed problematic console-message handler - it was causing crashes in newer Electron versions
 
   // Handle certificate errors gracefully
   mainWindow.webContents.session.setCertificateVerifyProc((request, callback) => {
@@ -357,6 +340,31 @@ app.on('ready', () => {
       }
     });
     console.log('✅ Registered: shell:openExternal');
+
+    // Window Controls
+    ipcMain.handle('window:minimize', () => {
+      if (mainWindow) mainWindow.minimize();
+      return { success: true };
+    });
+    console.log('✅ Registered: window:minimize');
+
+    ipcMain.handle('window:maximize', () => {
+      if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+          mainWindow.unmaximize();
+        } else {
+          mainWindow.maximize();
+        }
+      }
+      return { success: true };
+    });
+    console.log('✅ Registered: window:maximize');
+
+    ipcMain.handle('window:close', () => {
+      if (mainWindow) mainWindow.close();
+      return { success: true };
+    });
+    console.log('✅ Registered: window:close');
 
     console.log('✅ All IPC handlers registered successfully!');
   } catch (err) {
