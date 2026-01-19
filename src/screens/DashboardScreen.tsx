@@ -100,7 +100,10 @@ const DashboardScreen: React.FC = () => {
         </nav>
 
         <div className="sidebar-footer">
-          <button className="nav-item" onClick={() => navigate('/settings')}>
+          <button className="nav-item" onClick={() => {
+            sessionStorage.setItem('settingsReferrer', '/dashboard');
+            navigate('/settings');
+          }}>
             <i className="fa-solid fa-gear"></i> Settings
           </button>
           <button className="nav-item logout" onClick={handleLogout}>

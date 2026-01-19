@@ -3,6 +3,7 @@
   height: 100vh;
   width: 100vw;
   display: flex;
+  flex-direction: column;
   background-color: #050508;
   color: #e0e0e0;
   overflow: hidden;
@@ -70,43 +71,61 @@
 
 /* --- 3. MAIN EDITOR AREA --- */
 .ide-main-content {
+  display: grid;
+  grid-template-columns: 50px 250px 1fr;
+  grid-template-rows: 1fr;
+  height: 100%;
+  width: 100%;
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background: #050508;
   overflow: hidden;
+  gap: 0;
 }
 
-/* Editor Terminal Wrapper - Contains editor and terminal */
-.editor-terminal-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+/* Outer wrapper for editor + analysis */
+.editor-analysis-wrapper {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
+  min-height: 0;
+}
+
+/* Editor Terminal Wrapper - Main container */
+.editor-terminal-wrapper {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  grid-template-columns: 1fr;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #050508;
+  min-height: 0;
 }
 
 /* Editor Split Container - Contains editor and analysis */
 .editor-split-container {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* The Code Editor Area */
 .editor-area {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
   min-height: 0;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Analysis Panel - Full Height */
+/* Analysis Panel - Right side, full height */
 .analysis-panel {
   background: #0e0e12;
   display: flex;
@@ -116,8 +135,9 @@
   animation: slideInFromRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
   z-index: 10;
+  height: 100%;
+  width: 100%;
   min-height: 0;
-  flex: 0 0 40%;
 }
 
 @keyframes slideInFromRight {
@@ -160,10 +180,9 @@
   background: #0a0a0e;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  min-height: 100px;
-  max-height: 600px;
   overflow: hidden;
+  height: auto;
+  width: 100%;
 }
 
 .terminal-header {
@@ -468,27 +487,14 @@
   padding: 4px;
   font-size: 12px;
   outline: none;
-}
+
   display: flex;
   flex: 1;
   position: relative; /* Essential for absolute positioning if needed */
   overflow: hidden;
 }
 
-/* The Code Editor Area */
-.editor-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth easing */
-}
 
-/* When analysis is open, shrink editor to 60% width */
-.editor-area.shrink {
-  flex: 0 0 60%; 
-  border-right: 1px solid #222;
-}
 
 /* The Analysis Panel (Right Side Popup) */
 .analysis-panel {
@@ -945,15 +951,6 @@
 }
 
 /* Editor area with proper flex */
-.editor-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
 .editor-section {
   display: flex;
   flex-direction: column;
@@ -1427,4 +1424,76 @@
 
 .terminal-tab i {
   font-size: 12px;
+}/* Header Menu Triggers */
+.menu-trigger {
+  padding: 0 10px;
+  height: 30px; /* Match header height approx */
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #cccccc;
+  user-select: none;
+  position: relative;
+}
+
+.menu-trigger:hover, .menu-trigger.active {
+  background-color: #3c3c3c;
+  color: white;
+}
+
+/* Dropdown Menu Box */
+.header-dropdown {
+  position: absolute;
+  top: 100%; /* Pushes directly below the trigger */
+  left: 0;
+  background-color: #252526;
+  border: 1px solid #454545;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  min-width: 200px;
+  z-index: 9999;
+  padding: 4px 0;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dropdown Items */
+.header-dropdown div {
+  padding: 6px 15px;
+  display: flex;
+  justify-content: space-between;
+  color: #cccccc;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-dropdown div:hover {
+  background-color: #094771; /* VS Code Selection Blue */
+  color: white;
+}
+
+/* Shortcut Text */
+.sc {
+  color: #888;
+  font-size: 10px;
+  margin-left: 15px;
+}
+
+/* Separator Line */
+.h-sep {
+  height: 1px;
+  background-color: #454545;
+  margin: 3px 0;
+  padding: 0 !important;
+}
+
+/* Keyboard shortcut toast animation */
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(20px); }
+  20% { opacity: 1; transform: translateX(0); }
+  80% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(20px); }
 }

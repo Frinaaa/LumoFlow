@@ -1,131 +1,131 @@
-import React, { useMemo, useRef } from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useMemo, useRef, useEffect } from 'react';
+import Editor, { Monaco } from '@monaco-editor/react';
 
 interface CodeEditorProps {
   code: string;
   onChange: (value: string) => void;
   selectedFile: string | null;
   onSave: () => void;
+  onRun: () => void;
   onClose: () => void;
+  onCursorChange: (line: number, col: number) => void;
+  isActive: boolean;
+  onFocus: () => void;
+  onProblemsDetected?: (problems: Array<{message: string; line: number; source: string; type: 'error' | 'warning'}>) => void;
+  editorRef?: React.MutableRefObject<any>;
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, selectedFile, onSave, onClose }) => {
-  const editorRef = useRef<any>(null);
+const CodeEditor: React.FC<CodeEditorProps> = ({ 
+  code, onChange, selectedFile, onSave, onRun, onClose, onCursorChange, isActive, onFocus, onProblemsDetected, editorRef    
+}) => {
+  const internalEditorRef = useRef<any>(null);
+  const monacoRef = useRef<Monaco | null>(null);
   const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
 
   const language = useMemo(() => {
     if (!fileName) return 'javascript';
-    
     const ext = fileName.split('.').pop()?.toLowerCase();
-    const languageMap: Record<string, string> = {
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'json': 'json',
-      'mjs': 'javascript',
-      'cjs': 'javascript',
-    };
-    
-    return languageMap[ext || ''] || 'javascript';
+    const map: any = { js: 'javascript', ts: 'typescript', py: 'python', json: 'json', css: 'css', html: 'html' };
+    return map[ext || ''] || 'plaintext';
   }, [fileName]);
 
-  const isValidJSFile = useMemo(() => {
-    if (!fileName) return false;
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    return ['js', 'jsx', 'ts', 'tsx', 'json', 'mjs', 'cjs'].includes(ext || '');
-  }, [fileName]);
+  const handleEditorDidMount = (editor: any, monaco: Monaco) => {
+    internalEditorRef.current = editor;
+    
+    if (editorRef) {
+      editorRef.current = editor;
+    }
+    
+    editor.onDidChangeCursorPosition((e: any) => {
+      onCursorChange(e.position.lineNumber, e.position.column);
+    });
+    monacoRef.current = monaco;
+
+    // Listen to model changes to detect diagnostics
+    const model = editor.getModel();
+    if (model) {
+      const handleDiagnosticsChange = () => {
+        const diagnostics = monaco.editor.getModelMarkers({ resource: model.uri });
+        if (onProblemsDetected && diagnostics.length > 0) {
+          const problems = diagnostics.map(d => ({
+            message: d.message,
+            line: d.startLineNumber,
+            source: fileName || 'file',
+            type: d.severity === 8 ? 'error' : 'warning' as 'error' | 'warning'
+          }));
+          onProblemsDetected(problems);
+        }
+      };
+      
+      // Check diagnostics on mount
+      handleDiagnosticsChange();
+      
+      // Listen for changes
+      const disposable = monaco.editor.onDidChangeMarkers(() => {
+        handleDiagnosticsChange();
+      });
+      
+      return () => disposable.dispose();
+    }
+
+    // Keyboard shortcuts
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      onSave();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      onRun();
+    });
+
+    editor.onDidFocusEditorText(() => {
+      onFocus();
+    });
+  };
 
   return (
-    <div className="editor-section">
+    <div className="editor-section" 
+         style={{ 
+           display: 'flex', flexDirection: 'column', height: '100%',
+           border: isActive ? '1px solid #007acc' : '1px solid transparent' 
+         }}>
+      {/* File Tab Bar */}
       <div className="editor-tabs">
         {selectedFile ? (
           <div className="editor-tab active">
-            <i className={`fa-solid ${language === 'typescript' ? 'fa-file-code' : 'fa-brands fa-js'}`}></i>
+            <i className={`fa-brands fa-${language === 'python' ? 'python' : 'js'}`}></i>
             <span className="tab-filename">{fileName}</span>
-            <span className="tab-language">{language.toUpperCase()}</span>
-            {/* The Close Button */}
-            <i 
-              className="fa-solid fa-xmark tab-close"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              title="Close File"
-            ></i>
+            <i className="fa-solid fa-xmark tab-close" onClick={(e) => { e.stopPropagation(); onClose(); }}></i>
           </div>
         ) : (
-          <div className="editor-tab empty">
-            <i className="fa-solid fa-file"></i>
-            <span>No file selected</span>
-          </div>
+          <div className="editor-tab empty">No file selected</div>
         )}
       </div>
 
-      {!isValidJSFile && selectedFile ? (
-        <div className="editor-error">
-          <i className="fa-solid fa-circle-exclamation"></i>
-          <p>Only JavaScript/TypeScript files are supported</p>
-          <small>{fileName}</small>
-        </div>
-      ) : (
+      <div style={{ flex: 1, position: 'relative' }}>
         <Editor
           height="100%"
           theme="vs-dark"
           language={language}
           value={code}
-          onChange={(value) => onChange(value || "")}
+          onChange={(val) => onChange(val || "")}
+          onMount={handleEditorDidMount}
           options={{
+            fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
             fontSize: 14,
             minimap: { enabled: true },
-            padding: { top: 20 },
+            cursorBlinking: 'smooth',
+            cursorSmoothCaretAnimation: 'on',
+            smoothScrolling: true,
+            contextmenu: true,
+            multiCursorModifier: 'ctrlCmd',
             wordWrap: 'on',
-            formatOnPaste: true,
-            formatOnType: true,
-            autoClosingBrackets: 'always',
-            autoClosingQuotes: 'always',
-            suggestOnTriggerCharacters: true,
+            padding: { top: 15 },
+            guides: { indentation: true, bracketPairs: true },
             bracketPairColorization: { enabled: true },
-            inlineSuggest: { enabled: true },
-            quickSuggestions: {
-              other: true,
-              comments: false,
-              strings: false,
-            },
-            parameterHints: { enabled: true },
-            codeLens: true,
-            folding: true,
-            foldingStrategy: 'indentation',
-            showUnused: true,
-            showDeprecated: true,
-          }}
-          onMount={(editor) => {
-            editorRef.current = editor;
-            
-            // Ctrl+S for save
-            editor.addCommand(
-              1 << 11 | 49,
-              () => onSave()
-            );
-
-            // Ctrl+/ for comment toggle
-            editor.addCommand(
-              1 << 11 | 191,
-              () => {
-                editor.trigger('keyboard', 'editor.action.commentLine', {});
-              }
-            );
-
-            // Ctrl+Shift+F for format
-            editor.addCommand(
-              1 << 11 | 1 << 10 | 70,
-              () => {
-                editor.trigger('keyboard', 'editor.action.formatDocument', {});
-              }
-            );
+            renderLineHighlight: 'all',
           }}
         />
-      )}
+      </div>
     </div>
   );
 };

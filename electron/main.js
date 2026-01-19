@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, protocol, dialog } = require('electron');
 const isDev = require('electron-is-dev');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -7,6 +7,8 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const userController = require('./controllers/userController');
 const authController = require('./controllers/authController');
+const codeController = require('./controllers/codeController');
+const analysisController = require('./controllers/analysisController');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 let mainWindow;
@@ -160,6 +162,9 @@ app.on('ready', () => {
   
   console.log('🚀 App ready - Registering IPC handlers...');
   
+  // Re-import dialog to ensure it's available in this scope
+  const { dialog: electronDialog } = require('electron');
+  
   // Suppress Chromium DevTools protocol warnings
   const originalError = console.error;
   console.error = function(...args) {
@@ -275,96 +280,485 @@ app.on('ready', () => {
     console.log('✅ Registered: files:createFolder');
 
     // Terminal Execution
+    // --- REPLACE YOUR EXISTING terminal:runCode WITH THIS BLOCK ---
+
     ipcMain.handle('terminal:runCode', async (event, { filePath, code }) => {
       return new Promise((resolve) => {
-        fs.writeFileSync(filePath, code, 'utf-8');
+        // Save file
+        try { 
+          fs.writeFileSync(filePath, code, 'utf-8'); 
+        } catch(e) {
+          return resolve({ stdout: "", stderr: "Failed to save file before execution." });
+        }
         
         let cmd;
         if (filePath.endsWith('.js')) {
           cmd = `node "${filePath}"`;
         } else if (filePath.endsWith('.py')) {
-          cmd = `python "${filePath}"`;
+          cmd = `python "${filePath}"`; 
         } else {
-          cmd = `node "${filePath}"`;
+          return resolve({ stdout: "", stderr: "❌ Unsupported file type. Use .js or .py" });
         }
-        
-        const stripAnsi = (str) => {
-          return str.replace(/\x1B\[[0-9;]*m/g, '');
-        };
-        
-        const timeout = 30000;
+
         const child = exec(cmd, { 
-          timeout: timeout,
-          maxBuffer: 10 * 1024 * 1024
+          timeout: 10000,
+          maxBuffer: 5 * 1024 * 1024 
         }, (error, stdout, stderr) => {
-          let output = [];
           
-          if (stdout) {
-            const cleanStdout = stripAnsi(stdout);
-            output.push(...cleanStdout.split('\n').filter(line => line.trim()));
+          // Function to strip ANSI escape sequences (comprehensive pattern)
+          const stripAnsi = (str) => {
+            return str.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
+          };
+          
+          // Clean stdout - remove ANSI codes and system messages
+          let cleanStdout = stdout || "";
+          if (cleanStdout) {
+            cleanStdout = stripAnsi(cleanStdout).trim();
           }
           
-          if (stderr) {
-            const cleanStderr = stripAnsi(stderr);
-            output.push(`❌ ERROR: ${cleanStderr}`);
+          // Clean stderr - remove ANSI codes but keep error messages for problem parsing
+          let cleanStderr = stderr || "";
+          if (cleanStderr) {
+            cleanStderr = stripAnsi(cleanStderr);
           }
-          
-          if (error) {
-            if (error.killed) {
-              output.push(`❌ TIMEOUT: Process exceeded ${timeout}ms`);
-            } else if (!stderr) {
-              output.push(`❌ SYSTEM ERROR: ${error.message}`);
-            }
+          if (error && !stderr) {
+            cleanStderr = stripAnsi(error.message);
           }
-          
-          resolve(output.length ? output : ["Process finished with no output."]);
-        });
-        
-        child.on('error', (err) => {
-          resolve([`❌ EXECUTION ERROR: ${err.message}`]);
+
+          resolve({
+            stdout: cleanStdout,
+            stderr: cleanStderr
+          });
         });
       });
     });
-    console.log('✅ Registered: terminal:runCode');
-
-    ipcMain.handle('app:info', () => ({ appVersion: app.getVersion(), isDev }));
-    console.log('✅ Registered: app:info');
-
-    ipcMain.handle('shell:openExternal', async (event, url) => {
-      try {
-        await shell.openExternal(url);
-        return { success: true };
-      } catch (err) {
-        console.error('Error opening external URL:', err);
-        return { success: false, msg: err.message };
-      }
+    // 2. Interactive Terminal: Handles commands like 'ls', 'mkdir', 'git'
+    ipcMain.handle('terminal:executeCommand', async (event, command) => {
+      return new Promise((resolve) => {
+        // Execute command in the Project Directory
+        exec(command, { cwd: projectDir }, (error, stdout, stderr) => {
+          // Function to strip ANSI escape sequences (comprehensive pattern)
+          const stripAnsi = (str) => {
+            return str.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
+          };
+          
+          // Combine outputs for the interactive terminal view
+          let output = stdout ? stripAnsi(stdout) : '';
+          if (stderr) output += `\n${stripAnsi(stderr)}`;
+          if (error) output += `\nError: ${stripAnsi(error.message)}`;
+          resolve(output || "");
+        });
+      });
     });
-    console.log('✅ Registered: shell:openExternal');
-
     // Window Controls
     ipcMain.handle('window:minimize', () => {
-      if (mainWindow) mainWindow.minimize();
-      return { success: true };
+      try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.minimize();
+        }
+        return { success: true };
+      } catch (error) {
+        console.error('Window minimize error:', error);
+        return { success: false, error: error.message };
+      }
     });
     console.log('✅ Registered: window:minimize');
 
     ipcMain.handle('window:maximize', () => {
-      if (mainWindow) {
-        if (mainWindow.isMaximized()) {
-          mainWindow.unmaximize();
-        } else {
-          mainWindow.maximize();
+      try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize();
+          } else {
+            mainWindow.maximize();
+          }
         }
+        return { success: true };
+      } catch (error) {
+        console.error('Window maximize error:', error);
+        return { success: false, error: error.message };
       }
-      return { success: true };
     });
     console.log('✅ Registered: window:maximize');
 
     ipcMain.handle('window:close', () => {
-      if (mainWindow) mainWindow.close();
-      return { success: true };
+      try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.close();
+        }
+        return { success: true };
+      } catch (error) {
+        console.error('Window close error:', error);
+        return { success: false, error: error.message };
+      }
     });
     console.log('✅ Registered: window:close');
+
+    // Code Management Handlers
+    ipcMain.handle('code:saveToDatabase', codeController.saveCodeToDatabase);
+    console.log('✅ Registered: code:saveToDatabase');
+
+    ipcMain.handle('code:loadUserProjects', codeController.loadUserProjects);
+    console.log('✅ Registered: code:loadUserProjects');
+
+    ipcMain.handle('code:loadFileFromDatabase', codeController.loadFileFromDatabase);
+    console.log('✅ Registered: code:loadFileFromDatabase');
+
+    ipcMain.handle('code:deleteFileFromDatabase', codeController.deleteFileFromDatabase);
+    console.log('✅ Registered: code:deleteFileFromDatabase');
+
+    ipcMain.handle('code:createProject', codeController.createProject);
+    console.log('✅ Registered: code:createProject');
+
+    // Analysis Handlers
+    ipcMain.handle('analysis:analyzeCode', analysisController.analyzeCode);
+    console.log('✅ Registered: analysis:analyzeCode');
+
+    ipcMain.handle('analysis:getHistory', analysisController.getAnalysisHistory);
+    console.log('✅ Registered: analysis:getHistory');
+
+    // Git/GitHub Handlers
+    ipcMain.handle('git:status', async (event, repoPath) => {
+      return new Promise((resolve) => {
+        exec('git status --porcelain', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            const changes = stdout.split('\n').filter(line => line.trim()).map(line => {
+              const status = line.substring(0, 2).trim();
+              const file = line.substring(3);
+              return { status, file };
+            });
+            resolve({ success: true, changes });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:status');
+
+    ipcMain.handle('git:branch', async (event, repoPath) => {
+      return new Promise((resolve) => {
+        exec('git branch --show-current', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message, branch: 'main' });
+          } else {
+            resolve({ success: true, branch: stdout.trim() || 'main' });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:branch');
+
+    ipcMain.handle('git:branches', async (event, repoPath) => {
+      return new Promise((resolve) => {
+        exec('git branch -a', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message, branches: [] });
+          } else {
+            const branches = stdout.split('\n')
+              .filter(line => line.trim())
+              .map(line => ({
+                name: line.replace('*', '').trim(),
+                current: line.startsWith('*')
+              }));
+            resolve({ success: true, branches });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:branches');
+
+    ipcMain.handle('git:init', async (event, repoPath) => {
+      return new Promise((resolve) => {
+        exec('git init', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: 'Repository initialized' });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:init');
+
+    ipcMain.handle('git:clone', async (event, { url, targetPath }) => {
+      return new Promise((resolve) => {
+        const clonePath = targetPath || projectDir;
+        exec(`git clone ${url}`, { cwd: clonePath }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: 'Repository cloned successfully' });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:clone');
+
+    ipcMain.handle('git:add', async (event, { files, repoPath }) => {
+      return new Promise((resolve) => {
+        const fileList = files.join(' ');
+        exec(`git add ${fileList}`, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: 'Files staged' });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:add');
+
+    ipcMain.handle('git:commit', async (event, { message, repoPath }) => {
+      return new Promise((resolve) => {
+        exec(`git commit -m "${message}"`, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: 'Changes committed' });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:commit');
+
+    ipcMain.handle('git:push', async (event, { remote, branch, repoPath }) => {
+      return new Promise((resolve) => {
+        const cmd = `git push ${remote || 'origin'} ${branch || 'main'}`;
+        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: 'Changes pushed to remote' });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:push');
+
+    ipcMain.handle('git:pull', async (event, { remote, branch, repoPath }) => {
+      return new Promise((resolve) => {
+        const cmd = `git pull ${remote || 'origin'} ${branch || 'main'}`;
+        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: 'Changes pulled from remote' });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:pull');
+
+    ipcMain.handle('git:checkout', async (event, { branch, repoPath }) => {
+      return new Promise((resolve) => {
+        exec(`git checkout ${branch}`, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: `Switched to branch ${branch}` });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:checkout');
+
+    ipcMain.handle('git:createBranch', async (event, { branch, repoPath }) => {
+      return new Promise((resolve) => {
+        exec(`git checkout -b ${branch}`, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: `Created and switched to branch ${branch}` });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:createBranch');
+
+    ipcMain.handle('git:log', async (event, { limit, repoPath }) => {
+      return new Promise((resolve) => {
+        const cmd = `git log --oneline -${limit || 10}`;
+        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message, commits: [] });
+          } else {
+            const commits = stdout.split('\n')
+              .filter(line => line.trim())
+              .map(line => {
+                const [hash, ...messageParts] = line.split(' ');
+                return { hash, message: messageParts.join(' ') };
+              });
+            resolve({ success: true, commits });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:log');
+
+    ipcMain.handle('git:diff', async (event, { file, repoPath }) => {
+      return new Promise((resolve) => {
+        const cmd = file ? `git diff ${file}` : 'git diff';
+        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message, diff: '' });
+          } else {
+            resolve({ success: true, diff: stdout });
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:diff');
+
+    ipcMain.handle('git:remote', async (event, { action, name, url, repoPath }) => {
+      return new Promise((resolve) => {
+        let cmd;
+        if (action === 'add') {
+          cmd = `git remote add ${name} ${url}`;
+        } else if (action === 'remove') {
+          cmd = `git remote remove ${name}`;
+        } else if (action === 'list') {
+          cmd = 'git remote -v';
+        } else {
+          resolve({ success: false, error: 'Invalid action' });
+          return;
+        }
+        
+        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            if (action === 'list') {
+              const remotes = stdout.split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                  const [name, url] = line.split('\t');
+                  return { name, url: url?.replace(/\(.*\)/, '').trim() };
+                });
+              resolve({ success: true, remotes });
+            } else {
+              resolve({ success: true, message: `Remote ${action}ed successfully` });
+            }
+          }
+        });
+      });
+    });
+    console.log('✅ Registered: git:remote');
+
+    // Dialog Handlers
+    ipcMain.handle('window:new', () => {
+      createWindow(); // Calls your existing function to spawn a new window
+      return { success: true };
+    });
+    console.log('✅ Registered: window:new');
+
+    ipcMain.handle('dialog:openFile', async () => {
+      try {
+        // Ensure dialog is available
+        if (!dialog) {
+          console.error('Dialog module not available');
+          return { canceled: true, error: 'Dialog module not available' };
+        }
+        
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+          properties: ['openFile'],
+          defaultPath: require('os').homedir(), // Start from user's home directory
+          filters: [
+            { name: 'Code Files', extensions: ['js', 'py', 'txt', 'json', 'md'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+        if (canceled) return { canceled: true };
+        
+        const content = fs.readFileSync(filePaths[0], 'utf-8');
+        const fileName = path.basename(filePaths[0]);
+        return { canceled: false, filePath: filePaths[0], fileName, content };
+      } catch (error) {
+        console.error('Open file dialog error:', error);
+        return { canceled: true, error: error.message };
+      }
+    });
+    console.log('✅ Registered: dialog:openFile');
+
+    ipcMain.handle('dialog:openFolder', async () => {
+      try {
+        // Ensure dialog is available
+        if (!dialog) {
+          console.error('Dialog module not available');
+          return { canceled: true, error: 'Dialog module not available' };
+        }
+        
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+          properties: ['openDirectory'],
+          defaultPath: require('os').homedir() // Start from user's home directory
+        });
+        if (canceled) return { canceled: true };
+        
+        const selectedPath = filePaths[0];
+        const files = fs.readdirSync(selectedPath).map(file => ({
+          name: file,
+          path: path.join(selectedPath, file)
+        }));
+        
+        return { canceled: false, folderPath: selectedPath, files };
+      } catch (error) {
+        console.error('Open folder dialog error:', error);
+        return { canceled: true, error: error.message };
+      }
+    });
+    console.log('✅ Registered: dialog:openFolder');
+
+    ipcMain.handle('dialog:saveAs', async (event, content) => {
+      try {
+        // Ensure dialog is available
+        if (!dialog) {
+          console.error('Dialog module not available');
+          return { canceled: true, error: 'Dialog module not available' };
+        }
+        
+        const os = require('os');
+        const documentsPath = path.join(os.homedir(), 'Documents');
+        
+        const { canceled, filePath } = await dialog.showSaveDialog({
+          title: 'Save File',
+          defaultPath: path.join(documentsPath, 'untitled.js'), // Save to Documents folder
+          filters: [
+            { name: 'JavaScript Files', extensions: ['js'] },
+            { name: 'Python Files', extensions: ['py'] },
+            { name: 'Text Files', extensions: ['txt'] },
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+        if (canceled) return { canceled: true };
+        
+        fs.writeFileSync(filePath, content || '', 'utf-8');
+        const fileName = path.basename(filePath);
+        return { canceled: false, filePath, fileName };
+      } catch (error) {
+        console.error('Save as dialog error:', error);
+        return { canceled: true, error: error.message };
+      }
+    });
+    console.log('✅ Registered: dialog:saveAs');
+
+    // Get user directories
+    ipcMain.handle('system:getUserDirectories', () => {
+      const os = require('os');
+      const homeDir = os.homedir();
+      
+      return {
+        home: homeDir,
+        documents: path.join(homeDir, 'Documents'),
+        desktop: path.join(homeDir, 'Desktop'),
+        downloads: path.join(homeDir, 'Downloads'),
+        pictures: path.join(homeDir, 'Pictures'),
+        music: path.join(homeDir, 'Music'),
+        videos: path.join(homeDir, 'Videos')
+      };
+    });
+    console.log('✅ Registered: system:getUserDirectories');
+    console.log('✅ Registered: dialog:saveAs');
 
     console.log('✅ All IPC handlers registered successfully!');
   } catch (err) {

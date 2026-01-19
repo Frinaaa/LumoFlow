@@ -14,13 +14,14 @@ import AuthCallback from './pages/AuthCallback';
 import authService from './services/authService';
 import TerminalScreen from './screens/EditorScreen';
 import CustomTitlebar from './components/CustomTitlebar';
+import { EditorProvider, useEditor } from './context/EditorContext';
 import './styles/App.css';
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const location = useLocation();
+  const editorState = useEditor();
 
   useEffect(() => {
     const initFlow = async () => {
@@ -129,6 +130,18 @@ function AppLayout() {
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
         />
 
+        {/* EDITOR ROUTE (Protected) */}
+        <Route
+          path="/editor"
+          element={
+            isAuthenticated ? (
+              <TerminalScreen />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
         <Route path="*" element={<Navigate to="/login" replace />} />
         <Route path="/terminal" element={isAuthenticated ? <TerminalScreen /> : <Navigate to="/login" />} />
       </Routes>
@@ -139,9 +152,11 @@ function AppLayout() {
 
 function App() {
   return (
-    <Router>
-      <AppLayout />
-    </Router>
+    <EditorProvider>
+      <Router>
+        <AppLayout />
+      </Router>
+    </EditorProvider>
   );
 }
 

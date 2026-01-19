@@ -30,14 +30,49 @@ interface Window {
     createFolder: (folderName: string) => Promise<any>;
     deleteFile: (filePath: string) => Promise<any>;
     renameFile: (oldPath: string, newName: string) => Promise<any>;
-    runCode: (payload: { filePath: string; code: string }) => Promise<string[]>;
+    runCode: (payload: { filePath: string; code: string }) => Promise<{ stdout: string; stderr: string }>;
+    executeCommand: (command: string) => Promise<string>;
     
-    // --- System ---
-    getAppInfo: () => Promise<any>;
+    // --- Dialogs ---
+    openFileDialog: () => Promise<{ canceled: boolean; filePath: string; fileName: string; content: string }>;
+    openFolderDialog: () => Promise<{ canceled: boolean; folderPath: string; files: any[] }>;
+    saveFileAs: (content: string) => Promise<{ canceled: boolean; filePath: string; fileName: string }>;
     
     // --- Window Controls ---
+    newWindow: () => Promise<void>;
     minimizeWindow: () => Promise<void>;
     maximizeWindow: () => Promise<void>;
     closeWindow: () => Promise<void>;
+    
+    // --- Code Management (Database) ---
+    saveCodeToDatabase: (data: { filePath: string; content: string; userId?: string }) => Promise<any>;
+    loadUserProjects: (userId: string) => Promise<any>;
+    loadFileFromDatabase: (fileId: string) => Promise<any>;
+    deleteFileFromDatabase: (fileId: string) => Promise<any>;
+    createProject: (data: { userId: string; projectName: string; language?: string }) => Promise<any>;
+    
+    // --- Code Analysis ---
+    analyzeCode: (data: { code: string; language: string; userId?: string; fileId?: string }) => Promise<any>;
+    getAnalysisHistory: (userId: string) => Promise<any>;
+    
+    // --- Git/GitHub Operations ---
+    gitStatus: (repoPath?: string) => Promise<{ success: boolean; changes?: Array<{ status: string; file: string }>; error?: string }>;
+    gitBranch: (repoPath?: string) => Promise<{ success: boolean; branch?: string; error?: string }>;
+    gitBranches: (repoPath?: string) => Promise<{ success: boolean; branches?: Array<{ name: string; current: boolean }>; error?: string }>;
+    gitInit: (repoPath?: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitClone: (data: { url: string; targetPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitAdd: (data: { files: string[]; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitCommit: (data: { message: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitPush: (data: { remote?: string; branch?: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitPull: (data: { remote?: string; branch?: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitCheckout: (data: { branch: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitCreateBranch: (data: { branch: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitLog: (data: { limit?: number; repoPath?: string }) => Promise<{ success: boolean; commits?: Array<{ hash: string; message: string }>; error?: string }>;
+    gitDiff: (data: { file?: string; repoPath?: string }) => Promise<{ success: boolean; diff?: string; error?: string }>;
+    gitRemote: (data: { action: 'add' | 'remove' | 'list'; name?: string; url?: string; repoPath?: string }) => Promise<{ success: boolean; remotes?: Array<{ name: string; url: string }>; message?: string; error?: string }>;
+    
+    // --- System ---
+    getAppInfo: () => Promise<any>;
+    getUserDirectories: () => Promise<{ home: string; documents: string; desktop: string; downloads: string; pictures: string; music: string; videos: string }>;
   };
 }
