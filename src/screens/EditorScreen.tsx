@@ -133,6 +133,7 @@ const EditorScreen: React.FC = () => {
   const [showBranchCreate, setShowBranchCreate] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
   const [gitLoading, setGitLoading] = useState(false);
+  const [remoteUrl, setRemoteUrl] = useState('');
   
   // --- CONTEXT MENU & CLIPBOARD ---
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: any } | null>(null);
@@ -1091,6 +1092,23 @@ const handlePasteFile = async () => {
     }
     setGitLoading(false);
   };
+
+  const handleSetRemote = async () => {
+    if (!remoteUrl.trim()) return;
+    if (!isElectronAvailable()) {
+      showShortcutToast('Electron API not available');
+      return;
+    }
+    setGitLoading(true);
+    const res = await window.api.gitRemote({ action: 'add', name: 'origin', url: remoteUrl });
+    if (res.success) {
+      showShortcutToast('Remote URL set successfully');
+      setRemoteUrl('');
+    } else {
+      showShortcutToast('Error: ' + res.error);
+    }
+    setGitLoading(false);
+  };
   
    useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1441,43 +1459,87 @@ const handlePasteFile = async () => {
             </div>
 
             {/* Sync Section */}
+            {/* Remote Settings Section - VITAL FOR PUSHING */}
+            <div className="git-section" style={{ marginBottom: '15px' }}>
+              <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', marginBottom: '5px' }}>
+                Remote Origin URL
+              </div>
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <input 
+                  type="text" 
+                  placeholder="https://token@github.com/user/repo.git" 
+                  value={remoteUrl}
+                  onChange={(e) => setRemoteUrl(e.target.value)}
+                  style={{ 
+                    flex: 1, 
+                    background: '#1e1e1e', 
+                    border: '1px solid #333', 
+                    color: 'white', 
+                    fontSize: '11px', 
+                    padding: '4px 6px',
+                    borderRadius: '3px',
+                    outline: 'none'
+                  }} 
+                />
+                <button 
+                  onClick={handleSetRemote}
+                  disabled={gitLoading}
+                  title="Set Remote"
+                  style={{ 
+                    background: '#333', 
+                    border: '1px solid #444', 
+                    color: 'white', 
+                    borderRadius: '3px', 
+                    cursor: 'pointer',
+                    width: '24px'
+                  }}
+                >
+                  <i className="fa-solid fa-link"></i>
+                </button>
+              </div>
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '4px' }}>
+                <i>Tip: Use HTTPS with token for auth</i>
+              </div>
+            </div>
+
+            {/* Sync Section (Push/Pull) */}
             <div className="git-section" style={{ marginBottom: '15px' }}>
               <div style={{ display: 'flex', gap: '5px' }}>
-                <button
-                  onClick={handleGitPull}
-                  disabled={gitLoading}
-                  style={{
-                    flex: 1,
-                    background: '#0969da',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '6px 12px',
-                    color: 'white',
-                    fontSize: '11px',
-                    cursor: 'pointer'
+                <button 
+                  onClick={handleGitPull} 
+                  disabled={gitLoading} 
+                  style={{ 
+                    flex: 1, 
+                    background: '#0969da', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    padding: '6px 12px', 
+                    color: 'white', 
+                    fontSize: '11px', 
+                    cursor: 'pointer' 
                   }}
                 >
                   <i className="fa-solid fa-download"></i> Pull
                 </button>
-                <button
-                  onClick={handleGitPush}
-                  disabled={gitLoading}
-                  style={{
-                    flex: 1,
-                    background: '#bc13fe',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '6px 12px',
-                    color: 'white',
-                    fontSize: '11px',
-                    cursor: 'pointer'
+                <button 
+                  onClick={handleGitPush} 
+                  disabled={gitLoading} 
+                  style={{ 
+                    flex: 1, 
+                    background: '#bc13fe', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    padding: '6px 12px', 
+                    color: 'white', 
+                    fontSize: '11px', 
+                    cursor: 'pointer' 
                   }}
                 >
                   <i className="fa-solid fa-upload"></i> Push
                 </button>
               </div>
             </div>
-
+            
             {/* Recent Commits */}
             {gitCommits.length > 0 && (
               <div className="git-section">

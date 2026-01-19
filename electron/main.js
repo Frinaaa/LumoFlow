@@ -9,6 +9,7 @@ const userController = require('./controllers/userController');
 const authController = require('./controllers/authController');
 const codeController = require('./controllers/codeController');
 const analysisController = require('./controllers/analysisController');
+const [remoteUrl, setRemoteUrl] = useState(''); // New state for Remote URL input
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 let mainWindow;
@@ -548,33 +549,60 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: git:commit');
 
-    ipcMain.handle('git:push', async (event, { remote, branch, repoPath }) => {
-      return new Promise((resolve) => {
-        const cmd = `git push ${remote || 'origin'} ${branch || 'main'}`;
-        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message });
-          } else {
-            resolve({ success: true, message: 'Changes pushed to remote' });
-          }
-        });
+   ipcMain.handle('git:push', async (event, { remote, branch, repoPath }) => {
+    return new Promise((resolve) => {
+      // FIX: Added -u to set upstream tracking, otherwise subsequent pulls fail
+      const targetRemote = remote || 'origin';
+      const targetBranch = branch || 'main';
+      const cmd = `git push -u ${targetRemote} ${targetBranch}`;
+      
+      console.log(`Executing: ${cmd}`);
+      
+      exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+        if (error) {
+          // Send back stderr because git often puts status info there
+          resolve({ success: false, error: stderr || error.message });
+        } else {
+          resolve({ success: true, message: 'Changes pushed to remote' });
+        }
       });
     });
-    console.log('✅ Registered: git:push');
+  });
 
-    ipcMain.handle('git:pull', async (event, { remote, branch, repoPath }) => {
-      return new Promise((resolve) => {
-        const cmd = `git pull ${remote || 'origin'} ${branch || 'main'}`;
-        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+  ipcMain.handle('git:pull', async (event, { remote, branch, repoPath }) => {
+    return new Promise((resolve) => {
+      const targetRemote = remote || 'origin';
+      const targetBranch = branch || 'main';
+      const cmd = `git pull ${targetRemote} ${targetBranch}`;
+
+      console.log(`Executing: ${cmd}`);
+
+      exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+        if (error) {
+          resolve({ success: false, error: stderr || error.message });
+        } else {
+          resolve({ success: true, message: 'Changes pulled from remote' });
+        }
+      });
+    });
+  });
+
+  // ADD THIS NEW HANDLER: To allow setting the remote URL
+  ipcMain.handle('git:addRemote', async (event, { url }) => {
+    return new Promise((resolve) => {
+      // Remove existing origin first to avoid "remote origin already exists" error
+      exec('git remote remove origin', { cwd: projectDir }, () => {
+        // Then add the new one
+        exec(`git remote add origin ${url}`, { cwd: projectDir }, (error, stdout, stderr) => {
           if (error) {
             resolve({ success: false, error: stderr || error.message });
           } else {
-            resolve({ success: true, message: 'Changes pulled from remote' });
+            resolve({ success: true, message: 'Remote origin configured' });
           }
         });
       });
     });
-    console.log('✅ Registered: git:pull');
+  });
 
     ipcMain.handle('git:checkout', async (event, { branch, repoPath }) => {
       return new Promise((resolve) => {
@@ -671,6 +699,27 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: git:remote');
 
+    const handleSetRemote = async () => {
+    if (!remoteUrl.trim()) {
+      showShortcutToast('Please enter a URL');
+      return;
+    }
+    if (!isElectronAvailable()) return;
+    
+    setGitLoading(true);
+    // @ts-ignore - Assuming you added git:addRemote to main.js
+    const res = await window.api.executeCommand(`git remote remove origin && git remote add origin ${remoteUrl}`);
+    
+    // Check if it looks like an error (git often outputs to stderr but returns success for empty stdout)
+    if (res.includes('error') || res.includes('fatal')) {
+       showShortcutToast('Failed to set remote');
+    } else {
+       showShortcutToast('Remote origin set!');
+       setGitCloneUrl(remoteUrl); // Sync clone URL
+    }
+    setGitLoading(false);
+  };
+  
     // Dialog Handlers
     ipcMain.handle('window:new', () => {
       createWindow(); // Calls your existing function to spawn a new window
