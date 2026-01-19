@@ -6,24 +6,131 @@ class AuthService {
   // --- LOGIN ---
   public async login(credentials: { email: string; password: string }) {
     try {
-      if (!window.api) throw new Error('Bridge missing');
-      const response = await window.api.login(credentials);
-      
-      if (response.success && response.token) {
-        this.setSession(response.token, response.user);
+      // Check if running in Electron
+      if (window.api) {
+        console.log('Using Electron IPC for login');
+        const response = await window.api.login(credentials);
+        
+        if (response.success && response.token) {
+          this.setSession(response.token, response.user);
+        }
+        return response;
+      } else {
+        // Web fallback - call backend API directly
+        console.log('Using Web API for login - calling /api/auth/login');
+        return await this.loginWeb(credentials);
       }
-      return response;
     } catch (error) {
-      console.error("Login IPC Error:", error);
+      console.error("Login Error:", error);
       return { success: false, msg: "System Connection Failed" };
     }
+  }
+
+  // --- WEB LOGIN FALLBACK ---
+  private async loginWeb(credentials: { email: string; password: string }) {
+    try {
+      // Try to call the backend API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        console.error(`API Error: ${response.status} ${response.statusText}`);
+        
+        // If 404, backend is not running - offer demo mode
+        if (response.status === 404) {
+          console.log('Backend not found. Offering demo mode...');
+          return this.loginDemo(credentials);
+        }
+        
+        return { success: false, msg: `Server error: ${response.status}` };
+      }
+
+      const text = await response.text();
+      if (!text) {
+        return { success: false, msg: "Empty response from server" };
+      }
+
+      const data = JSON.parse(text);
+
+      if (data.success && data.token) {
+        this.setSession(data.token, data.user);
+      }
+      return data;
+    } catch (error) {
+      console.error("Web Login Error:", error);
+      // Fallback to demo mode if backend is not available
+      return this.loginDemo(credentials);
+    }
+  }
+
+  // --- DEMO LOGIN (for development without backend) ---
+  private loginDemo(credentials: { email: string; password: string }) {
+    console.log('🎭 Using DEMO mode - no backend server required');
+    
+    // Accept any email/password combination for demo
+    if (credentials.email && credentials.password) {
+      const demoUser = {
+        _id: 'demo-user-' + Date.now(),
+        id: 'demo-user-' + Date.now(),
+        email: credentials.email,
+        name: credentials.email.split('@')[0],
+        avatar: 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png',
+        bio: 'Demo User'
+      };
+      
+      const demoToken = 'demo-token-' + Date.now();
+      
+      this.setSession(demoToken, demoUser);
+      
+      return {
+        success: true,
+        token: demoToken,
+        user: demoUser,
+        msg: 'Demo mode - no backend server'
+      };
+    }
+    
+    return { success: false, msg: "Invalid credentials" };
   }
 
   // --- SIGNUP ---
   async signup(data: any) {
     try {
-      return await window.api.signup(data);
+      if (window.api) {
+        return await window.api.signup(data);
+      } else {
+        return await this.signupWeb(data);
+      }
     } catch (error) {
+      return { success: false, msg: 'Signup failed' };
+    }
+  }
+
+  // --- WEB SIGNUP FALLBACK ---
+  private async signupWeb(data: any) {
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.token) {
+        this.setSession(result.token, result.user);
+      }
+      return result;
+    } catch (error) {
+      console.error("Web Signup Error:", error);
       return { success: false, msg: 'Signup failed' };
     }
   }
@@ -33,10 +140,28 @@ class AuthService {
     try {
       localStorage.removeItem('authToken');
       localStorage.removeItem('user_info');
-      if (window.api) return await window.api.logout();
-      return { success: true };
+      if (window.api) {
+        return await window.api.logout();
+      } else {
+        return await this.logoutWeb();
+      }
     } catch (error) {
       return { success: false };
+    }
+  }
+
+  // --- WEB LOGOUT FALLBACK ---
+  private async logoutWeb() {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: true };
     }
   }
 
@@ -47,15 +172,39 @@ class AuthService {
       if (!userString) return { success: false };
       
       const cachedUser = JSON.parse(userString);
-      // 🟢 FORCE FETCH from DB to get the latest email/avatar
-      const res = await window.api.getDashboardStats(cachedUser._id || cachedUser.id);
       
-      if (res.success && res.user) {
-        localStorage.setItem('user_info', JSON.stringify(res.user));
-        return { success: true, user: res.user };
+      if (window.api) {
+        const res = await window.api.getDashboardStats(cachedUser._id || cachedUser.id);
+        
+        if (res.success && res.user) {
+          localStorage.setItem('user_info', JSON.stringify(res.user));
+          return { success: true, user: res.user };
+        }
+      } else {
+        const res = await this.getProfileWeb(cachedUser._id || cachedUser.id);
+        
+        if (res.success && res.user) {
+          localStorage.setItem('user_info', JSON.stringify(res.user));
+          return { success: true, user: res.user };
+        }
       }
+      
       return { success: true, user: cachedUser };
     } catch (e) {
+      return { success: false };
+    }
+  }
+
+  // --- WEB GET PROFILE FALLBACK ---
+  private async getProfileWeb(userId: string) {
+    try {
+      const response = await fetch(`/api/user/profile/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+        },
+      });
+      return await response.json();
+    } catch (error) {
       return { success: false };
     }
   }
@@ -65,24 +214,26 @@ class AuthService {
       const userString = localStorage.getItem('user_info');
       const currentUser = JSON.parse(userString || '{}');
       
-      // 🟢 Fix ID mismatch: Use _id (Google/Mongo) or id (Manual)
       const payload = { 
         name: userData.name,
         bio: userData.bio,
-        avatar: userData.avatar, // Send Base64 directly
+        avatar: userData.avatar,
         userId: currentUser._id || currentUser.id 
       };
 
       console.log("AuthService updateProfile - Sending payload with userId:", payload.userId);
 
-      const res = await window.api.updateProfile(payload);
+      let res;
+      if (window.api) {
+        res = await window.api.updateProfile(payload);
+      } else {
+        res = await this.updateProfileWeb(payload);
+      }
       
       console.log("AuthService updateProfile - Response:", res);
 
       if (res.success) {
-        // 🟢 Update local session so Dashboard sees the change
         localStorage.setItem('user_info', JSON.stringify(res.user));
-        // 🟢 Broadcast change to Dashboard
         window.dispatchEvent(new Event('profile-updated'));
         return { success: true, user: res.user };
       }
@@ -93,11 +244,46 @@ class AuthService {
     }
   }
 
+  // --- WEB UPDATE PROFILE FALLBACK ---
+  private async updateProfileWeb(payload: any) {
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.getToken()}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Web updateProfile error:", error);
+      return { success: false, msg: "Connection Error" };
+    }
+  }
+
   // --- DASHBOARD ---
   async getDashboardData(userId: string) {
     try {
-      if (!window.api) return { success: false, msg: "API missing" };
-      return await window.api.getDashboardStats(userId);
+      if (window.api) {
+        return await window.api.getDashboardStats(userId);
+      } else {
+        return await this.getDashboardDataWeb(userId);
+      }
+    } catch (error) {
+      return { success: false, msg: "Failed to load stats" };
+    }
+  }
+
+  // --- WEB GET DASHBOARD DATA FALLBACK ---
+  private async getDashboardDataWeb(userId: string) {
+    try {
+      const response = await fetch(`/api/user/dashboard/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`,
+        },
+      });
+      return await response.json();
     } catch (error) {
       return { success: false, msg: "Failed to load stats" };
     }
@@ -113,7 +299,31 @@ class AuthService {
   // --- GITHUB ---
   async githubOAuth(code: string) {
     try {
-      const res = await window.api.githubOAuth(code);
+      if (window.api) {
+        const res = await window.api.githubOAuth(code);
+        if (res.success && res.token && res.user) {
+          this.setSession(res.token, res.user);
+        }
+        return res;
+      } else {
+        return await this.githubOAuthWeb(code);
+      }
+    } catch (e) {
+      return { success: false, msg: "GitHub OAuth failed" };
+    }
+  }
+
+  // --- WEB GITHUB OAUTH FALLBACK ---
+  private async githubOAuthWeb(code: string) {
+    try {
+      const response = await fetch('/api/auth/github/callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+      const res = await response.json();
       if (res.success && res.token && res.user) {
         this.setSession(res.token, res.user);
       }
@@ -126,7 +336,31 @@ class AuthService {
   // --- GOOGLE ---
   async googleOAuth(code: string) {
     try {
-      const res = await window.api.googleOAuth(code);
+      if (window.api) {
+        const res = await window.api.googleOAuth(code);
+        if (res.success && res.token && res.user) {
+          this.setSession(res.token, res.user);
+        }
+        return res;
+      } else {
+        return await this.googleOAuthWeb(code);
+      }
+    } catch (e) {
+      return { success: false, msg: "Google OAuth failed" };
+    }
+  }
+
+  // --- WEB GOOGLE OAUTH FALLBACK ---
+  private async googleOAuthWeb(code: string) {
+    try {
+      const response = await fetch('/api/auth/google/callback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+      const res = await response.json();
       if (res.success && res.token && res.user) {
         this.setSession(res.token, res.user);
       }
@@ -138,11 +372,51 @@ class AuthService {
 
   // --- PASSWORD RECOVERY ---
   async forgotPassword(email: string) {
-    return await window.api.forgotPassword({ email });
+    if (window.api) {
+      return await window.api.forgotPassword({ email });
+    } else {
+      return await this.forgotPasswordWeb(email);
+    }
+  }
+
+  // --- WEB FORGOT PASSWORD FALLBACK ---
+  private async forgotPasswordWeb(email: string) {
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, msg: "Failed to send reset email" };
+    }
   }
 
   async resetPassword(data: any) {
-    return await window.api.resetPassword(data);
+    if (window.api) {
+      return await window.api.resetPassword(data);
+    } else {
+      return await this.resetPasswordWeb(data);
+    }
+  }
+
+  // --- WEB RESET PASSWORD FALLBACK ---
+  private async resetPasswordWeb(data: any) {
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, msg: "Failed to reset password" };
+    }
   }
 
   // --- SESSION HELPERS ---

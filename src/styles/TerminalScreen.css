@@ -1,6 +1,6 @@
 /* --- LAYOUT CONTAINER --- */
 .ide-wrapper {
-  height: 100vh;
+  height: 100%;
   width: 100vw;
   display: flex;
   flex-direction: column;
@@ -21,7 +21,10 @@
   padding-top: 15px;
   padding-bottom: 15px;
   flex-shrink: 0;
-  z-index: 20;
+  z-index: 10;
+  pointer-events: auto;
+  gap: 10px;
+  position: relative;
 }
 
 .activity-icon {
@@ -36,12 +39,35 @@
   transition: all 0.2s;
   border-left: 2px solid transparent;
   margin-bottom: 5px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  pointer-events: auto;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
-.activity-icon:hover { color: white; }
+.activity-icon:hover { 
+  color: white; 
+}
+
 .activity-icon.active { 
   color: #fff; 
   border-left-color: #bc13fe; /* Purple Indicator */
+}
+
+.activity-icon.home-icon,
+.activity-icon.settings-icon {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  z-index: 100 !important;
+}
+
+/* Ensure icon elements don't block clicks */
+.activity-icon i {
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Push items to bottom */
@@ -71,9 +97,8 @@
 
 /* --- 3. MAIN EDITOR AREA --- */
 .ide-main-content {
-  display: grid;
-  grid-template-columns: 50px 250px 1fr;
-  grid-template-rows: 1fr;
+  display: flex;
+  flex-direction: row;
   height: 100%;
   width: 100%;
   flex: 1;
@@ -958,7 +983,7 @@
   width: 100%;
   min-height: 0;
 }
-
+ 
 
 /* Analysis Panel Wrapper - Full Height, No Header */
 .analysis-panel-wrapper {

@@ -43,6 +43,7 @@ interface Window {
     minimizeWindow: () => Promise<void>;
     maximizeWindow: () => Promise<void>;
     closeWindow: () => Promise<void>;
+    toggleDevTools: () => Promise<void>;
     
     // --- Code Management (Database) ---
     saveCodeToDatabase: (data: { filePath: string; content: string; userId?: string }) => Promise<any>;

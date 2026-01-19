@@ -35,6 +35,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
+  const handleInputBlur = () => {
+    if (newName.trim()) {
+      handleCreateSubmit({ preventDefault: () => {} } as React.FormEvent);
+    } else {
+      setIsCreatingFile(false);
+      setIsCreatingFolder(false);
+      setNewName('');
+    }
+  };
+
   const getIcon = (name: string) => {
     if (name.endsWith('.py')) return 'fa-brands fa-python';
     if (name.endsWith('.js')) return 'fa-brands fa-js';
@@ -135,7 +145,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
               placeholder={creationType === 'file' ? 'filename.py' : 'folder name'}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onBlur={handleCreateSubmit}
+              onBlur={handleInputBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreateSubmit(e as any);
+                } else if (e.key === 'Escape') {
+                  setIsCreatingFile(false);
+                  setIsCreatingFolder(false);
+                  setNewName('');
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '6px 8px',

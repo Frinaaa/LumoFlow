@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('api', {
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
+  toggleDevTools: () => ipcRenderer.invoke('window:toggleDevTools'),
   
   // Code Management (Database)
   saveCodeToDatabase: (data) => ipcRenderer.invoke('code:saveToDatabase', data).catch(err => ({ success: false, msg: err.message })),

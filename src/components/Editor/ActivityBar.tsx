@@ -1,116 +1,110 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 
 interface ActivityBarProps {
   activeSidebar: string;
   onSidebarChange: (sidebar: string) => void;
+  onNavigate?: (path: string) => void;
 }
 
-const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChange }) => {
-  const navigate = useNavigate();
+const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChange, onNavigate }) => {
+  const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
 
-  const handleDashboardClick = () => {
-    console.log('Dashboard button clicked, navigating to /dashboard');
-    navigate('/dashboard');
+  const handleDashboardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🏠 Home button clicked');
+    if (onNavigate) {
+      onNavigate('/dashboard');
+    } else {
+      window.location.href = '/#/dashboard';
+    }
   };
 
-  const handleSettingsClick = () => {
-    console.log('Settings button clicked, navigating to /settings');
-    sessionStorage.setItem('settingsReferrer', '/terminal');
-    navigate('/settings');
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('⚙️ Settings button clicked');
+    sessionStorage.setItem('settingsReferrer', '/editor');
+    if (onNavigate) {
+      onNavigate('/settings');
+    } else {
+      window.location.href = '/#/settings';
+    }
   };
 
   return (
-    <aside className="activity-bar" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      width: '50px',
-      background: '#1e1e1e',
-      borderRight: '1px solid #333',
-      padding: '10px 0',
-      gap: '10px'
-    }}>
-      <div 
-        className="activity-icon" 
-        onClick={handleDashboardClick} 
+    <aside className="activity-bar">
+      <button 
+        type="button"
+        className="activity-icon home-icon" 
+        onClick={handleDashboardClick}
         title="Dashboard"
+        onMouseEnter={() => setHoveredIcon('home')}
+        onMouseLeave={() => setHoveredIcon(null)}
         style={{
-          padding: '8px',
-          cursor: 'pointer',
-          color: '#888',
-          fontSize: '18px',
-          transition: 'all 0.2s ease',
-          borderLeft: '3px solid transparent',
-          '&:hover': {
-            color: '#00f2ff'
-          }
+          color: hoveredIcon === 'home' ? '#00f2ff' : '#888',
         }}
       >
         <i className="fa-solid fa-house"></i>
-      </div>
+      </button>
 
-      <div 
+      <button 
+        type="button"
         className={`activity-icon ${activeSidebar === 'Explorer' ? 'active' : ''}`} 
         onClick={() => onSidebarChange('Explorer')} 
         title="Explorer"
+        onMouseEnter={() => setHoveredIcon('explorer')}
+        onMouseLeave={() => setHoveredIcon(null)}
         style={{
-          padding: '8px',
-          cursor: 'pointer',
-          color: activeSidebar === 'Explorer' ? '#00f2ff' : '#888',
-          fontSize: '18px',
-          transition: 'all 0.2s ease'
+          color: activeSidebar === 'Explorer' ? '#00f2ff' : hoveredIcon === 'explorer' ? '#00f2ff' : '#888'
         }}
       >
         <i className="fa-regular fa-copy"></i>
-      </div>
+      </button>
 
-      <div 
+      <button 
+        type="button"
         className={`activity-icon ${activeSidebar === 'Search' ? 'active' : ''}`} 
         onClick={() => onSidebarChange('Search')} 
         title="Search"
+        onMouseEnter={() => setHoveredIcon('search')}
+        onMouseLeave={() => setHoveredIcon(null)}
         style={{
-          padding: '8px',
-          cursor: 'pointer',
-          color: activeSidebar === 'Search' ? '#00f2ff' : '#888',
-          fontSize: '18px',
-          transition: 'all 0.2s ease'
+          color: activeSidebar === 'Search' ? '#00f2ff' : hoveredIcon === 'search' ? '#00f2ff' : '#888'
         }}
       >
         <i className="fa-solid fa-magnifying-glass"></i>
-      </div>
+      </button>
 
-      <div 
+      <button 
+        type="button"
         className={`activity-icon ${activeSidebar === 'Github' ? 'active' : ''}`} 
         onClick={() => onSidebarChange('Github')} 
         title="Source Control"
+        onMouseEnter={() => setHoveredIcon('github')}
+        onMouseLeave={() => setHoveredIcon(null)}
         style={{
-          padding: '8px',
-          cursor: 'pointer',
-          color: activeSidebar === 'Github' ? '#00f2ff' : '#888',
-          fontSize: '18px',
-          transition: 'all 0.2s ease'
+          color: activeSidebar === 'Github' ? '#00f2ff' : hoveredIcon === 'github' ? '#00f2ff' : '#888'
         }}
       >
         <i className="fa-brands fa-github"></i>
-      </div>
+      </button>
 
       <div style={{ flex: 1 }}></div>
 
-      <div 
-        className="activity-icon" 
-        onClick={handleSettingsClick} 
+      <button 
+        type="button"
+        className="activity-icon settings-icon" 
+        onClick={handleSettingsClick}
         title="Settings"
+        onMouseEnter={() => setHoveredIcon('settings')}
+        onMouseLeave={() => setHoveredIcon(null)}
         style={{
-          padding: '8px',
-          cursor: 'pointer',
-          color: '#888',
-          fontSize: '18px',
-          transition: 'all 0.2s ease'
+          color: hoveredIcon === 'settings' ? '#00f2ff' : '#888',
         }}
       >
         <i className="fa-solid fa-gear"></i>
-      </div>
+      </button>
     </aside>
   );
 };

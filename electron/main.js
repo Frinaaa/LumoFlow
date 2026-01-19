@@ -227,7 +227,16 @@ app.on('ready', () => {
     console.log('✅ Registered: files:createFile');
 
     ipcMain.handle('files:readFile', async (event, filePath) => {
-      return fs.readFileSync(filePath, 'utf-8');
+      try {
+        const stats = fs.statSync(filePath);
+        if (stats.isDirectory()) {
+          return { success: false, msg: 'Path is a directory, not a file' };
+        }
+        const content = fs.readFileSync(filePath, 'utf-8');
+        return { success: true, content };
+      } catch (err) {
+        return { success: false, msg: err.message };
+      }
     });
     console.log('✅ Registered: files:readFile');
 
@@ -393,6 +402,23 @@ app.on('ready', () => {
       }
     });
     console.log('✅ Registered: window:close');
+
+    ipcMain.handle('window:toggleDevTools', () => {
+      try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          if (mainWindow.webContents.isDevToolsOpened()) {
+            mainWindow.webContents.closeDevTools();
+          } else {
+            mainWindow.webContents.openDevTools();
+          }
+        }
+        return { success: true };
+      } catch (error) {
+        console.error('Toggle DevTools error:', error);
+        return { success: false, error: error.message };
+      }
+    });
+    console.log('✅ Registered: window:toggleDevTools');
 
     // Code Management Handlers
     ipcMain.handle('code:saveToDatabase', codeController.saveCodeToDatabase);

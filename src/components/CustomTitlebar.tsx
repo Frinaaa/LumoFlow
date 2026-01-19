@@ -12,7 +12,7 @@ const CustomTitlebar: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Check if we're in EditorScreen
-  const isEditorScreen = location.pathname === '/terminal';
+  const isEditorScreen = location.pathname === '/editor';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -114,6 +114,16 @@ const CustomTitlebar: React.FC = () => {
                   <div onClick={() => triggerAction('toggleTerminal')}>Toggle Terminal <span className="sc">Ctrl+`</span></div>
                   <div className="h-sep"></div>
                   <div onClick={editorState.onAnalyze}>Toggle Analysis</div>
+                </div>
+              )}
+            </div>
+
+            {/* DEVELOPER MENU */}
+            <div className={`menu-trigger ${activeMenu === 'Developer' ? 'active' : ''}`} onClick={() => setActiveMenu(activeMenu === 'Developer' ? null : 'Developer')}>
+              <span>Developer</span>
+              {activeMenu === 'Developer' && (
+                <div className="header-dropdown">
+                  <div onClick={() => triggerAction('toggleDevTools')}>Toggle DevTools <span className="sc">Ctrl+Shift+I</span></div>
                 </div>
               )}
             </div>

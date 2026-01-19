@@ -48,6 +48,7 @@ const SettingsScreen: React.FC = () => {
 
   // Load from cache immediately on mount
   useEffect(() => {
+    console.log('✅ SettingsScreen MOUNTED');
     const userString = localStorage.getItem('user_info');
     if (userString) {
       try {
@@ -63,6 +64,9 @@ const SettingsScreen: React.FC = () => {
         console.error('Failed to parse cached user:', e);
       }
     }
+    return () => {
+      console.log('❌ SettingsScreen UNMOUNTED');
+    };
   }, []);
 
   // Then fetch fresh data from backend

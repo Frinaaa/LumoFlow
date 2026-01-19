@@ -22,6 +22,13 @@ function AppLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const editorState = useEditor();
+  const location = useLocation();
+
+  useEffect(() => {
+    console.log('📍 Current route:', location.pathname);
+    console.log('🔐 isAuthenticated:', isAuthenticated);
+    console.log('⏳ isLoading:', isLoading);
+  }, [location.pathname, isAuthenticated, isLoading]);
 
   useEffect(() => {
     const initFlow = async () => {
@@ -78,73 +85,84 @@ function AppLayout() {
   return (
     <>
       <CustomTitlebar />
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', width: '100%' }}>
         <Routes>
-        {/* Auth Callbacks */}
-        <Route path="/auth/google/callback" element={<AuthCallback />} />
-        <Route path="/auth/github/callback" element={<AuthCallback />} />
+          {/* Auth Callbacks */}
+          <Route path="/auth/google/callback" element={<AuthCallback />} />
+          <Route path="/auth/github/callback" element={<AuthCallback />} />
 
-        <Route path="/signup" element={<SignUpScreen />} />
-        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-        <Route path="/reset-password" element={<ResetPasswordScreen />} />
-        <Route path="/about" element={<AboutUsScreen />} />
+          {/* Public Routes */}
+          <Route path="/signup" element={<SignUpScreen />} />
+          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+          <Route path="/reset-password" element={<ResetPasswordScreen />} />
+          <Route path="/about" element={<AboutUsScreen />} />
 
-        {/* LOGIN ROUTE */}
-        <Route
-          path="/login"
-          element={
-            !isAuthenticated ? (
-              <LoginScreen setIsAuthenticated={setIsAuthenticated} />
-            ) : (
-              <Navigate to="/dashboard" replace />
-            )
-          }
-        />
+          {/* Login Route */}
+          <Route
+            path="/login"
+            element={
+              !isAuthenticated ? (
+                <LoginScreen setIsAuthenticated={setIsAuthenticated} />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
+            }
+          />
 
-        {/* DASHBOARD ROUTE (Protected) */}
-        <Route
-          path="/dashboard"
-          element={
-            isAuthenticated ? (
-              <DashboardScreen />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-          {/* 2. ADD THIS ROUTE */}
-  <Route
-    path="/settings"
-    element={
-      isAuthenticated ? (
-        <SettingsScreen />
-      ) : (
-        <Navigate to="/login" replace />
-      )
-    }
-  />
-        {/* ROOT REDIRECT */}
-        {/* Redirects to Dashboard if authenticated, otherwise to Login */}
-        <Route 
-          path="/" 
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
-        />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              isAuthenticated ? (
+                <DashboardScreen />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
 
-        {/* EDITOR ROUTE (Protected) */}
-        <Route
-          path="/editor"
-          element={
-            isAuthenticated ? (
-              <TerminalScreen />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+          <Route
+            path="/settings"
+            element={
+              isAuthenticated ? (
+                <SettingsScreen />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
-        <Route path="/terminal" element={isAuthenticated ? <TerminalScreen /> : <Navigate to="/login" />} />
-      </Routes>
+          <Route
+            path="/editor"
+            element={
+              isAuthenticated ? (
+                <TerminalScreen />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/terminal"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/editor" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          {/* Root Redirect */}
+          <Route
+            path="/"
+            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />}
+          />
+
+          {/* Catch-all - must be last */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
       </div>
     </>
   );
@@ -152,11 +170,11 @@ function AppLayout() {
 
 function App() {
   return (
-    <EditorProvider>
-      <Router>
+    <Router>
+      <EditorProvider>
         <AppLayout />
-      </Router>
-    </EditorProvider>
+      </EditorProvider>
+    </Router>
   );
 }
 

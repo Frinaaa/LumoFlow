@@ -64,13 +64,17 @@ const DashboardScreen: React.FC = () => {
 
   // 🟢 EFFECT: Initial Load + Event Listener for Parallel Updates
   useEffect(() => {
+    console.log('✅ DashboardScreen MOUNTED');
     fetchUser(); // Run once on mount
 
     // Listen for the 'profile-updated' event from SettingsScreen
     window.addEventListener('profile-updated', fetchUser);
 
     // Cleanup listener when leaving dashboard
-    return () => window.removeEventListener('profile-updated', fetchUser);
+    return () => {
+      console.log('❌ DashboardScreen UNMOUNTED');
+      window.removeEventListener('profile-updated', fetchUser);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -93,7 +97,7 @@ const DashboardScreen: React.FC = () => {
         <nav>
           <button className="nav-item active"><i className="fa-solid fa-chart-line"></i> Dashboard</button>
           <button className="nav-item"><i className="fa-solid fa-gamepad"></i> Arcade</button>
-          <button className="nav-item" onClick={() => navigate('/terminal')}>
+          <button className="nav-item" onClick={() => navigate('/editor')}>
             <i className="fa-solid fa-terminal"></i> Code Editor
           </button>
           <button className="nav-item"><i className="fa-solid fa-eye"></i> Visuals</button>
