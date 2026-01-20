@@ -1,62 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getNextPuzzle, PuzzleData } from '../utils/logicPuzzleGenerator';
 import '../styles/LogicPuzzle.css';
-
-// Definition of a code fragment
-interface CodeFragment {
-  id: string;
-  content: React.ReactNode;
-}
-
-// The puzzle data
-const initialFragments: CodeFragment[] = [
-  { id: 'p1', content: <><span className="kw">function</span> <span className="fn">initFirewall</span>() {'{'}</> },
-  { id: 'p2', content: <>&nbsp;&nbsp;<span className="kw">let</span> secure = <span className="kw">true</span>;</> },
-  { id: 'p3', content: <>&nbsp;&nbsp;<span className="kw">if</span> (secure) {'{'}</> },
-  { id: 'p4', content: <>&nbsp;&nbsp;&nbsp;&nbsp;console.log(<span className="str">"Connected"</span>);</> },
-  { id: 'p5', content: <>&nbsp;&nbsp;{'}'}</> },
-  { id: 'p6', content: <>{'}'}</> },
-];
 
 const LogicPuzzleScreen: React.FC = () => {
   const navigate = useNavigate();
   
-  // State to track where each fragment is (null means it's in the sidebar)
-  // Key = Slot Index (0-4), Value = Fragment ID
-  const [slots, setSlots] = useState<(string | null)[]>([null, null, null, null, null, null]);
+  // -- Game State --
+  const [level, setLevel] = useState(1);
+  const [puzzle, setPuzzle] = useState<PuzzleData | null>(null);
+  
+  // -- Slots State (Array of fragment IDs) --
+  const [slots, setSlots] = useState<(string | null)[]>([]);
+  
+  // -- UI State --
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  // Helper to check if a fragment is already placed in a slot
+  // Initial Load
+  useEffect(() => {
+    loadLevel(1);
+  }, []);
+
+  const loadLevel = (lvl: number) => {
+    const newPuzzle = getNextPuzzle(lvl);
+    setPuzzle(newPuzzle);
+    // Initialize empty slots based on number of fragments
+    setSlots(new Array(newPuzzle.correctOrderIds.length).fill(null));
+    setIsSuccess(false);
+    setShowHint(false);
+  };
+
+  const handleNextLevel = () => {
+    const nextLvl = level + 1;
+    setLevel(nextLvl);
+    loadLevel(nextLvl);
+  };
+
   const isPlaced = (id: string) => slots.includes(id);
 
-  // --- Drag Handlers ---
-
+  // --- Drag & Drop ---
+  
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData("text/plain", id);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
-  };
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
   const handleDropInSlot = (index: number) => {
     if (!draggedId) return;
 
     setSlots(prev => {
       const newSlots = [...prev];
+      // Remove from old slot if it exists there
+      const oldIndex = newSlots.indexOf(draggedId);
+      if (oldIndex !== -1) newSlots[oldIndex] = null;
       
-      // If item was already in another slot, clear that slot
-      const oldSlotIndex = newSlots.indexOf(draggedId);
-      if (oldSlotIndex !== -1) {
-        newSlots[oldSlotIndex] = null;
-      }
-
-      // If target slot has an item, move it back to sidebar (or swap - simple replace here)
-      // For simplicity: overwriting just replaces
+      // Place in new slot (overwrite/replace)
       newSlots[index] = draggedId;
-      
       return newSlots;
     });
     setDraggedId(null);
@@ -66,7 +70,7 @@ const LogicPuzzleScreen: React.FC = () => {
     e.preventDefault();
     if (!draggedId) return;
 
-    // Remove from slots (effectively moving back to sidebar)
+    // Remove from slots = return to sidebar
     setSlots(prev => {
       const newSlots = [...prev];
       const index = newSlots.indexOf(draggedId);
@@ -76,20 +80,19 @@ const LogicPuzzleScreen: React.FC = () => {
     setDraggedId(null);
   };
 
-  // --- Validation Logic ---
+  // --- Validation ---
   const checkPuzzle = () => {
-    // Correct Order IDs
-    const correctOrder = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
-    
-    // Check if slots match correct order
-    const isCorrect = slots.every((val, index) => val === correctOrder[index]);
+    if (!puzzle) return;
+    const isCorrect = slots.every((val, index) => val === puzzle.correctOrderIds[index]);
 
     if (isCorrect) {
-      alert("✅ SYSTEM SECURE: Firewall initialized successfully!");
+      setIsSuccess(true);
     } else {
-      alert("❌ SYNTAX ERROR: Code fragments are misplaced or missing.");
+      alert("⚠️ Syntax Error: Blocks are missing or in the wrong order.");
     }
   };
+
+  if (!puzzle) return <div style={{color:'white', padding: 50}}>Loading Neural Interface...</div>;
 
   return (
     <div className="logic-puzzle-wrapper">
@@ -97,13 +100,8 @@ const LogicPuzzleScreen: React.FC = () => {
 
       {/* HEADER */}
       <header className="puzzle-header">
-        <div className="brand-logo">
-          <div className="logo-icon"><i className="fa-solid fa-bolt"></i></div>
-          LUMO<span>FLOW</span>
-        </div>
-        <div className="level-badge">PUZZLE: LEVEL 3/5</div>
-        
-        {/* BACK BUTTON */}
+       
+        <div className="level-pill">PUZZLE: LEVEL {level}/∞</div>
         <button className="exit-btn" onClick={() => navigate('/games')}>
           <i className="fa-solid fa-arrow-right-from-bracket"></i> Exit Game
         </button>
@@ -111,20 +109,20 @@ const LogicPuzzleScreen: React.FC = () => {
 
       <div className="puzzle-container">
         
-        {/* LEFT: Editor Drop Zones */}
+        {/* LEFT PANEL: Drop Zones */}
         <div className="editor-panel">
           <div className="panel-top-bar">
             <div className="circle red"></div><div className="circle yellow"></div><div className="circle green"></div>
-            <div className="filename">broken_logic.js</div>
+            <div className="filename">logic_level_{level}.js</div>
           </div>
           
           <div className="drop-zone">
             {slots.map((contentId, index) => {
-              const fragment = initialFragments.find(f => f.id === contentId);
+              const fragment = contentId ? puzzle.fragments.find(f => f.id === contentId) : null;
               return (
                 <div 
                   key={index} 
-                  className="drop-slot" 
+                  className={`drop-slot ${isSuccess ? 'success-glow' : ''}`}
                   data-line={index + 1}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDropInSlot(index)}
@@ -132,9 +130,9 @@ const LogicPuzzleScreen: React.FC = () => {
                   {fragment && (
                     <div 
                       className="code-card" 
-                      draggable 
+                      draggable={!isSuccess}
                       onDragStart={(e) => handleDragStart(e, fragment.id)}
-                      style={{ width: '100%', border: 'none', background: 'transparent' }}
+                      style={{ width: '100%', border: 'none', background: 'transparent', margin: 0, padding: 0 }}
                     >
                       {fragment.content}
                     </div>
@@ -145,52 +143,69 @@ const LogicPuzzleScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* RIGHT: Sidebar Instructions & Pieces */}
+        {/* RIGHT PANEL: Info & Fragments */}
         <div className="sidebar-panel">
           
           <div className="info-card">
-            <h2 className="fancy-heading">Dare to Arrange Me</h2>
-            <p className="description">
-              The firewall security protocol is scrambled. Rearrange the code snippets to initialize the secure connection.
-            </p>
+            <h2 className="fancy-heading">{puzzle.title}</h2>
+            <p className="description">{puzzle.description}</p>
             
-            <div className={`hint-text ${showHint ? 'visible' : ''}`}>
-              <i className="fa-regular fa-lightbulb"></i> <b>Hint:</b> Declare variable 'secure' before checking it.
-            </div>
+            {showHint && (
+              <div className="hint-text">
+                <i className="fa-solid fa-lightbulb"></i> {puzzle.hint}
+              </div>
+            )}
 
             <div className="btn-group">
-              <button className="action-btn btn-hint" onClick={() => setShowHint(!showHint)}>
-                <i className="fa-solid fa-eye"></i> Hint
-              </button>
-              <button className="action-btn btn-check" onClick={checkPuzzle}>
-                <i className="fa-solid fa-play"></i> Run Code
-              </button>
+              {isSuccess ? (
+                <button 
+                  className="action-btn btn-check" 
+                  style={{ background: '#00ff88', color: '#000', border: 'none' }}
+                  onClick={handleNextLevel}
+                >
+                  Next Level <i className="fa-solid fa-arrow-right"></i>
+                </button>
+              ) : (
+                <>
+                  <button className="action-btn btn-hint" onClick={() => setShowHint(!showHint)}>
+                    <i className="fa-solid fa-eye"></i> Hint
+                  </button>
+                  <button className="action-btn btn-check" onClick={checkPuzzle}>
+                    <i className="fa-solid fa-play"></i> Run Code
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
-          <h4 style={{ color: '#666', fontFamily: 'Orbitron', marginTop: '10px' }}>FRAGMENTS</h4>
+          <div className="fragments-header">FRAGMENTS</div>
           
-          {/* Source Zone (Sidebar) */}
+          {/* Source Zone */}
           <div 
             className="fragments-container"
             onDragOver={handleDragOver}
             onDrop={handleDropInSidebar}
           >
-            {initialFragments.map((frag) => {
-              // Only render if NOT placed in a slot
-              if (isPlaced(frag.id)) return null;
-
+            {puzzle.fragments.map((frag) => {
+              if (isPlaced(frag.id)) return null; // Hide if placed
+              
               return (
                 <div 
                   key={frag.id} 
                   className="code-card" 
-                  draggable 
+                  draggable={!isSuccess}
                   onDragStart={(e) => handleDragStart(e, frag.id)}
                 >
                   {frag.content}
                 </div>
               );
             })}
+            
+            {slots.every(s => s !== null) && (
+              <div style={{ textAlign:'center', color:'#444', fontSize:'0.8rem', marginTop: 20 }}>
+                All fragments placed.
+              </div>
+            )}
           </div>
 
         </div>

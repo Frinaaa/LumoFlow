@@ -107,12 +107,7 @@ if (selectedGame.id === 1) {
       </button>
 
       <div className="gs-header">
-        <div className="gs-logo">
-          <div className="gs-logo-icon">
-            <i className="fa-solid fa-bolt"></i>
-          </div>
-          LUMO<span>FLOW</span>
-        </div>
+      
         <h2>GAME ARCADE</h2>
         <p style={{color:'#888', margin:0}}>Swipe to choose your challenge</p>
       </div>
