@@ -1,6 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const GamesTab: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="analysis-content-section">
       <h4 style={{ color: '#00f2ff' }}>Learning Games</h4>
@@ -14,12 +17,15 @@ const GamesTab: React.FC = () => {
           borderRadius: '5px',
           color: 'white',
           cursor: 'pointer',
-          fontSize: '14px'
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}
-        onClick={() => alert('Games feature coming soon!')}
+        onClick={() => navigate('/games')}
       >
-        <i className="fa-solid fa-gamepad" style={{ marginRight: '8px' }}></i>
-        Start Game
+        <i className="fa-solid fa-gamepad"></i>
+        Enter Arcade
       </button>
     </div>
   );

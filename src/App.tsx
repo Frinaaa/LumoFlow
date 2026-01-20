@@ -16,6 +16,8 @@ import TerminalScreen from './screens/EditorScreen';
 import CustomTitlebar from './components/CustomTitlebar';
 import { EditorProvider, useEditor } from './context/EditorContext';
 import './styles/App.css';
+import GameSelectorScreen from './screens/GameSelectorScreen';
+import LogicPuzzleScreen from './screens/PuzzleGameScreen'; 
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
@@ -153,7 +155,21 @@ function AppLayout() {
               )
             }
           />
-
+        <Route
+            path="/games"
+            element={
+              isAuthenticated ? (
+                <GameSelectorScreen />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          
+<Route
+  path="/games/puzzle"
+  element={isAuthenticated ? <LogicPuzzleScreen /> : <Navigate to="/login" replace />}
+/>
           {/* Root Redirect */}
           <Route
             path="/"

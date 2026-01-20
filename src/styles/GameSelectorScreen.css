@@ -1,0 +1,272 @@
+:root {
+    --card-width: 260px;
+    --card-height: 380px;
+    
+    /* Game Colors */
+    --c-hunt: #ff9f1c;   /* Orange */
+    --c-puzzle: #2ec4b6; /* Teal */
+    --c-debug: #e71d36;  /* Red */
+    --c-predict: #7209b7; /* Purple */
+    --c-error: #f72585;  /* Pink */
+}
+
+.game-selector-wrapper {
+    background-color: #0d0d0d;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    perspective: 1000px; /* Essential for 3D effect */
+    position: relative;
+}
+
+/* Background Glow effect */
+.spotlight {
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0) 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.gs-header {
+    position: absolute;
+    top: 40px;
+    left: 70px; /* Added left positioning */
+    text-align: left; /* Changed from center to left */
+    z-index: 10;
+    opacity: 0.9;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Changed from center to flex-start */
+    gap: 10px;
+}
+
+.gs-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Orbitron';
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: white;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.gs-logo-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: rgba(0, 242, 255, 0.1);
+    border: 1px solid rgba(0, 242, 255, 0.3);
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+}
+
+.gs-logo-icon i {
+    font-size: 0.9rem;
+    background: linear-gradient(180deg, #ffffff 0%, #2ec4b6 100%);
+    -webkit-background-clip: text;
+    background-clip: text; /* <--- Added this standard property */
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 5px rgba(46, 196, 182, 0.8));
+}
+
+.gs-logo span {
+    color: #2ec4b6;
+    text-shadow: 0 0 10px rgba(46, 196, 182, 0.6);
+}
+
+/* The 3D Container */
+.carousel-container {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform-style: preserve-3d;
+    z-index: 5;
+    margin-top: -50px;
+}
+
+.game-card {
+    position: absolute;
+    width: var(--card-width);
+    height: var(--card-height);
+    background: #1e1e1e;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 25px;
+    box-sizing: border-box;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s, filter 0.5s;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    
+    /* Initial positioning logic handled in JS/React now */
+    left: 50%;
+    top: 50%;
+    margin-left: calc(var(--card-width) * -0.5);
+    margin-top: calc(var(--card-height) * -0.5);
+}
+
+/* Card Content Styling */
+.card-icon {
+    font-size: 3rem;
+    margin-top: 20px;
+}
+
+.card-content h3 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 0 10px 0;
+    line-height: 1.1;
+}
+
+.card-content p {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin: 0;
+}
+
+.play-btn {
+    margin-top: auto;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 50px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    backdrop-filter: blur(5px);
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    z-index: 100;
+    pointer-events: auto;
+}
+
+.play-btn:hover {
+    background: rgba(255,255,255,0.4);
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+}
+
+.play-btn:active {
+    transform: scale(0.95);
+}
+
+/* Specific Game Themes */
+.game-theme-0 { border-top: 4px solid var(--c-hunt); }
+.game-theme-0 .card-icon { color: var(--c-hunt); }
+
+.game-theme-1 { border-top: 4px solid var(--c-puzzle); }
+.game-theme-1 .card-icon { color: var(--c-puzzle); }
+
+.game-theme-2 { border-top: 4px solid var(--c-debug); }
+.game-theme-2 .card-icon { color: var(--c-debug); }
+
+.game-theme-3 { border-top: 4px solid var(--c-predict); }
+.game-theme-3 .card-icon { color: var(--c-predict); }
+
+.game-theme-4 { border-top: 4px solid var(--c-error); }
+.game-theme-4 .card-icon { color: var(--c-error); }
+
+
+/* Controls */
+.gs-controls {
+    position: absolute;
+    bottom: 80px;
+    display: flex;
+    gap: 20px;
+    z-index: 20;
+}
+
+.nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-btn:hover {
+    background: white;
+    color: black;
+}
+
+/* The Launch Button */
+.launch-zone {
+    position: absolute;
+    bottom: 30px;
+    text-align: center;
+    z-index: 20;
+    animation: bounce 2s infinite;
+    cursor: pointer;
+}
+
+.launch-zone span {
+    display: block;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}
+/* Add this to src/styles/GameSelectorScreen.css */
+
+.gs-back-btn {
+    position: absolute;
+    top: 30px; /* Aligned nicely with the header */
+    left: 20px; /* To the left of the header content */
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ccc;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.gs-back-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: #00f2ff;
+    transform: translateX(-3px);
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+}

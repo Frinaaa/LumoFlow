@@ -9,7 +9,6 @@ const userController = require('./controllers/userController');
 const authController = require('./controllers/authController');
 const codeController = require('./controllers/codeController');
 const analysisController = require('./controllers/analysisController');
-const [remoteUrl, setRemoteUrl] = useState(''); // New state for Remote URL input
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 let mainWindow;
