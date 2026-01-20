@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNextPuzzle, PuzzleData } from '../utils/logicPuzzleGenerator';
+import { getNextPuzzle, PuzzleData, reshufflePuzzles } from '../utils/logicPuzzleGenerator';
 import '../styles/LogicPuzzle.css';
 
 const LogicPuzzleScreen: React.FC = () => {
@@ -20,6 +20,7 @@ const LogicPuzzleScreen: React.FC = () => {
 
   // Initial Load
   useEffect(() => {
+    reshufflePuzzles(); // Shuffle puzzles for new game session
     loadLevel(1);
   }, []);
 

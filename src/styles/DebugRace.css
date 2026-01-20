@@ -1,0 +1,268 @@
+:root {
+    --bg-deep: #080808;
+    --neon-alert: #ff003c;
+    --neon-safe: #00ff88;
+    --glass: rgba(20, 20, 25, 0.9);
+    --border-red: rgba(255, 0, 60, 0.3);
+    --text-main: #e0e0e0;
+}
+
+.debug-race-wrapper {
+    background-color: var(--bg-deep);
+    color: var(--text-main);
+    font-family: 'Rajdhani', sans-serif;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* Hexagon Pattern */
+    background-image: 
+        radial-gradient(circle at 50% 50%, rgba(20, 0, 0, 0.5), transparent 80%),
+        linear-gradient(0deg, transparent 24%, rgba(255, 0, 60, .05) 25%, rgba(255, 0, 60, .05) 26%, transparent 27%, transparent 74%, rgba(255, 0, 60, .05) 75%, rgba(255, 0, 60, .05) 76%, transparent 77%, transparent), 
+        linear-gradient(90deg, transparent 24%, rgba(255, 0, 60, .05) 25%, rgba(255, 0, 60, .05) 26%, transparent 27%, transparent 74%, rgba(255, 0, 60, .05) 75%, rgba(255, 0, 60, .05) 76%, transparent 77%, transparent);
+    background-size: 100% 100%, 50px 50px, 50px 50px;
+}
+
+/* Header */
+.hud-header {
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    border-bottom: 2px solid var(--border-red);
+    background: rgba(10, 5, 5, 0.95);
+    z-index: 10;
+}
+
+.debug-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: white;
+    text-transform: uppercase;
+}
+
+.debug-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    background: rgba(255, 0, 60, 0.1);
+    border: 1px solid rgba(255, 0, 60, 0.3);
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.1);
+    color: var(--neon-alert);
+}
+
+.timer-box {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(255, 0, 60, 0.1);
+    padding: 10px 25px;
+    border: 1px solid var(--neon-alert);
+    border-radius: 4px;
+    transition: background 0.3s;
+}
+
+.timer-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    color: var(--neon-alert);
+    text-shadow: 0 0 10px var(--neon-alert);
+    width: 60px;
+    text-align: right;
+}
+
+.timer-label { font-size: 0.8rem; color: #aaa; letter-spacing: 2px; font-weight: bold; }
+
+/* Progress Bar */
+.progress-line { width: 100%; height: 4px; background: #222; }
+.progress-fill {
+    height: 100%;
+    background: var(--neon-alert);
+    box-shadow: 0 0 15px var(--neon-alert);
+    transition: width 1s linear;
+}
+
+/* Main Layout */
+.interface-container {
+    flex: 1;
+    display: flex;
+    padding: 30px;
+    gap: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Editor Panel */
+.debug-editor-panel {
+    flex: 2;
+    background: #0f0f13;
+    border: 1px solid #333;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+
+.editor-top {
+    background: #1a1a20;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.file-tab {
+    background: #0f0f13;
+    padding: 5px 15px;
+    border-top: 2px solid var(--neon-alert);
+    color: white;
+}
+
+/* System Panel */
+.system-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 300px;
+}
+
+.status-card {
+    background: var(--glass);
+    border: 1px solid var(--border-red);
+    padding: 20px;
+    border-radius: 6px;
+    position: relative;
+}
+
+.status-header {
+    color: var(--neon-alert);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.console-box {
+    background: black;
+    border: 1px solid #333;
+    padding: 15px;
+    flex: 1;
+    min-height: 150px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #aaa;
+    overflow-y: auto;
+}
+
+.log-entry { margin-bottom: 5px; }
+.log-err { color: var(--neon-alert); }
+.log-ok { color: var(--neon-safe); }
+
+.deploy-btn {
+    margin-top: auto;
+    background: var(--neon-alert);
+    color: white;
+    border: none;
+    padding: 18px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+    transition: 0.3s;
+    text-transform: uppercase;
+}
+
+.deploy-btn:hover {
+    background: #ff3355;
+    box-shadow: 0 0 30px rgba(255, 0, 60, 0.6);
+    transform: scale(1.02);
+}
+
+/* Overlays */
+.overlay-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.glitch-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px var(--neon-alert);
+}
+
+/* Animations */
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(5px); }
+    50% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+}
+
+.shake-anim {
+    animation: shake 0.5s;
+}
+/* Add to src/styles/DebugRace.css */
+
+/* Add to src/styles/DebugRace.css */
+
+/* Add these to src/styles/DebugRace.css */
+
+.solution-box {
+    background: #111;
+    border: 1px solid #333;
+    padding: 15px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #888;
+    flex: 1;
+    overflow: auto;
+    white-space: pre;
+    border-radius: 6px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.solution-box.correct {
+    border-color: var(--neon-safe);
+    color: var(--neon-safe);
+    background: rgba(0, 255, 136, 0.05);
+}
+
+.exit-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    padding: 5px 15px;
+    cursor: pointer;
+    font-family: 'Orbitron';
+    transition: 0.2s;
+}
+.exit-btn:hover { border-color: white; color: white; }

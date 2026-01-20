@@ -37,10 +37,14 @@ const GameSelectorScreen: React.FC = () => {
     // Inside launchGame function
 if (selectedGame.id === 1) { 
   navigate('/games/puzzle');
-} else {
+}
+ else if (selectedGame.id === 2) { // Debug Race (ID 2 in your games array)
+      navigate('/games/debug');
+    } 
+    else {
       const gameName = selectedGame.title.replace('\n', ' ');
       alert(`The game "${gameName}" is currently under development.`);
-    }
+    } 
   };
 
   // Calculate style for 3D effect

@@ -209,12 +209,20 @@ const generateVariations = (): PuzzleData[] => {
   return variations;
 };
 
-// Generate all puzzles once
-const allPuzzles = generateVariations();
+// Generate all puzzles and shuffle
+let allPuzzles = shuffleArray(generateVariations());
+let sessionStartIndex = 0;
+
+// Function to reshuffle puzzles (call this when starting a new game)
+export const reshufflePuzzles = (): void => {
+  allPuzzles = shuffleArray(generateVariations());
+  // Start from a random position in the shuffled array
+  sessionStartIndex = Math.floor(Math.random() * allPuzzles.length);
+};
 
 export const getNextPuzzle = (level: number): PuzzleData => {
-  // Return puzzle based on level, cycle if level exceeds available puzzles
-  const index = (level - 1) % allPuzzles.length;
+  // Use session start index to ensure different starting point each time
+  const index = (sessionStartIndex + level - 1) % allPuzzles.length;
   return allPuzzles[index];
 };
 

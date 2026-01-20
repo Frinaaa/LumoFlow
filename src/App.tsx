@@ -18,6 +18,7 @@ import { EditorProvider, useEditor } from './context/EditorContext';
 import './styles/App.css';
 import GameSelectorScreen from './screens/GameSelectorScreen';
 import LogicPuzzleScreen from './screens/PuzzleGameScreen'; 
+import DebugRaceScreen from './screens/DebugRaceScreen';
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
@@ -165,7 +166,10 @@ function AppLayout() {
               )
             }
           />
-          
+          <Route 
+  path="/games/debug" 
+  element={isAuthenticated ? <DebugRaceScreen /> : <Navigate to="/login" replace />} 
+/>
 <Route
   path="/games/puzzle"
   element={isAuthenticated ? <LogicPuzzleScreen /> : <Navigate to="/login" replace />}
