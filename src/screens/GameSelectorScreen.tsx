@@ -41,6 +41,7 @@ if (selectedGame.id === 1) {
  else if (selectedGame.id === 2) { // Debug Race (ID 2 in your games array)
       navigate('/games/debug');
     } 
+    else if (selectedGame.id === 3) navigate('/games/predict'); 
     else {
       const gameName = selectedGame.title.replace('\n', ' ');
       alert(`The game "${gameName}" is currently under development.`);
