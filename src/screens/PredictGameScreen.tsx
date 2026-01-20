@@ -53,10 +53,6 @@ const PredictGameScreen: React.FC = () => {
 
       {/* HEADER */}
       <header>
-        <div className="brand-logo">
-          <div className="logo-icon"><i className="fa-solid fa-bolt"></i></div>
-          LUMO<span>FLOW</span>
-        </div>
         
         <div className="score-box">
           <div>Level: <span>{level}</span></div>

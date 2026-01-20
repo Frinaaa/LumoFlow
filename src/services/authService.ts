@@ -373,7 +373,7 @@ class AuthService {
   // --- PASSWORD RECOVERY ---
   async forgotPassword(email: string) {
     if (window.api) {
-      return await window.api.forgotPassword({ email });
+      return await window.api.forgotPassword(email);
     } else {
       return await this.forgotPasswordWeb(email);
     }

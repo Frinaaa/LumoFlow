@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/GameSelectorScreen.css';
 
 const games = [
-  { id: 0, title: "Big\nHunt", subtitle: "Find the target", icon: "fa-crosshairs" },
+  { id: 0, title: "Bug\nHunt", subtitle: "Find the target", icon: "fa-crosshairs" },
   { id: 1, title: "Logic\nPuzzle", subtitle: "Solve the riddle", icon: "fa-puzzle-piece" },
   { id: 2, title: "Debug\nRace", subtitle: "Fix code fast", icon: "fa-bug" },
   { id: 3, title: "Predict\nOutput", subtitle: "What comes next?", icon: "fa-terminal" },
@@ -35,13 +35,20 @@ const GameSelectorScreen: React.FC = () => {
 
     // Logic Puzzle has ID 1
     // Inside launchGame function
-if (selectedGame.id === 1) { 
-  navigate('/games/puzzle');
+    if (selectedGame.id === 0) { // Big Hunt is usually ID 0 in your list
+  navigate('/games/bughunt');
 }
- else if (selectedGame.id === 2) { // Debug Race (ID 2 in your games array)
+else if (selectedGame.id === 1) { 
+  navigate('/games/puzzle');
+} else if (selectedGame.id === 2) { // Debug Race (ID 2 in your games array)
       navigate('/games/debug');
     } 
-    else if (selectedGame.id === 3) navigate('/games/predict'); 
+    else if (selectedGame.id === 3) navigate('/games/predict');
+    else if (selectedGame.id === 0) navigate('/games/bughunt');
+    else if (selectedGame.id === 4) { // Error Match is ID 4 in your list
+  navigate('/games/error');
+}
+
     else {
       const gameName = selectedGame.title.replace('\n', ' ');
       alert(`The game "${gameName}" is currently under development.`);

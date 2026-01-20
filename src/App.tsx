@@ -20,6 +20,7 @@ import GameSelectorScreen from './screens/GameSelectorScreen';
 import LogicPuzzleScreen from './screens/PuzzleGameScreen'; 
 import DebugRaceScreen from './screens/DebugRaceScreen';
 import PredictGameScreen from './screens/PredictGameScreen';
+import BugHuntScreen from './screens/BugHuntScreen';
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
@@ -171,6 +172,7 @@ function AppLayout() {
   path="/games/debug" 
   element={isAuthenticated ? <DebugRaceScreen /> : <Navigate to="/login" replace />} 
 />
+<Route path="/games/bughunt" element={isAuthenticated ? <BugHuntScreen /> : <Navigate to="/login" replace />} />
 <Route 
   path="/games/predict" 
   element={isAuthenticated ? <PredictGameScreen /> : <Navigate to="/login" replace />} 

@@ -1,0 +1,299 @@
+:root {
+    --bg-deep: #050508;
+    --card-bg: #0e0e11;
+    --border-color: #2a2a2e;
+    
+    /* Exact Colors from Image */
+    --accent-pink: #d925ac;
+    --accent-purple: #9d4edd;
+    --text-white: #ffffff;
+    --text-gray: #8b8b95;
+    --text-comment: #6a737d;
+    --goal-bg: rgba(157, 78, 221, 0.1);
+    --goal-border: #7b2cbf;
+}
+
+.bug-hunt-wrapper {
+    background-color: var(--bg-deep);
+    color: var(--text-white);
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* --- Header --- */
+.bug-header {
+    height: 70px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    background: #000;
+    border-bottom: 1px solid #222;
+}
+
+.brand-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1.4rem;
+}
+.brand-logo i { color: #00f2ff; }
+.brand-logo span { color: #00f2ff; }
+
+.level-pill {
+    background: #111;
+    border: 1px solid #333;
+    padding: 8px 24px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    color: #888;
+    font-family: 'Orbitron';
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.level-pill span { color: #d925ac; font-weight: bold; }
+
+.exit-btn {
+    background: #111;
+    border: 1px solid #333;
+    color: #ccc;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex; align-items: center; gap: 8px;
+    transition: 0.2s;
+}
+.exit-btn:hover { border-color: #d925ac; color: #fff; }
+
+/* --- Game Layout --- */
+.bh-game-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px; /* Space between Editor and Sidebar */
+    padding: 40px;
+    background: radial-gradient(circle at center, #13131a 0%, #050508 100%);
+    position: relative;
+}
+
+/* Purple Glow at bottom */
+.bh-game-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, #9d4edd, transparent);
+    box-shadow: 0 0 20px #9d4edd;
+}
+
+/* --- CARD 1: Editor Panel --- */
+.editor-card {
+    width: 65%;
+    height: 75vh;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+.editor-top-bar {
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.02);
+}
+
+.window-dots { display: flex; gap: 8px; }
+.w-dot { width: 10px; height: 10px; border-radius: 50%; }
+.red { background: #ff5f56; }
+.yellow { background: #ffbd2e; }
+.green { background: #27c93f; }
+
+.file-name {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #666;
+    letter-spacing: 0.5px;
+}
+
+.code-container {
+    flex: 1;
+    padding: 25px 0;
+    overflow-y: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.code-row {
+    display: flex;
+    padding: 2px 25px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.code-row:hover { background: rgba(255,255,255,0.03); }
+
+/* Selection State */
+.code-row.selected {
+    background: rgba(217, 37, 172, 0.15); /* Pinkish tint */
+    border-left: 2px solid var(--accent-pink);
+}
+
+.line-num {
+    width: 35px;
+    text-align: right;
+    margin-right: 25px;
+    color: #444;
+    user-select: none;
+}
+
+.code-content { color: #d4d4d4; }
+
+/* Syntax Colors */
+.kwd { color: #ff79c6; } /* pink */
+.func { color: #8be9fd; } /* blue */
+.num { color: #bd93f9; } /* purple */
+.str { color: #f1fa8c; } /* yellow */
+.cmt { color: var(--text-comment); font-style: italic; }
+
+/* --- CARD 2: Mission Sidebar --- */
+.sidebar-card {
+    width: 30%;
+    height: 60vh; /* Slightly smaller than editor */
+    background: #16161b;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.mission-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Orbitron';
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: #fff;
+}
+.mission-header i { color: #d925ac; }
+
+.mission-text {
+    font-size: 0.9rem;
+    color: #aaa;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+/* Dashed Goal Box */
+.goal-container {
+    border: 1px dashed var(--goal-border);
+    background: var(--goal-bg);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+}
+
+.goal-label {
+    color: #d925ac;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 5px;
+    font-family: 'Inter', sans-serif;
+}
+
+.goal-text {
+    color: #e9d5ff;
+    font-size: 0.85rem;
+}
+
+/* Hint Link */
+.hint-toggle {
+    color: #d925ac;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+.hint-toggle:hover { text-decoration: underline; }
+
+.hint-box {
+    background: #222;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #ccc;
+    margin-bottom: 20px;
+    border-left: 3px solid #d925ac;
+}
+
+/* Action Buttons */
+.buttons-row {
+    display: flex;
+    gap: 12px;
+    margin-top: auto; /* Pushes to bottom of content area */
+}
+
+.btn {
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-reveal {
+    background: #2a2a30;
+    color: #ffb703; /* Yellow text */
+    flex: 1;
+}
+.btn-reveal:hover { background: #333; }
+
+.btn-mark {
+    background: linear-gradient(90deg, #d925ac, #f72585);
+    color: white;
+    flex: 1.2;
+}
+.btn-mark:hover { opacity: 0.9; box-shadow: 0 4px 15px rgba(217, 37, 172, 0.4); }
+
+/* Next Level Footer */
+.next-level-area {
+    position: absolute;
+    bottom: 9px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #444;
+}
+
+.next-level-area.unlocked {
+    color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+}
+.next-level-area i { margin-right: 6px; }

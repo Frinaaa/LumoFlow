@@ -41,18 +41,16 @@ const VisualizeTab: React.FC<VisualizeTabProps> = ({ analysisData, currentStep, 
     if (!autoPlay || !analysisData) return;
 
     const interval = setInterval(() => {
-      onStepChange((prev) => {
-        const nextStep = prev + 1;
-        if (nextStep >= analysisData.explanation.length) {
-          setAutoPlay(false);
-          return prev;
-        }
-        return nextStep;
-      });
+      const nextStep = currentStep + 1;
+      if (nextStep >= analysisData.explanation.length) {
+        setAutoPlay(false);
+        return;
+      }
+      onStepChange(nextStep);
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [autoPlay, analysisData, onStepChange]);
+  }, [autoPlay, analysisData, onStepChange, currentStep]);
 
   const renderFlowchart = () => {
     if (!analysisData?.flowchart?.nodes) return null;
