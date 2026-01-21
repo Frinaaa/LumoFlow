@@ -360,6 +360,11 @@ const EditorScreen: React.FC = () => {
         setIsCreatingFile(true); // Focuses sidebar input
         break;
 
+      // 2b. New Folder... (Triggers Sidebar Input)
+      case 'newFolder':
+        setIsCreatingFolder(true); // Focuses sidebar folder input
+        break;
+
       // 3. New Window
       case 'newWindow':
         if (isElectronAvailable()) {

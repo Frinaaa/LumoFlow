@@ -53,7 +53,9 @@
   display: flex;
   gap: 4px;
   align-items: center;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  z-index: 10000;
 }
 
 .titlebar-actions {
@@ -126,8 +128,10 @@
   font-size: 11px;
   transition: all 0.2s ease;
   border-radius: 2px;
-  -webkit-app-region: no-drag;
-  pointer-events: auto;
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  z-index: 10000;
+  position: relative;
 }
 
 .titlebar-btn:hover {

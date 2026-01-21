@@ -361,13 +361,18 @@ app.on('ready', () => {
     });
     // Window Controls
     ipcMain.handle('window:minimize', () => {
+      console.log('🔵 window:minimize handler called');
       try {
         if (mainWindow && !mainWindow.isDestroyed()) {
+          console.log('🔵 Attempting to minimize window...');
           mainWindow.minimize();
+          console.log('✅ Window minimized successfully');
+        } else {
+          console.log('❌ mainWindow is null or destroyed');
         }
         return { success: true };
       } catch (error) {
-        console.error('Window minimize error:', error);
+        console.error('❌ Window minimize error:', error);
         return { success: false, error: error.message };
       }
     });

@@ -24,22 +24,50 @@ const CustomTitlebar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleMinimize = () => {
-    if (window.api && window.api.minimizeWindow) {
-      window.api.minimizeWindow();
+  const handleMinimize = async () => {
+    console.log('🔵 Minimize button clicked!');
+    try {
+      if (window.api && window.api.minimizeWindow) {
+        console.log('🔵 Calling window.api.minimizeWindow...');
+        const result = await window.api.minimizeWindow();
+        console.log('🔵 Minimize result:', result);
+      } else {
+        console.error('❌ window.api.minimizeWindow not available');
+        alert('Minimize function not available. Are you running in Electron?');
+      }
+    } catch (error: any) {
+      console.error('❌ Error minimizing window:', error);
+      alert('Error: ' + error.message);
     }
   };
 
-  const handleMaximize = () => {
-    if (window.api && window.api.maximizeWindow) {
-      window.api.maximizeWindow();
-      setIsMaximized(!isMaximized);
+  const handleMaximize = async () => {
+    console.log('🔵 Maximize button clicked!');
+    try {
+      if (window.api && window.api.maximizeWindow) {
+        console.log('🔵 Calling window.api.maximizeWindow...');
+        const result = await window.api.maximizeWindow();
+        console.log('🔵 Maximize result:', result);
+        setIsMaximized(!isMaximized);
+      } else {
+        console.error('❌ window.api.maximizeWindow not available');
+      }
+    } catch (error: any) {
+      console.error('❌ Error maximizing window:', error);
     }
   };
 
-  const handleClose = () => {
-    if (window.api && window.api.closeWindow) {
-      window.api.closeWindow();
+  const handleClose = async () => {
+    console.log('🔵 Close button clicked!');
+    try {
+      if (window.api && window.api.closeWindow) {
+        console.log('🔵 Calling window.api.closeWindow...');
+        await window.api.closeWindow();
+      } else {
+        console.error('❌ window.api.closeWindow not available');
+      }
+    } catch (error: any) {
+      console.error('❌ Error closing window:', error);
     }
   };
 
@@ -68,7 +96,7 @@ const CustomTitlebar: React.FC = () => {
               <span>File</span>
               {activeMenu === 'File' && (
                 <div className="header-dropdown">
-                  <div onClick={() => triggerAction('newTextFile')}>New Text File <span className="sc">Ctrl+N</span></div>
+                  <div onClick={() => triggerAction('newFolder')}>New Folder <span className="sc">Ctrl+N</span></div>
                   <div onClick={() => triggerAction('newFile')}>New File... <span className="sc">Ctrl+Alt+N</span></div>
                   <div onClick={() => triggerAction('newWindow')}>New Window <span className="sc">Ctrl+Shift+N</span></div>
                   <div className="h-sep"></div>

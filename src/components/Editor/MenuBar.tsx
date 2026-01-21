@@ -40,10 +40,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ onAction }) => {
           {activeMenu === 'File' && (
             <div className="dropdown-menu">
               <div className="dropdown-item" onClick={() => handleAction('newFile')}>
-                <span>New Text File</span> <span className="shortcut">Ctrl+N</span>
-              </div>
-              <div className="dropdown-item" onClick={() => handleAction('newFile')}>
                 <span>New File...</span> <span className="shortcut">Ctrl+Alt+N</span>
+              </div>
+              <div className="dropdown-item" onClick={() => handleAction('newFolder')}>
+                <span>New Folder...</span>
               </div>
               <div className="separator"></div>
               <div className="dropdown-item" onClick={() => handleAction('save')}>
