@@ -243,16 +243,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
     <div className="login-screen-wrapper">
       <div className="bg-grid"></div>
 
-      <header className="login-header">
-        <div className="login-brand-wrapper">
-          <div className="login-logo-circle">
-            <i className="fa-solid fa-bolt"></i>
-          </div>
-          <h1 className="login-brand-text">
-            LUMO<span className="login-brand-highlight">FLOW</span>
-          </h1>
-        </div>
-      </header>
+      
 
       <div className="login-content-container">
         <div className="login-card">

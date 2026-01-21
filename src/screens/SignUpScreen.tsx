@@ -113,8 +113,7 @@ const SignUpScreen: React.FC = () => {
 
       <header className="signup-header">
         <div className="app-brand small" onClick={() => navigate('/login')} style={{ cursor: 'pointer' }}>
-          <div className="app-brand-icon"><i className="fa-solid fa-bolt"></i></div>
-          <h1 className="app-brand-text">LUMO<span className="app-brand-highlight">FLOW</span></h1>
+          
         </div>
         <button className="about-btn" onClick={() => navigate('/about')}>About Us</button>
       </header>

@@ -2,94 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CodeEditor from '../components/Editor/CodeEditor';
 import AnalysisPanel from '../components/Editor/SidePanel';
-import Terminal, { Problem } from '../components/Editor/Terminal'; 
+import Terminal, { Problem } from '../components/Editor/Terminal';
 import StatusBar from '../components/Editor/StatusBar';
 import ActivityBar from '../components/Editor/ActivityBar';
 import { useEditor } from '../context/EditorContext';
+import { FileExplorerSidebar, SearchSidebar, GitSidebar, ContextMenu, ShortcutToast } from './EditorScreen/components';
+import { stripAnsiCodes, parseErrors, isElectronAvailable, getLanguageFromFile } from './EditorScreen/utils';
+import { EditorState, FileItem } from './EditorScreen/types';
 import '../styles/TerminalScreen.css';
-import CustomTitlebar from '@/components/CustomTitlebar';
-
-
-// 1. Define Editor State Structure
-interface EditorState {
-  file: string | null;
-  code: string;
-  cursorLine: number;
-  cursorCol: number;
-}
 
 const initialEditorState: EditorState = { file: null, code: "", cursorLine: 1, cursorCol: 1 };
-
-// 🟢 UTILITY: Strip ANSI escape sequences
-const stripAnsiCodes = (str: string): string => {
-  return str.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
-};
-
-// 🟢 PARSE ERRORS FROM STDERR INTO PROBLEMS
-const parseErrors = (stderr: string, fileName: string): Problem[] => {
-  if (!stderr) return [];
-  
-  // Strip ANSI codes from stderr first
-  const cleanStderr = stripAnsiCodes(stderr);
-  const problems: Problem[] = [];
-  const lines = cleanStderr.split('\n');
-  
-  for (const line of lines) {
-    // Python error patterns
-    if (line.includes('File "') && line.includes('line ')) {
-      const lineMatch = line.match(/line (\d+)/);
-      const lineNum = lineMatch ? parseInt(lineMatch[1]) : 1;
-      
-      // Look for the actual error message in subsequent lines
-      const errorIndex = lines.indexOf(line);
-      let message = 'Syntax Error';
-      
-      if (errorIndex < lines.length - 1) {
-        const nextLine = lines[errorIndex + 1];
-        if (nextLine && nextLine.trim()) {
-          message = nextLine.trim();
-        }
-      }
-      
-      problems.push({
-        message,
-        line: lineNum,
-        source: fileName,
-        type: 'error'
-      });
-    }
-    
-    // JavaScript error patterns
-    else if (line.includes('SyntaxError') || line.includes('ReferenceError') || line.includes('TypeError')) {
-      const lineMatch = line.match(/:(\d+):/);
-      const lineNum = lineMatch ? parseInt(lineMatch[1]) : 1;
-      
-      problems.push({
-        message: line.trim(),
-        line: lineNum,
-        source: fileName,
-        type: 'error'
-      });
-    }
-    
-    // Generic error patterns
-    else if (line.includes('Error:') || line.includes('Exception:')) {
-      problems.push({
-        message: line.trim(),
-        line: 1,
-        source: fileName,
-        type: 'error'
-      });
-    }
-  }
-  
-  return problems;
-};
-
-// 🟢 HELPER: Check if Electron API is available
-const isElectronAvailable = (): boolean => {
-  return typeof window !== 'undefined' && !!(window as any).api;
-};
 
 const EditorScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -97,9 +19,10 @@ const EditorScreen: React.FC = () => {
 
   // --- UI STATES ---
   const [activeSidebar, setActiveSidebar] = useState('Explorer');
-  const [activeBottomTab, setActiveBottomTab] = useState('Terminal');
+  const [activeBottomTab, setActiveBottomTab] = useState('Problems');
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(true);
+  const [isTerminalMaximized, setIsTerminalMaximized] = useState(false);
   
   // --- SPLIT VIEW STATES ---
   const [isSplitView, setIsSplitView] = useState(false);
@@ -108,19 +31,19 @@ const EditorScreen: React.FC = () => {
   const [rightEditor, setRightEditor] = useState<EditorState>(initialEditorState);
 
   // --- DATA STATES ---
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [stdout, setStdout] = useState('');
   const [stderr, setStderr] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
- const [problems, setProblems] = useState<Problem[]>([]);
+  const [problems, setProblems] = useState<Problem[]>([]);
 
   // --- EDITOR REFS FOR CLIPBOARD OPERATIONS ---
   const leftEditorRef = useRef<any>(null);
   const rightEditorRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // --- SIDEBAR FEATURES ---
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<FileItem[]>([]);
   
   // --- GIT/GITHUB STATES ---
   const [gitBranch, setGitBranch] = useState('main');
@@ -136,8 +59,8 @@ const EditorScreen: React.FC = () => {
   const [remoteUrl, setRemoteUrl] = useState('');
   
   // --- CONTEXT MENU & CLIPBOARD ---
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: any } | null>(null);
-  const [clipboard, setClipboard] = useState<{ file: any; action: 'cut' | 'copy' } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: FileItem } | null>(null);
+  const [clipboard, setClipboard] = useState<{ file: FileItem; action: 'cut' | 'copy' } | null>(null);
   const [renameFile, setRenameFile] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [isCreatingFile, setIsCreatingFile] = useState(false);
@@ -151,6 +74,12 @@ const EditorScreen: React.FC = () => {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [creatingInFolder, setCreatingInFolder] = useState<string | null>(null);
   
+  // --- RESIZING STATES ---
+  const [sidebarWidth, setSidebarWidth] = useState(250);
+  const [terminalHeight, setTerminalHeight] = useState(200);
+  const [analysisWidth, setAnalysisWidth] = useState(400);
+  const [isDragging, setIsDragging] = useState<'sidebar' | 'terminal' | 'analysis' | null>(null);
+
   // Toast notification for keyboard shortcuts
   const showShortcutToast = (message: string) => {
     setShortcutToast(message);
@@ -172,7 +101,6 @@ const EditorScreen: React.FC = () => {
             content: currentEditor.code 
           });
           
-          // Also save to database if user is logged in
           const userInfo = localStorage.getItem('user_info');
           if (userInfo) {
             const user = JSON.parse(userInfo);
@@ -190,25 +118,10 @@ const EditorScreen: React.FC = () => {
           setIsAutoSaving(false);
         }
       }
-    }, 30000); // Auto-save every 30 seconds
+    }, 30000);
     
     return () => clearInterval(autoSaveInterval);
   }, [autoSave, leftEditor, rightEditor, activePane]);
-  // --- RESIZING STATES ---
-  const [sidebarWidth, setSidebarWidth] = useState(250);
-  const [terminalHeight, setTerminalHeight] = useState(200);
-  const [analysisWidth, setAnalysisWidth] = useState(400);
-  const [isDragging, setIsDragging] = useState<'sidebar' | 'terminal' | 'analysis' | null>(null);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { 
-    console.log('✅ EditorScreen MOUNTED');
-    loadProject(); 
-    return () => {
-      console.log('❌ EditorScreen UNMOUNTED');
-    };
-  }, []);
 
   // --- MOUSE MOVE FOR RESIZING ---
   useEffect(() => {
@@ -229,6 +142,14 @@ const EditorScreen: React.FC = () => {
     }
   }, [isDragging]);
 
+  useEffect(() => { 
+    console.log('✅ EditorScreen MOUNTED');
+    loadProject(); 
+    return () => {
+      console.log('❌ EditorScreen UNMOUNTED');
+    };
+  }, []);
+
   const loadProject = async () => {
     try {
       if (window.api && window.api.readProjectFiles) {
@@ -237,13 +158,13 @@ const EditorScreen: React.FC = () => {
       } else {
         console.log('Electron API not available - skipping project load');
       }
-    } catch (e) { console.error("Load error", e); }
+    } catch (e) { 
+      console.error("Load error", e); 
+    }
   };
 
   // --- FILE HANDLING ---
- // --- FILE HANDLING ---
-  const handleFileSelect = async (file: any) => {
-    // Check if it's an in-memory file
+  const handleFileSelect = async (file: FileItem) => {
     if (file.isInMemory) {
       const newState = { file: file.path, code: '', cursorLine: 1, cursorCol: 1 };
       if (activePane === 'left') setLeftEditor(prev => ({ ...prev, ...newState }));
@@ -256,14 +177,11 @@ const EditorScreen: React.FC = () => {
       return;
     }
 
-    // 🟢 FIX: Extract content string from the returned object to prevent black screen crash
     try {
       const response: any = await window.api.readFile(file.path);
-      
-      // Check if response is an object with a 'content' property (Electron main usually returns { success: true, content: "..." })
       const fileContent = (response && response.success && typeof response.content === 'string') 
         ? response.content 
-        : (typeof response === 'string' ? response : ''); // Fallback if it returns a string directly
+        : (typeof response === 'string' ? response : '');
 
       const newState = { file: file.path, code: fileContent, cursorLine: 1, cursorCol: 1 };
       
@@ -273,7 +191,8 @@ const EditorScreen: React.FC = () => {
       console.error("Error reading file:", error);
     }
   };
-  // 🟢 UPDATED: RUN HANDLER
+
+  // --- RUN HANDLER ---
   const handleRun = async () => {
     const current = activePane === 'left' ? leftEditor : rightEditor;
     if (!current.file) return;
@@ -286,21 +205,17 @@ const EditorScreen: React.FC = () => {
     
     setStdout(''); 
     setStderr(''); 
-    setProblems([]); // Clear old problems
+    setProblems([]);
     setActiveBottomTab('Output'); 
     setIsTerminalOpen(true);
-    setIsRunning(true);
 
     try {
-      // Auto-save
       await window.api.saveFile({ filePath: current.file, content: current.code });
       
       const res = await window.api.runCode({ filePath: current.file, code: current.code });
       
-      // Clean output - remove error formatting and show only actual program output
       let cleanOutput = '';
       if (res.stdout) {
-        // Strip any remaining ANSI codes that might have gotten through
         cleanOutput = stripAnsiCodes(res.stdout).trim();
       }
       
@@ -310,17 +225,15 @@ const EditorScreen: React.FC = () => {
         const cleanStderr = stripAnsiCodes(res.stderr);
         setStderr(cleanStderr);
         
-        // 🟢 Generate Problems from Stderr
         const detectedProblems = parseErrors(cleanStderr, current.file.split(/[\\/]/).pop() || 'file');
         setProblems(detectedProblems);
 
         if (detectedProblems.length > 0) {
-           setActiveBottomTab('Problems'); // Auto-switch to Problems if we parsed any
+          setActiveBottomTab('Problems');
         } else if (!cleanOutput) {
-           setActiveBottomTab('Debug'); // Otherwise go to Debug if no output
+          setActiveBottomTab('Debug');
         }
       } else if (!cleanOutput) {
-        // No output and no errors - show a completion message
         setStdout('Program executed successfully with no output.');
       }
     } catch (err: any) {
@@ -332,258 +245,181 @@ const EditorScreen: React.FC = () => {
         type: 'error'
       }]);
       setActiveBottomTab('Problems');
-    } finally {
-      setIsRunning(false);
     }
   };
 
   // --- MENU ACTIONS ---
-  // Inside src/screens/EditorScreen.tsx
-
- const handleMenuAction = async (action: string) => {
-    console.log('Menu action triggered:', action); // Debug log
+  const handleMenuAction = async (action: string) => {
+    console.log('Menu action triggered:', action);
     
-    // Helper: Identify which editor is currently focused
     const currentEditor = activePane === 'left' ? leftEditor : rightEditor;
     const setCurrentEditor = activePane === 'left' ? setLeftEditor : setRightEditor;
 
     switch(action) {
-      
-      // 1. New Text File (In-memory only)
       case 'newTextFile':
         const untitledState = { file: null, code: '', cursorLine: 1, cursorCol: 1 };
         setCurrentEditor(untitledState);
         break;
 
-      // 2. New File... (Triggers Sidebar Input)
       case 'newFile':
-        setIsCreatingFile(true); // Focuses sidebar input
+        setIsCreatingFile(true);
         break;
 
-      // 2b. New Folder... (Triggers Sidebar Input)
       case 'newFolder':
-        setIsCreatingFolder(true); // Focuses sidebar folder input
+        setIsCreatingFolder(true);
         break;
 
-      // 3. New Window
       case 'newWindow':
         if (isElectronAvailable()) {
           await window.api.newWindow();
-        } else {
-          console.log('Electron API not available');
         }
         break;
 
-      // 4. Open File...
       case 'openFile':
-        if (!isElectronAvailable()) {
-          console.log('Electron API not available');
-          break;
-        }
+        if (!isElectronAvailable()) break;
         const fileRes = await window.api.openFileDialog();
         if (fileRes && !fileRes.canceled) {
-           setCurrentEditor({ 
-             file: fileRes.filePath, 
-             code: fileRes.content, 
-             cursorLine: 1, cursorCol: 1 
-           });
-           // Add to sidebar if not already there
-           if (!files.find(f => f.path === fileRes.filePath)) {
-             setFiles(prev => [...prev, { name: fileRes.fileName, path: fileRes.filePath }]);
-           }
+          setCurrentEditor({ 
+            file: fileRes.filePath, 
+            code: fileRes.content, 
+            cursorLine: 1, 
+            cursorCol: 1 
+          });
+          if (!files.find(f => f.path === fileRes.filePath)) {
+            setFiles(prev => [...prev, { name: fileRes.fileName, path: fileRes.filePath }]);
+          }
         }
         break;
 
-      // 5. Open Folder...
       case 'openFolder':
-        if (!isElectronAvailable()) {
-          console.log('Electron API not available');
-          break;
-        }
+        if (!isElectronAvailable()) break;
         const folderRes = await window.api.openFolderDialog();
         if (folderRes && !folderRes.canceled) {
-           setFiles(folderRes.files); // Populate sidebar with new folder files
-           setLeftEditor(initialEditorState); // Reset editors
-           setRightEditor(initialEditorState);
+          setFiles(folderRes.files);
+          setLeftEditor(initialEditorState);
+          setRightEditor(initialEditorState);
         }
         break;
 
-      // 6. Open Recent (Mock Implementation - usually requires LocalStore)
       case 'openRecent':
-        // For now, just reload the default project directory
         loadProject();
         break;
 
-      // 7. Save (Enhanced with database saving)
       case 'save':
         try {
           if (currentEditor.file) {
-             // Save to file system
-             if (isElectronAvailable()) {
-               await window.api.saveFile({ filePath: currentEditor.file, content: currentEditor.code });
-               console.log('File saved to filesystem');
-             }
-             
-             // Save to database
-             const userInfo = localStorage.getItem('user_info');
-             if (userInfo) {
-               const user = JSON.parse(userInfo);
-               if (isElectronAvailable()) {
-                 const dbResult = await window.api.saveCodeToDatabase({ 
-                   filePath: currentEditor.file, 
-                   content: currentEditor.code,
-                   userId: user._id || user.id
-                 });
-                 if (dbResult.success) {
-                   console.log('File saved to database');
-                 } else {
-                   console.warn('Database save failed:', dbResult.msg);
-                 }
-               }
-             }
+            if (isElectronAvailable()) {
+              await window.api.saveFile({ filePath: currentEditor.file, content: currentEditor.code });
+            }
+            
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+              const user = JSON.parse(userInfo);
+              if (isElectronAvailable()) {
+                await window.api.saveCodeToDatabase({ 
+                  filePath: currentEditor.file, 
+                  content: currentEditor.code,
+                  userId: user._id || user.id
+                });
+              }
+            }
           } else {
-             // If it's untitled, redirect to "Save As"
-             handleMenuAction('saveAs');
+            handleMenuAction('saveAs');
           }
         } catch (error: any) {
           console.error('Save failed:', error);
-          alert('Save failed: ' + error.message);
         }
         break;
 
-      // 8. Save As... (Enhanced with database saving)
       case 'saveAs':
         try {
-          if (!isElectronAvailable()) {
-            console.log('Electron API not available');
-            break;
-          }
+          if (!isElectronAvailable()) break;
           const saveRes = await window.api.saveFileAs(currentEditor.code);
           if (saveRes && !saveRes.canceled) {
-             setCurrentEditor(prev => ({ ...prev, file: saveRes.filePath }));
-             console.log('File saved as:', saveRes.filePath);
-             
-             // Update sidebar
-             if (!files.find(f => f.path === saveRes.filePath)) {
-               setFiles(prev => [...prev, { name: saveRes.fileName, path: saveRes.filePath }]);
-             }
-             
-             // Save to database
-             const userInfo = localStorage.getItem('user_info');
-             if (userInfo) {
-               const user = JSON.parse(userInfo);
-               const dbResult = await window.api.saveCodeToDatabase({ 
-                 filePath: saveRes.filePath, 
-                 content: currentEditor.code,
-                 userId: user._id || user.id
-               });
-               if (dbResult.success) {
-                 console.log('File saved to database');
-               } else {
-                 console.warn('Database save failed:', dbResult.msg);
-               }
-             }
+            setCurrentEditor(prev => ({ ...prev, file: saveRes.filePath }));
+            
+            if (!files.find(f => f.path === saveRes.filePath)) {
+              setFiles(prev => [...prev, { name: saveRes.fileName, path: saveRes.filePath }]);
+            }
+            
+            const userInfo = localStorage.getItem('user_info');
+            if (userInfo) {
+              const user = JSON.parse(userInfo);
+              await window.api.saveCodeToDatabase({ 
+                filePath: saveRes.filePath, 
+                content: currentEditor.code,
+                userId: user._id || user.id
+              });
+            }
           }
         } catch (error: any) {
           console.error('Save As failed:', error);
-          alert('Save As failed: ' + error.message);
         }
         break;
 
-      // 9. Save All (Enhanced with database saving)
       case 'saveAll':
         try {
           const userInfo = localStorage.getItem('user_info');
           const user = userInfo ? JSON.parse(userInfo) : null;
           const userId = user?._id || user?.id;
           
-          let savedCount = 0;
-          
           if (leftEditor.file) {
             await window.api.saveFile({ filePath: leftEditor.file, content: leftEditor.code });
-            savedCount++;
             if (userId) {
-              const dbResult = await window.api.saveCodeToDatabase({ 
+              await window.api.saveCodeToDatabase({ 
                 filePath: leftEditor.file, 
                 content: leftEditor.code, 
                 userId 
               });
-              if (dbResult.success) {
-                console.log('Left editor saved to database');
-              }
             }
           }
           
           if (rightEditor.file) {
             await window.api.saveFile({ filePath: rightEditor.file, content: rightEditor.code });
-            savedCount++;
             if (userId) {
-              const dbResult = await window.api.saveCodeToDatabase({ 
+              await window.api.saveCodeToDatabase({ 
                 filePath: rightEditor.file, 
                 content: rightEditor.code, 
                 userId 
               });
-              if (dbResult.success) {
-                console.log('Right editor saved to database');
-              }
             }
-          }
-          
-          if (savedCount > 0) {
-            console.log(`Saved ${savedCount} file(s)`);
-          } else {
-            console.log('No files to save');
           }
         } catch (error: any) {
           console.error('Save All failed:', error);
-          alert('Save All failed: ' + error.message);
         }
         break;
 
-      // 10. Close Editor (Clear active pane)
       case 'closeFile':
-        console.log('Closing editor');
         setCurrentEditor(initialEditorState);
         break;
 
-      // 11. Close Folder (Clear sidebar)
       case 'closeFolder':
-        console.log('Closing folder');
         setFiles([]);
         setLeftEditor(initialEditorState);
         setRightEditor(initialEditorState);
         break;
 
-      // 12. Close Window / Exit
       case 'exit':
-        console.log('Closing window');
         if (window.api && window.api.closeWindow) {
           window.api.closeWindow();
-        } else {
-          console.error('closeWindow API not available');
         }
         break;
 
-      // 13. Toggle Auto Save
       case 'toggleAutoSave':
         setAutoSave(!autoSave);
         break;
 
-      // 14. Add Folder to Workspace
       case 'addFolderToWorkspace':
         const addFolderRes = await window.api.openFolderDialog();
         if (addFolderRes && !addFolderRes.canceled) {
-          // Add files to existing workspace instead of replacing
-          const newFiles = addFolderRes.files.filter(newFile => 
+          const newFiles = addFolderRes.files.filter((newFile: FileItem) => 
             !files.find(existingFile => existingFile.path === newFile.path)
           );
           setFiles(prev => [...prev, ...newFiles]);
         }
         break;
 
-      // 15. Save Workspace As
       case 'saveWorkspaceAs':
-        // Create a workspace file with current project structure
         const workspaceData = {
           name: 'LumoFlow Workspace',
           folders: files.map(f => ({ path: f.path, name: f.name })),
@@ -595,23 +431,17 @@ const EditorScreen: React.FC = () => {
         }
         break;
 
-      // 16. Share
       case 'share':
         if (currentEditor.file && currentEditor.code) {
-          // Copy current file content to clipboard for sharing
           try {
             await navigator.clipboard.writeText(currentEditor.code);
             alert('Code copied to clipboard for sharing!');
           } catch (err) {
             console.error('Failed to copy to clipboard:', err);
-            alert('Failed to copy code to clipboard');
           }
-        } else {
-          alert('No file open to share');
         }
         break;
 
-      // 15. Edit Actions
       case 'undo':
         const undoEditor = activePane === 'left' ? leftEditorRef.current : rightEditorRef.current;
         if (undoEditor) {
@@ -645,60 +475,43 @@ const EditorScreen: React.FC = () => {
         break;
 
       case 'paste':
-        // A. Priority: File Paste (if in Explorer and internal file clipboard has data)
         if (activeSidebar === 'Explorer' && clipboard) {
           handlePasteFile();
           return;
         }
-           const pasteEditor = activePane === 'left' ? leftEditorRef.current : rightEditorRef.current;
+        const pasteEditor = activePane === 'left' ? leftEditorRef.current : rightEditorRef.current;
         if (pasteEditor) {
           pasteEditor.focus();
           try {
-            // Modern Clipboard API: Read text from system clipboard
             const text = await navigator.clipboard.readText();
-            
-            // Execute edit to insert text at cursor (more reliable than triggerAction)
             const selection = pasteEditor.getSelection();
             const op = { range: selection, text: text, forceMoveMarkers: true };
             pasteEditor.executeEdits("clipboard", [op]);
-            
             showShortcutToast('Paste (Ctrl+V)');
           } catch (err) {
-            console.warn('Clipboard read failed (permission denied?):', err);
-            // Fallback: Try native command (might fail in some browsers)
+            console.warn('Clipboard read failed:', err);
             pasteEditor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
           }
         }
         break;
         
-      // Existing UI Toggles
       case 'splitEditor': 
-        console.log('Toggling split editor');
         setIsSplitView(!isSplitView); 
         setActivePane('right'); 
         break;
         
       case 'toggleTerminal': 
-        console.log('Toggling terminal');
         setIsTerminalOpen(!isTerminalOpen); 
         break;
 
-      // Toggle DevTools
-      case 'toggleDevTools':
-        console.log('Toggling DevTools');
-        if (window.api && window.api.toggleDevTools) {
-          window.api.toggleDevTools();
-        } else {
-          console.error('toggleDevTools API not available');
-        }
-        break;
-
-      // Default case for unhandled actions
       default:
         console.warn('Unhandled menu action:', action);
         break;
     }
   };
+
+  // Continue in next part...
+
   // --- FILE OPERATIONS (Context Menu) ---
   const handleCreateFile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -706,11 +519,10 @@ const EditorScreen: React.FC = () => {
     
     try {
       if (!isElectronAvailable()) {
-        // --- Web/In-memory Logic ---
         const folderPath = creatingInFolder || '';
         const filePath = folderPath ? `${folderPath}/${newFileName}` : `/untitled/${newFileName}`;
         
-        const newFile = {
+        const newFile: FileItem = {
           name: newFileName,
           path: filePath,
           isInMemory: true,
@@ -731,15 +543,12 @@ const EditorScreen: React.FC = () => {
         return;
       }
       
-      // --- Electron Logic ---
       let fileNameToSend = newFileName;
       let parentPath = null;
 
-      // Check if we are creating inside a folder
       if (creatingInFolder) {
         const parentFolderObj = files.find(f => f.path === creatingInFolder);
         if (parentFolderObj) {
-          // Combine folder name and file name for the backend
           fileNameToSend = `${parentFolderObj.name}/${newFileName}`;
           parentPath = creatingInFolder;
         }
@@ -748,17 +557,15 @@ const EditorScreen: React.FC = () => {
       const res = await window.api.createFile({ fileName: fileNameToSend, content: '' });
       
       if (res.success) { 
-        // Manually update UI state to show the file immediately
-        const newFileObj = {
+        const newFileObj: FileItem = {
           name: newFileName,
           path: res.path,
-          parentFolder: parentPath, // Key: This links the file to the folder in the UI
+          parentFolder: parentPath,
           isFolder: false
         };
 
         setFiles(prev => [...prev, newFileObj]);
 
-        // If inside a folder, ensure it's expanded
         if (parentPath) {
           setExpandedFolders(prev => new Set([...prev, parentPath]));
         }
@@ -784,25 +591,21 @@ const EditorScreen: React.FC = () => {
     }
     if (!name?.trim()) return;
     
-    // Web/Memory Mode
     if (!isElectronAvailable()) {
-      const newFolder = {
+      const newFolder: FileItem = {
         name: name,
         path: `/untitled/${name}`,
-        isFolder: true, // Explicitly mark as folder
+        isFolder: true,
         isInMemory: true
       };
       setFiles(prev => [...prev, newFolder]);
       return;
     }
     
-    // Electron Mode
     try { 
       const res = await window.api.createFolder(name);
       if (res && res.success) {
-        // We manually add the folder to state to ensure 'isFolder' is true immediately
-        // The backend 'loadProject' might not set this flag correctly on its own
-        const newFolderObj = {
+        const newFolderObj: FileItem = {
           name: name,
           path: res.path,
           isFolder: true 
@@ -819,6 +622,7 @@ const EditorScreen: React.FC = () => {
       alert('Error creating folder');
     }
   };
+
   const handleDeleteFile = async (file: any) => {
     if (window.confirm(`Delete ${file.name}?`)) {
       if (!isElectronAvailable()) {
@@ -840,21 +644,16 @@ const EditorScreen: React.FC = () => {
     setRenameFile(null); setNewName('');
   };
 
-const handlePasteFile = async () => {
+  const handlePasteFile = async () => {
     if (!clipboard || !isElectronAvailable()) return;
     
     try {
-      // 1. Read content of the source file
       const content = await window.api.readFile(clipboard.file.path);
-      
-      // 2. Determine name (prefix with 'copy_' if it's a copy action)
       const baseName = clipboard.action === 'cut' ? clipboard.file.name : `copy_${clipboard.file.name}`;
       
-      // 3. Determine destination: currently selected folder or root
       let fileNameToSend = baseName;
       let parentPath = null;
 
-      // If a folder is selected, paste inside it
       if (selectedFolder) {
         const folderObj = files.find(f => f.path === selectedFolder && f.isFolder);
         if (folderObj) {
@@ -863,20 +662,16 @@ const handlePasteFile = async () => {
         }
       }
 
-      // 4. Create the file
       const res = await window.api.createFile({ fileName: fileNameToSend, content });
       
       if (res.success) {
-        // 5. Delete original if 'cut'
         if (clipboard.action === 'cut') {
           await window.api.deleteFile(clipboard.file.path);
         }
         
-        // 6. Update UI
         await loadProject(); 
-        setClipboard(null); // Clear clipboard after paste
+        setClipboard(null);
         
-        // Expand folder if we pasted into one
         if (parentPath) {
           setExpandedFolders(prev => new Set([...prev, parentPath]));
         }
@@ -886,6 +681,7 @@ const handlePasteFile = async () => {
       alert("Failed to paste file");
     }
   };
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) { 
@@ -1115,15 +911,13 @@ const handlePasteFile = async () => {
     setGitLoading(false);
   };
   
-   useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Ctrl (Windows/Linux) or Cmd (Mac)
       const isCtrl = e.ctrlKey || e.metaKey;
       const isAlt = e.altKey;
 
       if (isCtrl) {
         switch(e.key.toLowerCase()) {
-          // Save operations
           case 's':
             e.preventDefault();
             if (e.shiftKey) {
@@ -1135,7 +929,6 @@ const handlePasteFile = async () => {
             }
             break;
           
-          // New operations
           case 'n':
             e.preventDefault();
             if (e.shiftKey) {
@@ -1147,7 +940,6 @@ const handlePasteFile = async () => {
             }
             break;
             
-          // Open operations
           case 'o':
             e.preventDefault();
             if (e.shiftKey) {
@@ -1159,112 +951,100 @@ const handlePasteFile = async () => {
             }
             break;
 
-          // Ctrl+K combinations (need to handle specially)
           case 'k':
             e.preventDefault();
-            // Set a flag to wait for the next key
             const handleNextKey = (nextEvent: KeyboardEvent) => {
               if (nextEvent.ctrlKey || nextEvent.metaKey) {
                 switch(nextEvent.key.toLowerCase()) {
                   case 's':
                     nextEvent.preventDefault();
-                    handleMenuAction('saveAll'); // Ctrl+K S
+                    handleMenuAction('saveAll');
                     break;
                   case 'f':
                     nextEvent.preventDefault();
-                    handleMenuAction('closeFolder'); // Ctrl+K F
+                    handleMenuAction('closeFolder');
                     break;
                   case 'o':
                     nextEvent.preventDefault();
-                    handleMenuAction('openFolder'); // Ctrl+K Ctrl+O
+                    handleMenuAction('openFolder');
                     break;
                 }
               }
               window.removeEventListener('keydown', handleNextKey);
             };
             window.addEventListener('keydown', handleNextKey);
-            // Remove listener after 2 seconds if no second key is pressed
             setTimeout(() => {
               window.removeEventListener('keydown', handleNextKey);
             }, 2000);
             break;
 
-          // Edit operations
           case 'z':
             e.preventDefault();
-            if (e.shiftKey) handleMenuAction('redo'); // Ctrl+Shift+Z (alternative to Ctrl+Y)
-            else handleMenuAction('undo');           // Ctrl+Z
+            if (e.shiftKey) handleMenuAction('redo');
+            else handleMenuAction('undo');
             break;
 
           case 'y':
             e.preventDefault();
-            handleMenuAction('redo'); // Ctrl+Y
+            handleMenuAction('redo');
             break;
 
           case 'x':
             e.preventDefault();
-            handleMenuAction('cut'); // Ctrl+X
+            handleMenuAction('cut');
             break;
 
           case 'c':
             e.preventDefault();
-            handleMenuAction('copy'); // Ctrl+C
+            handleMenuAction('copy');
             break;
 
           case 'v':
-            // 1. If in Explorer AND we have a file to paste -> Intercept and paste file
             if (activeSidebar === 'Explorer' && clipboard) {
               e.preventDefault();
               handleMenuAction('paste');
             } 
-            // 2. If in Editor -> DO NOT preventDefault(). 
-            // Let Monaco Editor handle Ctrl+V natively (it handles indentation/cursors better).
             break;
 
-          // Developer tools
           case 'i':
             if (e.shiftKey) {
               e.preventDefault();
-              handleMenuAction('toggleDevTools'); // Ctrl+Shift+I
+              handleMenuAction('toggleDevTools');
               showShortcutToast('Toggle DevTools (Ctrl+Shift+I)');
             }
             break;
 
-          // View operations
-          case '\\': // Split Editor
+          case '\\':
             e.preventDefault();
             handleMenuAction('splitEditor');
             break;
             
-          case '`': // Toggle Terminal
+          case '`':
             e.preventDefault();
             handleMenuAction('toggleTerminal');
             break;
         }
       }
 
-      // Alt key combinations
       if (isAlt) {
         switch(e.key) {
-          case 'F4': // Alt+F4 - Close Window
+          case 'F4':
             e.preventDefault();
             handleMenuAction('exit');
             break;
         }
       }
 
-      // Function key combinations
       if (isCtrl) {
         switch(e.key) {
-          case 'F4': // Ctrl+F4 - Close Editor
+          case 'F4':
             e.preventDefault();
             handleMenuAction('closeFile');
             break;
         }
       }
 
-      // Special combinations with multiple modifiers
-      if (isCtrl && e.altKey && e.key === 'n') { // Ctrl+Alt+Win+N (simplified to Ctrl+Alt+N)
+      if (isCtrl && e.altKey && e.key === 'n') {
         e.preventDefault();
         handleMenuAction('newFile');
       }
@@ -1272,831 +1052,92 @@ const handlePasteFile = async () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [leftEditor, rightEditor, activePane]); // Dependencies ensure current state is used
+  }, [leftEditor, rightEditor, activePane, activeSidebar, clipboard]);
 
   // --- RENDER SIDEBAR CONTENT ---
   const renderSidebar = () => {
     if (activeSidebar === 'Github') {
       return (
-        <div className="github-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>SOURCE CONTROL</span>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <button 
-                className="add-file-btn" 
-                onClick={refreshGitStatus} 
-                title="Refresh"
-                disabled={gitLoading}
-              >
-                <i className={`fa-solid fa-rotate ${gitLoading ? 'fa-spin' : ''}`}></i>
-              </button>
-              <button 
-                className="add-file-btn" 
-                onClick={() => setShowGitClone(true)} 
-                title="Clone Repository"
-              >
-                <i className="fa-solid fa-download"></i>
-              </button>
-            </div>
-          </div>
-          
-          <div style={{ flex: 1, overflow: 'auto', padding: '10px' }}>
-            {/* Current Branch */}
-            <div className="git-section" style={{ marginBottom: '15px' }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                padding: '8px',
-                background: '#2d2d30',
-                borderRadius: '4px',
-                marginBottom: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <i className="fa-solid fa-code-branch" style={{ color: '#00f2ff' }}></i>
-                  <span style={{ color: '#fff', fontSize: '13px' }}>{gitBranch}</span>
-                </div>
-                <button 
-                  className="add-file-btn" 
-                  onClick={() => setShowBranchCreate(true)}
-                  title="Create Branch"
-                  style={{ padding: '2px 6px' }}
-                >
-                  <i className="fa-solid fa-plus"></i>
-                </button>
-              </div>
-              
-              {/* Branch List */}
-              {gitBranches.length > 0 && (
-                <div style={{ fontSize: '11px', color: '#888', marginBottom: '5px' }}>
-                  {gitBranches.slice(0, 5).map((branch, idx) => (
-                    <div 
-                      key={idx}
-                      onClick={() => !branch.current && handleGitCheckout(branch.name)}
-                      style={{ 
-                        padding: '4px 8px',
-                        cursor: branch.current ? 'default' : 'pointer',
-                        background: branch.current ? '#1e1e1e' : 'transparent',
-                        borderRadius: '3px',
-                        marginBottom: '2px'
-                      }}
-                    >
-                      {branch.current && '* '}{branch.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Changes Section */}
-            <div className="git-section" style={{ marginBottom: '15px' }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '8px'
-              }}>
-                <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase' }}>
-                  Changes ({gitChanges.length})
-                </span>
-                {gitChanges.length > 0 && (
-                  <button 
-                    className="add-file-btn" 
-                    onClick={handleGitStageAll}
-                    title="Stage All Changes"
-                    style={{ padding: '2px 6px', fontSize: '10px' }}
-                  >
-                    <i className="fa-solid fa-plus"></i> All
-                  </button>
-                )}
-              </div>
-              
-              {gitChanges.length === 0 ? (
-                <div style={{ 
-                  padding: '20px', 
-                  textAlign: 'center', 
-                  color: '#666',
-                  fontSize: '12px'
-                }}>
-                  <i className="fa-solid fa-check-circle" style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}></i>
-                  No changes
-                </div>
-              ) : (
-                <div style={{ maxHeight: '200px', overflow: 'auto' }}>
-                  {gitChanges.map((change, idx) => (
-                    <div 
-                      key={idx}
-                      style={{ 
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '4px 8px',
-                        background: '#1e1e1e',
-                        borderRadius: '3px',
-                        marginBottom: '4px',
-                        fontSize: '12px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                        <span style={{ 
-                          color: change.status.includes('M') ? '#ffa500' : 
-                                 change.status.includes('A') ? '#00ff00' : 
-                                 change.status.includes('D') ? '#ff0000' : '#fff',
-                          fontSize: '10px',
-                          fontWeight: 'bold'
-                        }}>
-                          {change.status}
-                        </span>
-                        <span style={{ color: '#ccc', fontSize: '11px' }}>{change.file}</span>
-                      </div>
-                      <button 
-                        className="add-file-btn" 
-                        onClick={() => handleGitStage(change.file)}
-                        title="Stage File"
-                        style={{ padding: '2px 4px', fontSize: '9px' }}
-                      >
-                        <i className="fa-solid fa-plus"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Commit Section */}
-            <div className="git-section" style={{ marginBottom: '15px' }}>
-              <textarea
-                placeholder="Commit message..."
-                value={gitCommitMessage}
-                onChange={(e) => setGitCommitMessage(e.target.value)}
-                style={{
-                  width: '100%',
-                  minHeight: '60px',
-                  background: '#1e1e1e',
-                  border: '1px solid #333',
-                  borderRadius: '4px',
-                  color: '#fff',
-                  padding: '8px',
-                  fontSize: '12px',
-                  resize: 'vertical',
-                  marginBottom: '8px'
-                }}
-              />
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <button
-                  onClick={handleGitCommit}
-                  disabled={!gitCommitMessage.trim() || gitLoading}
-                  style={{
-                    flex: 1,
-                    background: '#238636',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '6px 12px',
-                    color: 'white',
-                    fontSize: '11px',
-                    cursor: gitCommitMessage.trim() ? 'pointer' : 'not-allowed',
-                    opacity: gitCommitMessage.trim() ? 1 : 0.5
-                  }}
-                >
-                  <i className="fa-solid fa-check"></i> Commit
-                </button>
-              </div>
-            </div>
-
-            {/* Sync Section */}
-            {/* Remote Settings Section - VITAL FOR PUSHING */}
-            <div className="git-section" style={{ marginBottom: '15px' }}>
-              <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', marginBottom: '5px' }}>
-                Remote Origin URL
-              </div>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <input 
-                  type="text" 
-                  placeholder="https://token@github.com/user/repo.git" 
-                  value={remoteUrl}
-                  onChange={(e) => setRemoteUrl(e.target.value)}
-                  style={{ 
-                    flex: 1, 
-                    background: '#1e1e1e', 
-                    border: '1px solid #333', 
-                    color: 'white', 
-                    fontSize: '11px', 
-                    padding: '4px 6px',
-                    borderRadius: '3px',
-                    outline: 'none'
-                  }} 
-                />
-                <button 
-                  onClick={handleSetRemote}
-                  disabled={gitLoading}
-                  title="Set Remote"
-                  style={{ 
-                    background: '#333', 
-                    border: '1px solid #444', 
-                    color: 'white', 
-                    borderRadius: '3px', 
-                    cursor: 'pointer',
-                    width: '24px'
-                  }}
-                >
-                  <i className="fa-solid fa-link"></i>
-                </button>
-              </div>
-              <div style={{ fontSize: '9px', color: '#666', marginTop: '4px' }}>
-                <i>Tip: Use HTTPS with token for auth</i>
-              </div>
-            </div>
-
-            {/* Sync Section (Push/Pull) */}
-            <div className="git-section" style={{ marginBottom: '15px' }}>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <button 
-                  onClick={handleGitPull} 
-                  disabled={gitLoading} 
-                  style={{ 
-                    flex: 1, 
-                    background: '#0969da', 
-                    border: 'none', 
-                    borderRadius: '4px', 
-                    padding: '6px 12px', 
-                    color: 'white', 
-                    fontSize: '11px', 
-                    cursor: 'pointer' 
-                  }}
-                >
-                  <i className="fa-solid fa-download"></i> Pull
-                </button>
-                <button 
-                  onClick={handleGitPush} 
-                  disabled={gitLoading} 
-                  style={{ 
-                    flex: 1, 
-                    background: '#bc13fe', 
-                    border: 'none', 
-                    borderRadius: '4px', 
-                    padding: '6px 12px', 
-                    color: 'white', 
-                    fontSize: '11px', 
-                    cursor: 'pointer' 
-                  }}
-                >
-                  <i className="fa-solid fa-upload"></i> Push
-                </button>
-              </div>
-            </div>
-            
-            {/* Recent Commits */}
-            {gitCommits.length > 0 && (
-              <div className="git-section">
-                <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  Recent Commits
-                </div>
-                {gitCommits.map((commit, idx) => (
-                  <div 
-                    key={idx}
-                    style={{ 
-                      padding: '6px 8px',
-                      background: '#1e1e1e',
-                      borderRadius: '3px',
-                      marginBottom: '4px',
-                      fontSize: '11px'
-                    }}
-                  >
-                    <div style={{ color: '#00f2ff', marginBottom: '2px' }}>{commit.hash}</div>
-                    <div style={{ color: '#ccc' }}>{commit.message}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Initialize Git Button */}
-            {gitChanges.length === 0 && gitCommits.length === 0 && (
-              <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                <button
-                  onClick={handleGitInit}
-                  disabled={gitLoading}
-                  style={{
-                    background: '#238636',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '8px 16px',
-                    color: 'white',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <i className="fa-solid fa-code-branch"></i> Initialize Repository
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Clone Modal */}
-          {showGitClone && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}>
-              <div style={{
-                background: '#2d2d30',
-                padding: '20px',
-                borderRadius: '8px',
-                width: '90%',
-                maxWidth: '400px'
-              }}>
-                <h3 style={{ color: '#fff', marginBottom: '15px', fontSize: '14px' }}>Clone Repository</h3>
-                <input
-                  type="text"
-                  placeholder="https://github.com/user/repo.git"
-                  value={gitCloneUrl}
-                  onChange={(e) => setGitCloneUrl(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: '#1e1e1e',
-                    border: '1px solid #333',
-                    borderRadius: '4px',
-                    color: '#fff',
-                    padding: '8px',
-                    fontSize: '12px',
-                    marginBottom: '15px'
-                  }}
-                />
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => { setShowGitClone(false); setGitCloneUrl(''); }}
-                    style={{
-                      background: '#555',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '6px 12px',
-                      color: 'white',
-                      fontSize: '11px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleGitClone}
-                    disabled={!gitCloneUrl.trim() || gitLoading}
-                    style={{
-                      background: '#238636',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '6px 12px',
-                      color: 'white',
-                      fontSize: '11px',
-                      cursor: gitCloneUrl.trim() ? 'pointer' : 'not-allowed',
-                      opacity: gitCloneUrl.trim() ? 1 : 0.5
-                    }}
-                  >
-                    Clone
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Create Branch Modal */}
-          {showBranchCreate && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}>
-              <div style={{
-                background: '#2d2d30',
-                padding: '20px',
-                borderRadius: '8px',
-                width: '90%',
-                maxWidth: '400px'
-              }}>
-                <h3 style={{ color: '#fff', marginBottom: '15px', fontSize: '14px' }}>Create Branch</h3>
-                <input
-                  type="text"
-                  placeholder="feature/new-feature"
-                  value={newBranchName}
-                  onChange={(e) => setNewBranchName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: '#1e1e1e',
-                    border: '1px solid #333',
-                    borderRadius: '4px',
-                    color: '#fff',
-                    padding: '8px',
-                    fontSize: '12px',
-                    marginBottom: '15px'
-                  }}
-                />
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => { setShowBranchCreate(false); setNewBranchName(''); }}
-                    style={{
-                      background: '#555',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '6px 12px',
-                      color: 'white',
-                      fontSize: '11px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleGitCreateBranch}
-                    disabled={!newBranchName.trim() || gitLoading}
-                    style={{
-                      background: '#238636',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '6px 12px',
-                      color: 'white',
-                      fontSize: '11px',
-                      cursor: newBranchName.trim() ? 'pointer' : 'not-allowed',
-                      opacity: newBranchName.trim() ? 1 : 0.5
-                    }}
-                  >
-                    Create
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <GitSidebar
+          gitBranch={gitBranch}
+          gitChanges={gitChanges}
+          gitCommitMessage={gitCommitMessage}
+          gitBranches={gitBranches}
+          gitCommits={gitCommits}
+          showGitClone={showGitClone}
+          gitCloneUrl={gitCloneUrl}
+          showBranchCreate={showBranchCreate}
+          newBranchName={newBranchName}
+          gitLoading={gitLoading}
+          remoteUrl={remoteUrl}
+          setGitCommitMessage={setGitCommitMessage}
+          setShowGitClone={setShowGitClone}
+          setGitCloneUrl={setGitCloneUrl}
+          setShowBranchCreate={setShowBranchCreate}
+          setNewBranchName={setNewBranchName}
+          setRemoteUrl={setRemoteUrl}
+          onRefresh={refreshGitStatus}
+          onInit={handleGitInit}
+          onClone={handleGitClone}
+          onStage={handleGitStage}
+          onStageAll={handleGitStageAll}
+          onCommit={handleGitCommit}
+          onPush={handleGitPush}
+          onPull={handleGitPull}
+          onCheckout={handleGitCheckout}
+          onCreateBranch={handleGitCreateBranch}
+          onSetRemote={handleSetRemote}
+        />
       );
     }
+    
     if (activeSidebar === 'Search') {
       return (
-        <div className="search-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div className="sidebar-header">SEARCH</div>
-          <input 
-            className="search-input" 
-            placeholder="Search files..." 
-            value={searchQuery} 
-            onChange={(e) => handleSearch(e.target.value)} 
-            autoFocus
-            style={{
-              padding: '8px 12px',
-              margin: '10px',
-              background: '#1e1e1e',
-              border: '1px solid #333',
-              borderRadius: '4px',
-              color: '#fff',
-              fontSize: '13px'
-            }}
-          />
-          <div className="search-results" style={{ flex: 1, overflow: 'auto', padding: '10px' }}>
-             {searchResults.length === 0 && searchQuery && (
-               <div style={{ color: '#666', fontSize: '12px', padding: '20px', textAlign: 'center' }}>
-                 No files found
-               </div>
-             )}
-             {searchResults.map(f => (
-               <div 
-                 key={f.path} 
-                 className="search-result-item" 
-                 onClick={() => handleFileSelect(f)}
-                 style={{
-                   padding: '8px 12px',
-                   background: '#1e1e1e',
-                   borderRadius: '4px',
-                   marginBottom: '4px',
-                   cursor: 'pointer',
-                   display: 'flex',
-                   alignItems: 'center',
-                   gap: '8px',
-                   color: '#ccc',
-                   fontSize: '12px',
-                   transition: 'background 0.2s'
-                 }}
-                 onMouseEnter={(e) => e.currentTarget.style.background = '#2d2d30'}
-                 onMouseLeave={(e) => e.currentTarget.style.background = '#1e1e1e'}
-               >
-                 <i className="fa-regular fa-file-code"></i> {f.name}
-               </div>
-             ))}
-          </div>
-        </div>
+        <SearchSidebar
+          searchQuery={searchQuery}
+          searchResults={searchResults}
+          onSearch={handleSearch}
+          onFileSelect={handleFileSelect}
+        />
       );
     }
+    
     // Default Explorer
     return (
-      <div className="file-list">
-        <div className="sidebar-header sidebar-actions">
-          <span>EXPLORER</span>
-          <div className="sidebar-buttons">
-             <button 
-               className="add-file-btn" 
-               onClick={() => {
-                 console.log('New file button clicked');
-                 setIsCreatingFile(true);
-               }}
-               title="New File"
-               style={{
-                 padding: '4px 8px',
-                 background: 'transparent',
-                 border: '1px solid #333',
-                 borderRadius: '3px',
-                 color: '#888',
-                 cursor: 'pointer',
-                 fontSize: '11px',
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: '4px'
-               }}
-             >
-               <i className="fa-solid fa-file-plus"></i>
-               <span>New</span>
-             </button>
-             <button 
-               className="add-folder-btn" 
-               onClick={() => {
-                 console.log('New folder button clicked');
-                 setIsCreatingFolder(true);
-               }}
-               title="New Folder"
-               style={{
-                 padding: '4px 8px',
-                 background: 'transparent',
-                 border: '1px solid #333',
-                 borderRadius: '3px',
-                 color: '#888',
-                 cursor: 'pointer',
-                 fontSize: '11px',
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: '4px'
-               }}
-             >
-               <i className="fa-solid fa-folder-plus"></i>
-               <span>Folder</span>
-             </button>
-             {clipboard && (
-               <button 
-                 className="paste-btn" 
-                 onClick={handlePasteFile}
-                 title="Paste"
-                 style={{
-                   padding: '4px 8px',
-                   background: 'transparent',
-                   border: '1px solid #333',
-                   borderRadius: '3px',
-                   color: '#888',
-                   cursor: 'pointer',
-                   fontSize: '11px'
-                 }}
-               >
-                 <i className="fa-solid fa-paste"></i>
-               </button>
-             )}
-          </div>
-        </div>
-        
-        {isCreatingFile && (
-          <form onSubmit={handleCreateFile} className="new-file-form">
-            <input 
-              autoFocus 
-              type="text" 
-              className="new-file-input" 
-              value={newFileName} 
-              onChange={(e)=>setNewFileName(e.target.value)} 
-              onBlur={() => {
-                // Only close if empty, otherwise let form submit handle it
-                if (!newFileName.trim()) {
-                  setIsCreatingFile(false);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setIsCreatingFile(false);
-                  setNewFileName('');
-                }
-              }}
-              placeholder="filename.py"
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                margin: '8px 0',
-                background: '#2d2d30',
-                border: '1px solid #00f2ff',
-                borderRadius: '3px',
-                color: '#fff',
-                fontSize: '12px'
-              }}
-            />
-          </form>
-        )}
-
-        {isCreatingFolder && (
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            if (newFolderName.trim()) {
-              await handleCreateFolder(newFolderName);
-              setIsCreatingFolder(false);
-              setNewFolderName('');
-            }
-          }} className="new-folder-form">
-            <input 
-              autoFocus 
-              type="text" 
-              className="new-folder-input" 
-              value={newFolderName} 
-              onChange={(e)=>setNewFolderName(e.target.value)} 
-              onBlur={() => {
-                if (newFolderName.trim()) {
-                  handleCreateFolder(newFolderName);
-                }
-                setIsCreatingFolder(false);
-                setNewFolderName('');
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setIsCreatingFolder(false);
-                  setNewFolderName('');
-                }
-              }}
-              placeholder="folder name"
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                margin: '8px 0',
-                background: '#2d2d30',
-                border: '1px solid #00f2ff',
-                borderRadius: '3px',
-                color: '#fff',
-                fontSize: '12px'
-              }}
-            />
-          </form>
-        )}
-
-        {files.length === 0 && !isCreatingFile && (
-          <div style={{
-            padding: '20px 8px',
-            textAlign: 'center',
-            color: '#666',
-            fontSize: '12px'
-          }}>
-            <i className="fa-solid fa-folder-open" style={{ display: 'block', marginBottom: '8px', fontSize: '24px' }}></i>
-            No files in workspace
-          </div>
-        )}
-
-        {/* Render file tree */}
-         {files
-          .filter(file => !file.parentFolder) // Only show root level items
-          .map(file => {
-            // FIX: Robust folder detection
-            // 1. Check explicit flag (set by handleCreateFolder)
-            // 2. Check path ending (from backend)
-            // 3. Fallback: If it has no extension, treat as folder
-            const isFolder = file.isFolder || file.path?.endsWith('/') || file.path?.endsWith('\\') || !file.name.includes('.');
-            
-            const isExpanded = expandedFolders.has(file.path);
-            const childFiles = files.filter(f => f.parentFolder === file.path);
-            
-            return (
-              <div key={file.path}>
-                {renameFile === file.path ? (
-                  <form onSubmit={(e) => { e.preventDefault(); confirmRename(); }} className="rename-form">
-                    <input 
-                      autoFocus 
-                      className="rename-input" 
-                      value={newName} 
-                      onChange={(e) => setNewName(e.target.value)} 
-                      onBlur={confirmRename}
-                      style={{ /* styles... */ width: '100%', padding: '6px 8px', background: '#2d2d30', border: '1px solid #00f2ff', borderRadius: '3px', color: '#fff', fontSize: '12px', outline: 'none' }}
-                    />
-                  </form>
-                ) : (
-                  <>
-                    <div 
-                      className="file-item" 
-                      onClick={() => {
-                        if (isFolder) {
-                          setExpandedFolders(prev => {
-                            const next = new Set(prev);
-                            if (next.has(file.path)) {
-                              next.delete(file.path);
-                            } else {
-                              next.add(file.path);
-                            }
-                            return next;
-                          });
-                          setSelectedFolder(file.path);
-                        } else {
-                          handleFileSelect(file);
-                        }
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        // IMPORTANT: Pass isFolder flag to context menu so "New File in Folder" appears
-                        setContextMenu({ x: e.clientX, y: e.clientY, file: { ...file, isFolder } });
-                      }}
-                      // ... rest of div styles
-                      style={{
-                        padding: '6px 8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#ccc',
-                        fontSize: '12px',
-                        background: selectedFolder === file.path ? '#2d2d30' : 'transparent',
-                        borderRadius: '3px',
-                        marginBottom: '2px'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#2d2d30'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = selectedFolder === file.path ? '#2d2d30' : 'transparent'}
-                    >
-                      {isFolder && (
-                        <i className={`fa-solid fa-chevron-${isExpanded ? 'down' : 'right'}`} style={{ fontSize: '10px', width: '12px' }}></i>
-                      )}
-                      {!isFolder && <span style={{ width: '12px' }}></span>}
-                      <i className={`fa-${isFolder ? 'solid fa-folder' : 'regular fa-file-code'}`} style={{ color: isFolder ? '#dcb67a' : '#519aba' }}></i>
-                      <span>{file.name}</span>
-                      {file.isInMemory && <span style={{ fontSize: '9px', color: '#666', marginLeft: 'auto' }}>(memory)</span>}
-                    </div>
-                    
-                    {/* Show "New File" input inside folder */}
-                    {isFolder && isExpanded && creatingInFolder === file.path && (
-                      <div style={{ paddingLeft: '32px' }}>
-                        <form onSubmit={handleCreateFile} className="new-file-form">
-                          <input 
-                            autoFocus 
-                            type="text" 
-                            className="new-file-input" 
-                            value={newFileName} 
-                            onChange={(e)=>setNewFileName(e.target.value)} 
-                            onBlur={() => {
-                              if (!newFileName.trim()) {
-                                setIsCreatingFile(false);
-                                setCreatingInFolder(null);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Escape') {
-                                setIsCreatingFile(false);
-                                setNewFileName('');
-                                setCreatingInFolder(null);
-                              }
-                            }}
-                            placeholder="filename.py"
-                            style={{
-                              width: '100%', padding: '6px 8px', margin: '4px 0', background: '#2d2d30', border: '1px solid #00f2ff', borderRadius: '3px', color: '#fff', fontSize: '12px', outline: 'none'
-                            }}
-                          />
-                        </form>
-                      </div>
-                    )}
-                    
-                    {/* Render child files inside folder */}
-                    {isFolder && isExpanded && childFiles.map(childFile => (
-                       <div 
-                        key={childFile.path}
-                        className="file-item" 
-                        onClick={() => handleFileSelect(childFile)}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setContextMenu({ x: e.clientX, y: e.clientY, file: childFile });
-                        }}
-                        style={{
-                          padding: '6px 8px', paddingLeft: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: '#ccc', fontSize: '12px', background: 'transparent', borderRadius: '3px', marginBottom: '2px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#2d2d30'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <i className="fa-regular fa-file-code" style={{ color: '#519aba' }}></i>
-                        <span>{childFile.name}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            );
-          })}
-      </div>
+      <FileExplorerSidebar
+        files={files}
+        isCreatingFile={isCreatingFile}
+        isCreatingFolder={isCreatingFolder}
+        newFileName={newFileName}
+        newFolderName={newFolderName}
+        renameFile={renameFile}
+        newName={newName}
+        clipboard={clipboard}
+        expandedFolders={expandedFolders}
+        selectedFolder={selectedFolder}
+        creatingInFolder={creatingInFolder}
+        setIsCreatingFile={setIsCreatingFile}
+        setIsCreatingFolder={setIsCreatingFolder}
+        setNewFileName={setNewFileName}
+        setNewFolderName={setNewFolderName}
+        setExpandedFolders={setExpandedFolders}
+        setSelectedFolder={setSelectedFolder}
+        setCreatingInFolder={setCreatingInFolder}
+        setContextMenu={setContextMenu}
+        setRenameFile={setRenameFile}
+        setNewName={setNewName}
+        handleFileSelect={handleFileSelect}
+        handleCreateFile={handleCreateFile}
+        handleCreateFolder={handleCreateFolder}
+        handlePasteFile={handlePasteFile}
+        confirmRename={confirmRename}
+      />
     );
   };
 
   const activeState = activePane === 'left' ? leftEditor : rightEditor;
-  
+  const currentLang = getLanguageFromFile(activeState.file);
+
   // Update editor context for titlebar
   useEffect(() => {
     editorContext.setEditorState({
@@ -2114,55 +1155,41 @@ const handlePasteFile = async () => {
       autoSave: autoSave,
       isAutoSaving: isAutoSaving
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnalysis, autoSave, isAutoSaving, activePane, leftEditor.file, rightEditor.file, leftEditor.code, rightEditor.code]);
-  
-  // Determine current language based on file extension
-  const getCurrentLanguage = () => {
-    if (!activeState.file) return 'javascript';
-    const ext = activeState.file.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'py': return 'python';
-      case 'js': return 'javascript';
-      case 'ts': return 'typescript';
-      case 'jsx': return 'javascript';
-      case 'tsx': return 'typescript';
-      case 'html': return 'html';
-      case 'css': return 'css';
-      case 'json': return 'json';
-      default: return 'javascript';
-    }
-  };
-  
-  const currentLang = getCurrentLanguage();
 
   return (
     <div className="ide-wrapper" ref={containerRef}>
 
       {/* CONTEXT MENU */}
       {contextMenu && contextMenu.file && (
-        <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onMouseLeave={() => setContextMenu(null)}>
-          {(contextMenu.file.isFolder || contextMenu.file.path?.endsWith('/')) && (
-            <>
-              <div className="context-item" onClick={() => { 
-                if (contextMenu.file) {
-                  setCreatingInFolder(contextMenu.file.path);
-                  setIsCreatingFile(true);
-                  setExpandedFolders(prev => new Set([...prev, contextMenu.file.path]));
-                }
-                setContextMenu(null); 
-              }}>
-                <i className="fa-solid fa-file-plus"></i> New File in Folder
-              </div>
-              <div className="context-divider"></div>
-            </>
-          )}
-          <div className="context-item" onClick={() => { setRenameFile(contextMenu.file.path); setNewName(contextMenu.file.name); setContextMenu(null); }}><i className="fa-solid fa-pen"></i> Rename</div>
-          <div className="context-item" onClick={() => { setClipboard({file: contextMenu.file, action:'cut'}); setContextMenu(null); }}><i className="fa-solid fa-scissors"></i> Cut</div>
-          <div className="context-item" onClick={() => { setClipboard({file: contextMenu.file, action:'copy'}); setContextMenu(null); }}><i className="fa-solid fa-copy"></i> Copy</div>
-          <div className="context-divider"></div>
-          <div className="context-item delete" onClick={() => handleDeleteFile(contextMenu.file)}><i className="fa-solid fa-trash"></i> Delete</div>
-        </div>
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          file={contextMenu.file}
+          onClose={() => setContextMenu(null)}
+          onNewFileInFolder={() => {
+            if (contextMenu.file) {
+              setCreatingInFolder(contextMenu.file.path);
+              setIsCreatingFile(true);
+              setExpandedFolders(prev => new Set([...prev, contextMenu.file.path]));
+            }
+            setContextMenu(null);
+          }}
+          onRename={() => {
+            setRenameFile(contextMenu.file.path);
+            setNewName(contextMenu.file.name);
+            setContextMenu(null);
+          }}
+          onCut={() => {
+            setClipboard({ file: contextMenu.file, action: 'cut' });
+            setContextMenu(null);
+          }}
+          onCopy={() => {
+            setClipboard({ file: contextMenu.file, action: 'copy' });
+            setContextMenu(null);
+          }}
+          onDelete={() => handleDeleteFile(contextMenu.file)}
+        />
       )}
 
       {/* MAIN CONTENT AREA */}
@@ -2260,16 +1287,13 @@ const handlePasteFile = async () => {
                     outputData={stdout}
                     debugData={stderr}
                     problems={problems}
-                    onCommand={async (cmd) => {
+                    onCommand={async (cmd: string) => {
                       if (isElectronAvailable()) {
                         return await window.api.executeCommand(cmd);
                       }
-                      // Fixed: Return a string (not an object) to match TerminalProps
                       return "Command execution not available on web"; 
                     }}
-                    // Fixed: Added back the required onClear prop
                     onClear={() => { setStdout(''); setStderr(''); setProblems([]); }}
-                 
                  />
               </div>
             ) : (
@@ -2314,25 +1338,7 @@ const handlePasteFile = async () => {
       <StatusBar line={activeState.cursorLine} col={activeState.cursorCol} language={currentLang} />
       
       {/* Keyboard Shortcut Toast */}
-      {shortcutToast && (
-        <div style={{
-          position: 'fixed',
-          top: '50px',
-          right: '20px',
-          background: '#2d2d30',
-          color: '#cccccc',
-          padding: '8px 16px',
-          borderRadius: '4px',
-          border: '1px solid #3e3e42',
-          fontSize: '12px',
-          zIndex: 10000,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          animation: 'fadeInOut 2s ease-in-out'
-        }}>
-          <i className="fa-solid fa-keyboard" style={{ marginRight: '8px', color: '#00f2ff' }}></i>
-          {shortcutToast}
-        </div>
-      )}
+      {shortcutToast && <ShortcutToast message={shortcutToast} />}
     </div>
   );
 };

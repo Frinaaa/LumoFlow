@@ -207,12 +207,34 @@ app.on('ready', () => {
     console.log('✅ Registered: user:updateProfile');
 
     // File System
-    ipcMain.handle('files:readProject', async () => {
-      if (!fs.existsSync(projectDir)) fs.mkdirSync(projectDir, { recursive: true });
-      const files = fs.readdirSync(projectDir);
-      return files.map(file => ({ name: file, path: path.join(projectDir, file) }));
-    });
-    console.log('✅ Registered: files:readProject');
+   ipcMain.handle('files:readProject', async () => {
+    const results = [];
+    
+    // Helper function to scan folders deep
+    function scanDir(currentPath, parentFolder = null) {
+        if (!fs.existsSync(currentPath)) return;
+        const items = fs.readdirSync(currentPath);
+        
+        items.forEach(name => {
+            const fullPath = path.join(currentPath, name);
+            const isFolder = fs.statSync(fullPath).isDirectory();
+            
+            results.push({
+                name,
+                path: fullPath,
+                isFolder,
+                parentFolder // This links children to their folders
+            });
+
+            if (isFolder) {
+                scanDir(fullPath, fullPath); 
+            }
+        });
+    }
+
+    scanDir(projectDir);
+    return results;
+});
 
     ipcMain.handle('files:createFile', async (event, { fileName, content }) => {
       try {
@@ -408,23 +430,7 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: window:close');
 
-    ipcMain.handle('window:toggleDevTools', () => {
-      try {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          if (mainWindow.webContents.isDevToolsOpened()) {
-            mainWindow.webContents.closeDevTools();
-          } else {
-            mainWindow.webContents.openDevTools();
-          }
-        }
-        return { success: true };
-      } catch (error) {
-        console.error('Toggle DevTools error:', error);
-        return { success: false, error: error.message };
-      }
-    });
-    console.log('✅ Registered: window:toggleDevTools');
-
+   
     // Code Management Handlers
     ipcMain.handle('code:saveToDatabase', codeController.saveCodeToDatabase);
     console.log('✅ Registered: code:saveToDatabase');
