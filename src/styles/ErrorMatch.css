@@ -1,0 +1,212 @@
+:root {
+    --bg-dark: #000000;
+    --card-bg: #121212;
+    --text-white: #ffffff;
+    
+    /* Neon Colors */
+    --c-syntax: #00f2ff;   /* Cyan */
+    --c-ref: #bc13fe;      /* Purple */
+    --c-type: #f72585;     /* Pink */
+    --c-logic: #ff9f1c;    /* Orange */
+}
+
+.error-match-wrapper {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header */
+.error-header {
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    background: #050505;
+    border-bottom: 1px solid #222;
+}
+
+.brand-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Orbitron', sans-serif; font-size: 1.4rem; font-weight: 700;
+}
+.brand-logo i, .brand-logo span { color: var(--c-syntax); }
+
+.score-box {
+    font-family: 'Orbitron'; font-size: 1rem; color: #666; letter-spacing: 1px;
+}
+.score-val { color: var(--c-syntax); margin-left: 5px; font-weight: bold;}
+
+/* Game Layout */
+.em-game-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 50px;
+    padding: 20px;
+    background: radial-gradient(circle at center, #111 0%, #000 100%);
+}
+
+/* Baskets Row */
+.baskets-row {
+    display: flex;
+    gap: 30px;
+    perspective: 1000px;
+}
+
+.basket {
+    width: 180px;
+    height: 140px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+}
+
+.basket i { font-size: 2rem; color: #555; transition: 0.3s; }
+.basket span { 
+    font-family: 'Orbitron'; font-size: 0.75rem; color: #888; 
+    letter-spacing: 1px; text-transform: uppercase; transition: 0.3s;
+}
+
+/* Basket Colors & Active States */
+.basket.syntax { border-bottom: 3px solid var(--c-syntax); }
+.basket.ref { border-bottom: 3px solid var(--c-ref); }
+.basket.type { border-bottom: 3px solid var(--c-type); }
+.basket.logic { border-bottom: 3px solid var(--c-logic); }
+
+.basket.drag-over { transform: scale(1.1) translateZ(20px); background: #151515; }
+.basket.drag-over.syntax { border-color: var(--c-syntax); box-shadow: 0 0 20px var(--c-syntax); }
+.basket.drag-over.syntax i, .basket.drag-over.syntax span { color: var(--c-syntax); }
+
+.basket.drag-over.ref { border-color: var(--c-ref); box-shadow: 0 0 20px var(--c-ref); }
+.basket.drag-over.ref i, .basket.drag-over.ref span { color: var(--c-ref); }
+
+.basket.drag-over.type { border-color: var(--c-type); box-shadow: 0 0 20px var(--c-type); }
+.basket.drag-over.type i, .basket.drag-over.type span { color: var(--c-type); }
+
+.basket.drag-over.logic { border-color: var(--c-logic); box-shadow: 0 0 20px var(--c-logic); }
+.basket.drag-over.logic i, .basket.drag-over.logic span { color: var(--c-logic); }
+
+/* Code Card */
+.card-zone {
+    width: 100%;
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.code-card {
+    width: 500px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    cursor: grab;
+    user-select: none;
+    position: relative;
+    border-left: 4px solid white;
+    animation: slideUp 0.5s ease-out;
+    z-index: 1;
+}
+
+.code-card:active { cursor: grabbing; transform: scale(1.02); }
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(50px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.cc-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px; border-bottom: 1px solid #222; background: rgba(255,255,255,0.02);
+}
+.cc-filename { font-family: 'Fira Code', monospace; font-size: 0.8rem; color: #666; }
+.cc-icon { color: #444; }
+
+.cc-body {
+    padding: 25px;
+    font-family: 'Fira Code', monospace;
+    font-size: 1rem;
+    color: #d4d4d4;
+    line-height: 1.6;
+}
+
+.cc-hint {
+    margin: 0 25px 25px 25px;
+    background: #1a1a1a;
+    border: 1px dashed #333;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #888;
+    display: flex; align-items: center; gap: 10px;
+}
+.cc-hint i { color: #ffb703; }
+
+/* Syntax Highlight Colors */
+.kwd { color: #ff79c6; }
+.var { color: #fff; }
+.func { color: #8be9fd; }
+.num { color: #bd93f9; }
+
+/* Feedback */
+.feedback-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Orbitron';
+    font-size: 3rem;
+    font-weight: 800;
+    pointer-events: none;
+    z-index: 100;
+    text-shadow: 0 0 20px currentColor;
+}
+.feedback-overlay.success { 
+    color: var(--c-syntax); 
+    animation: successPop 1.5s forwards;
+}
+.feedback-overlay.fail { 
+    color: var(--c-type); 
+    animation: failShake 1.5s forwards;
+}
+
+@keyframes successPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    30% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes failShake {
+    0%, 100% { opacity: 0; transform: translate(-50%, -50%); }
+    10%, 30%, 50%, 70%, 90% { opacity: 1; transform: translate(-55%, -50%); }
+    20%, 40%, 60%, 80% { opacity: 1; transform: translate(-45%, -50%); }
+}
+
+.exit-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    padding: 5px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Orbitron';
+    margin-left: 20px;
+}
+.exit-btn:hover { border-color: #fff; color: #fff; }

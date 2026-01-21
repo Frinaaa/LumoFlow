@@ -35,20 +35,18 @@ const GameSelectorScreen: React.FC = () => {
 
     // Logic Puzzle has ID 1
     // Inside launchGame function
-    if (selectedGame.id === 0) { // Big Hunt is usually ID 0 in your list
-  navigate('/games/bughunt');
-}
-else if (selectedGame.id === 1) { 
-  navigate('/games/puzzle');
-} else if (selectedGame.id === 2) { // Debug Race (ID 2 in your games array)
+    if (selectedGame.id === 0) { // Bug Hunt
+      navigate('/games/bughunt');
+    }
+    else if (selectedGame.id === 1) { 
+      navigate('/games/puzzle');
+    } else if (selectedGame.id === 2) { // Debug Race
       navigate('/games/debug');
     } 
-    else if (selectedGame.id === 3) navigate('/games/predict');
-    else if (selectedGame.id === 0) navigate('/games/bughunt');
-    else if (selectedGame.id === 4) { // Error Match is ID 4 in your list
-  navigate('/games/error');
-}
-
+    else if (selectedGame.id === 3) {
+      navigate('/games/predict');
+    }
+    else if (selectedGame.id === 4) navigate('/games/error'); 
     else {
       const gameName = selectedGame.title.replace('\n', ' ');
       alert(`The game "${gameName}" is currently under development.`);

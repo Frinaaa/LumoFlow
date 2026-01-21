@@ -100,7 +100,7 @@ const BugHuntScreen: React.FC = () => {
           </div>
 
           <div className="code-container">
-            {data.lines.map((line: { text: string; indent: number; isBug: boolean }, idx: number) => (
+            {data.lines.map((line: CodeLine, idx: number) => (
               <div 
                 key={idx}
                 className={`code-row ${selectedLineIdx === idx ? 'selected' : ''}`}

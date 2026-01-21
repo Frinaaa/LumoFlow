@@ -21,6 +21,8 @@ import LogicPuzzleScreen from './screens/PuzzleGameScreen';
 import DebugRaceScreen from './screens/DebugRaceScreen';
 import PredictGameScreen from './screens/PredictGameScreen';
 import BugHuntScreen from './screens/BugHuntScreen';
+import ErrorMatchScreen from './screens/ErrorMatchScreen';
+
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
@@ -172,6 +174,7 @@ function AppLayout() {
   path="/games/debug" 
   element={isAuthenticated ? <DebugRaceScreen /> : <Navigate to="/login" replace />} 
 />
+<Route path="/games/error" element={isAuthenticated ? <ErrorMatchScreen /> : <Navigate to="/login" replace />} />
 <Route path="/games/bughunt" element={isAuthenticated ? <BugHuntScreen /> : <Navigate to="/login" replace />} />
 <Route 
   path="/games/predict" 
@@ -181,6 +184,7 @@ function AppLayout() {
   path="/games/puzzle"
   element={isAuthenticated ? <LogicPuzzleScreen /> : <Navigate to="/login" replace />}
 />
+<Route path="*" element={<Navigate to="/dashboard" replace />} /> 
           {/* Root Redirect */}
           <Route
             path="/"
