@@ -83,7 +83,24 @@ const DebugRaceScreen: React.FC = () => {
     setLogs(prev => [...prev, { msg: "> Compiling patch...", type: 'info' }]);
 
     setTimeout(() => {
-      if (userCode.trim() === bugData.fixedCode.trim()) {
+      // Normalize code by removing extra whitespace and empty lines for comparison
+      const normalizeCode = (code: string) => {
+        return code
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0 && !line.startsWith('//'))
+          .join('\n');
+      };
+
+      const normalizedUserCode = normalizeCode(userCode);
+      const normalizedFixedCode = normalizeCode(bugData.fixedCode);
+
+      // Check if the fixed code is present in the user's code (allows extra lines)
+      const isFixed = normalizedFixedCode.split('\n').every(fixedLine => 
+        normalizedUserCode.split('\n').some(userLine => userLine === fixedLine)
+      );
+
+      if (isFixed) {
         setLogs(prev => [...prev, 
           { msg: "> SUCCESS: Bug Patched.", type: 'success' },
           { msg: `> ${bugData.explanation}`, type: 'info' }
@@ -159,12 +176,13 @@ const DebugRaceScreen: React.FC = () => {
           </div>
           <div style={{flex: 1}}>
             <Editor
+              key={`editor-level-${level}`}
               height="100%"
               theme="vs-dark"
               language="javascript"
               value={userCode}
               onChange={(val) => setUserCode(val || '')}
-              options={{ fontSize: 16, minimap: { enabled: false }, fontFamily: "'JetBrains Mono', monospace", readOnly: gameState !== 'playing' }}
+              options={{ fontSize: 16, minimap: { enabled: false }, fontFamily: "'JetBrains Mono', monospace" }}
             />
           </div>
         </div>

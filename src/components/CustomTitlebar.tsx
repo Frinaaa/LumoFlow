@@ -145,16 +145,6 @@ const CustomTitlebar: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* DEVELOPER MENU */}
-            <div className={`menu-trigger ${activeMenu === 'Developer' ? 'active' : ''}`} onClick={() => setActiveMenu(activeMenu === 'Developer' ? null : 'Developer')}>
-              <span>Developer</span>
-              {activeMenu === 'Developer' && (
-                <div className="header-dropdown">
-                  <div onClick={() => triggerAction('toggleDevTools')}>Toggle DevTools <span className="sc">Ctrl+Shift+I</span></div>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </div>

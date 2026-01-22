@@ -133,7 +133,7 @@
    
 .progress-fill {
     height: 100%;
-    background-color: #bc13fe;
+    background-color:#bc13fe;
     transition: width 0.03s linear;
     box-shadow: 0 0 10px rgba(188, 19, 254, 0.8);
 }
