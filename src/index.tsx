@@ -12,11 +12,7 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 
 try {
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
+  root.render(<App />);
 } catch (error) {
   console.error("Application crashed:", error);
   // Fallback UI if app crashes immediately

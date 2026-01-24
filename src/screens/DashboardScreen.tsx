@@ -4,6 +4,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer 
 } from 'recharts';
 import authService from '../services/authService';
+import SimpleTitlebar from '../components/SimpleTitlebar';
 import '../styles/DashboardScreen.css'; 
 
 // Interface for type safety
@@ -85,7 +86,9 @@ const DashboardScreen: React.FC = () => {
   if (loading) return <div className="loading-screen">CONNECTING...</div>;
 
   return (
-    <div className="dashboard-wrapper">
+    <>
+      <SimpleTitlebar />
+      <div className="dashboard-wrapper" style={{ paddingTop: '35px' }}>
       
       {/* --- SIDEBAR --- */}
       <aside className="sidebar">
@@ -224,6 +227,7 @@ const DashboardScreen: React.FC = () => {
         </section>
       </main>
     </div>
+    </>
   );
 };
 

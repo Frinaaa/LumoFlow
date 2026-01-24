@@ -238,7 +238,16 @@ app.on('ready', () => {
 
     ipcMain.handle('files:createFile', async (event, { fileName, content }) => {
       try {
-        const filePath = path.join(projectDir, fileName);
+        // Normalize the file path to handle both forward and back slashes
+        const normalizedFileName = fileName.replace(/\\/g, '/');
+        const filePath = path.join(projectDir, normalizedFileName);
+        
+        // Create parent directory if it doesn't exist
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        
         if (fs.existsSync(filePath)) return { success: false, msg: 'File exists' };
         fs.writeFileSync(filePath, content || '', 'utf-8');
         return { success: true, path: filePath };
@@ -263,8 +272,13 @@ app.on('ready', () => {
     console.log('✅ Registered: files:readFile');
 
     ipcMain.handle('files:saveFile', async (event, { filePath, content }) => {
-      fs.writeFileSync(filePath, content, 'utf-8');
-      return { success: true };
+      try {
+        fs.writeFileSync(filePath, content, 'utf-8');
+        return { success: true };
+      } catch (err) {
+        console.error('Error saving file:', err);
+        return { success: false, msg: err.message };
+      }
     });
     console.log('✅ Registered: files:saveFile');
 
@@ -381,18 +395,20 @@ app.on('ready', () => {
         });
       });
     });
-    // Window Controls
-    ipcMain.handle('window:minimize', () => {
+    // Window Controls - Use BrowserWindow.getFocusedWindow() to get current window
+    ipcMain.handle('window:minimize', (event) => {
       console.log('🔵 window:minimize handler called');
       try {
-        if (mainWindow && !mainWindow.isDestroyed()) {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && !win.isDestroyed()) {
           console.log('🔵 Attempting to minimize window...');
-          mainWindow.minimize();
+          win.minimize();
           console.log('✅ Window minimized successfully');
+          return { success: true };
         } else {
-          console.log('❌ mainWindow is null or destroyed');
+          console.log('❌ Window is null or destroyed');
+          return { success: false, error: 'Window not found' };
         }
-        return { success: true };
       } catch (error) {
         console.error('❌ Window minimize error:', error);
         return { success: false, error: error.message };
@@ -400,16 +416,19 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: window:minimize');
 
-    ipcMain.handle('window:maximize', () => {
+    ipcMain.handle('window:maximize', (event) => {
       try {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          if (mainWindow.isMaximized()) {
-            mainWindow.unmaximize();
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && !win.isDestroyed()) {
+          if (win.isMaximized()) {
+            win.unmaximize();
           } else {
-            mainWindow.maximize();
+            win.maximize();
           }
+          return { success: true };
+        } else {
+          return { success: false, error: 'Window not found' };
         }
-        return { success: true };
       } catch (error) {
         console.error('Window maximize error:', error);
         return { success: false, error: error.message };
@@ -417,12 +436,15 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: window:maximize');
 
-    ipcMain.handle('window:close', () => {
+    ipcMain.handle('window:close', (event) => {
       try {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.close();
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && !win.isDestroyed()) {
+          win.close();
+          return { success: true };
+        } else {
+          return { success: false, error: 'Window not found' };
         }
-        return { success: true };
       } catch (error) {
         console.error('Window close error:', error);
         return { success: false, error: error.message };

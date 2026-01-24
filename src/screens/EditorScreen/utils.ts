@@ -1,5 +1,11 @@
-import { Problem } from '../../components/Editor/Terminal';
 import { FileItem } from './types';
+
+interface Problem {
+  message: string;
+  line: number;
+  source: string;
+  type: 'error' | 'warning';
+}
 
 // Strip ANSI escape sequences
 export const stripAnsiCodes = (str: string): string => {

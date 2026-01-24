@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import SimpleTitlebar from '../components/SimpleTitlebar';
 import '../styles/SplashScreen.css';
 
 interface SplashScreenProps {
@@ -37,7 +38,9 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className={`splash-container ${isReady ? 'ready' : ''}`}>
+    <>
+      <SimpleTitlebar />
+      <div className={`splash-container ${isReady ? 'ready' : ''}`} style={{ paddingTop: '35px' }}>
       <div className="splash-bg-grid" />
       <div className="ambient-glow" />
 
@@ -74,6 +77,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

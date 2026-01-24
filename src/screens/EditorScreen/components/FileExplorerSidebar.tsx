@@ -60,72 +60,9 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
   confirmRename
 }) => {
   return (
-    <div className="file-list">
-      <div className="sidebar-header sidebar-actions">
-        <span>EXPLORER</span>
-        <div className="sidebar-buttons">
-          <button 
-            className="add-file-btn" 
-            onClick={() => setIsCreatingFile(true)}
-            title="New File"
-            style={{
-              padding: '4px 8px',
-              background: 'transparent',
-              border: '1px solid #333',
-              borderRadius: '3px',
-              color: '#888',
-              cursor: 'pointer',
-              fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <i className="fa-solid fa-file-plus"></i>
-            <span>New</span>
-          </button>
-          <button 
-            className="add-folder-btn" 
-            onClick={() => setIsCreatingFolder(true)}
-            title="New Folder"
-            style={{
-              padding: '4px 8px',
-              background: 'transparent',
-              border: '1px solid #333',
-              borderRadius: '3px',
-              color: '#888',
-              cursor: 'pointer',
-              fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <i className="fa-solid fa-folder-plus"></i>
-            <span>Folder</span>
-          </button>
-          {clipboard && (
-            <button 
-              className="paste-btn" 
-              onClick={handlePasteFile}
-              title="Paste"
-              style={{
-                padding: '4px 8px',
-                background: 'transparent',
-                border: '1px solid #333',
-                borderRadius: '3px',
-                color: '#888',
-                cursor: 'pointer',
-                fontSize: '11px'
-              }}
-            >
-              <i className="fa-solid fa-paste"></i>
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="file-list" style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
       
-      {isCreatingFile && (
+      {isCreatingFile && !creatingInFolder && (
         <form onSubmit={handleCreateFile} className="new-file-form">
           <input 
             autoFocus 
@@ -153,7 +90,8 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
               border: '1px solid #00f2ff',
               borderRadius: '3px',
               color: '#fff',
-              fontSize: '12px'
+              fontSize: '12px',
+              outline: 'none'
             }}
           />
         </form>
@@ -260,11 +198,13 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
                         });
                         setSelectedFolder(file.path);
                       } else {
+                        setContextMenu(null);
                         handleFileSelect(file);
                       }
                     }}
                     onContextMenu={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       setContextMenu({ x: e.clientX, y: e.clientY, file: { ...file, isFolder: isFolderItem } });
                     }}
                     style={{
@@ -292,8 +232,15 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
                   </div>
                   
                   {isFolderItem && isExpanded && creatingInFolder === file.path && (
-                    <div style={{ paddingLeft: '32px' }}>
-                      <form onSubmit={handleCreateFile} className="new-file-form">
+                    <div style={{ paddingLeft: '32px', marginTop: '4px' }}>
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCreateFile(e);
+                        }} 
+                        className="new-file-form"
+                      >
                         <input 
                           autoFocus 
                           type="text" 
@@ -311,11 +258,15 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
                               setIsCreatingFile(false);
                               setNewFileName('');
                               setCreatingInFolder(null);
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCreateFile(e);
                             }
                           }}
                           placeholder="filename.py"
                           style={{
-                            width: '100%',
+                            width: 'calc(100% - 16px)',
                             padding: '6px 8px',
                             margin: '4px 0',
                             background: '#2d2d30',
@@ -334,10 +285,14 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
                     <div 
                       key={childFile.path}
                       className="file-item" 
-                      onClick={() => handleFileSelect(childFile)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFileSelect(childFile);
+                      }}
                       onContextMenu={(e) => {
                         e.preventDefault();
-                        setContextMenu({ x: e.clientX, y: e.clientY, file: childFile });
+                        e.stopPropagation();
+                        setContextMenu({ x: e.clientX, y: e.clientY, file: { ...childFile, isFolder: false } });
                       }}
                       style={{
                         padding: '6px 8px',
