@@ -8,6 +8,11 @@ interface EditorContextType {
   onMenuAction: (action: string) => void;
   autoSave: boolean;
   isAutoSaving: boolean;
+  isTerminalVisible: boolean; 
+  isSidebarVisible: boolean;
+  activeBottomTab?: string;
+  wordWrap: 'on' | 'off';
+  theme: 'dark' | 'light';
   setEditorState: (state: Partial<EditorContextType>) => void;
 }
 
@@ -20,13 +25,18 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     onSave: () => {},
     isAnalysisMode: false,
     onMenuAction: () => {},
-    autoSave: false,
+    autoSave: JSON.parse(localStorage.getItem('autoSave') || 'false'), // Connect to storage
     isAutoSaving: false,
+    // --- DEFAULTS ---
+    isTerminalVisible: true,
+    isSidebarVisible: true,
+    activeBottomTab: 'Terminal',
+    wordWrap: 'off',
+    theme: (localStorage.getItem('theme') as 'dark' | 'light') || 'dark', // Connect to storage
     setEditorState: (newState) => {
       setState(prev => ({ ...prev, ...newState }));
     }
   });
-
   return (
     <EditorContext.Provider value={state}>
       {children}

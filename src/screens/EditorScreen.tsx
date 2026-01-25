@@ -47,7 +47,37 @@ const EditorScreen: React.FC = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [creatingInFolder, setCreatingInFolder] = useState<string | null>(null);
+  const [workspaceFolderName, setWorkspaceFolderName] = useState<string>('');
+  const [workspaceFolderPath, setWorkspaceFolderPath] = useState<string>('');
+  // Context menu state
   const [contextMenu, setContextMenu] = useState<any>(null);
+  
+  // Outline and Timeline state
+  const [outlineExpanded, setOutlineExpanded] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
+  const [outlineItems, setOutlineItems] = useState<any[]>([]);
+  const [timelineItems, setTimelineItems] = useState<any[]>([]);
+  
+  // Draggable panel state
+  const [isDraggingPanel, setIsDraggingPanel] = useState<string | null>(null);
+  const [panelPositions, setPanelPositions] = useState({
+    explorer: { x: 0, y: 0 },
+    terminal: { x: 0, y: 0 },
+    analysis: { x: 0, y: 0 }
+  });
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Close context menu on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && contextMenu) {
+        setContextMenu(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [contextMenu]);
 
   useEffect(() => {
     const load = async () => {
@@ -135,10 +165,16 @@ const EditorScreen: React.FC = () => {
       },
       onMenuAction: async (action: string) => {
         switch(action) {
-          case 'newFile':
+          case 'newTextFile':
             setIsCreatingFile(true);
             setCreatingInFolder(null);
-            setOutputData('Creating new file...\n');
+            setOutputData('Creating new text file...\n');
+            setActiveBottomTab('Output');
+            break;
+            
+          case 'newFolder':
+            setIsCreatingFolder(true);
+            setOutputData('Creating new folder...\n');
             setActiveBottomTab('Output');
             break;
             
@@ -169,6 +205,10 @@ const EditorScreen: React.FC = () => {
               if (result && !result.canceled && result.folderPath) {
                 const updatedFiles = await window.api.readProjectFiles();
                 setFiles(updatedFiles);
+                // Extract folder name from path
+                const folderName = result.folderPath.split(/[\\/]/).pop() || 'Workspace';
+                setWorkspaceFolderName(folderName);
+                setWorkspaceFolderPath(result.folderPath);
                 setOutputData(`Folder opened: ${result.folderPath}\n`);
                 setActiveBottomTab('Output');
               }
@@ -177,6 +217,25 @@ const EditorScreen: React.FC = () => {
               setOutputData(`Error opening folder: ${error.message}\n`);
               setActiveBottomTab('Output');
             }
+            break;
+            
+          case 'closeFolder':
+            // Clear all files from explorer
+            setFiles([]);
+            // Clear workspace folder
+            setWorkspaceFolderName('');
+            setWorkspaceFolderPath('');
+            // Close active editor
+            setActiveEditor({
+              file: null,
+              code: '',
+              cursorLine: 1,
+              cursorCol: 1
+            });
+            // Collapse all folders
+            setExpandedFolders(new Set());
+            setOutputData('Folder closed\n');
+            setActiveBottomTab('Output');
             break;
             
           case 'saveAs':
@@ -221,11 +280,49 @@ const EditorScreen: React.FC = () => {
             break;
             
           case 'toggleAutoSave':
-            const newAutoSave = !editorContext.autoSave;
-            editorContext.setEditorState({ autoSave: newAutoSave });
-            setOutputData(`Auto Save ${newAutoSave ? 'enabled' : 'disabled'}\n`);
-            setActiveBottomTab('Output');
-            break;
+  const newAutoSave = !editorContext.autoSave;
+  editorContext.setEditorState({ autoSave: newAutoSave });
+  localStorage.setItem('autoSave', JSON.stringify(newAutoSave)); // Persistent storage
+  break;
+
+case 'toggleTerminal':
+  editorContext.setEditorState({ isTerminalVisible: !editorContext.isTerminalVisible });
+  break;
+
+case 'toggleSidebar':
+  const newWidth = sidebarWidth > 0 ? 0 : 260; // Toggles the UI appearance
+  setSidebarWidth(newWidth);
+  editorContext.setEditorState({ isSidebarVisible: newWidth > 0 });
+  break;
+
+case 'toggleWordWrap':
+  const nextWrap = editorContext.wordWrap === 'on' ? 'off' : 'on';
+  editorContext.setEditorState({ wordWrap: nextWrap });
+  break;
+
+case 'goToLine':
+  const lineNum = prompt("Go to Line:");
+  if (lineNum) {
+    window.dispatchEvent(new CustomEvent('monaco-cmd', { 
+      detail: { action: 'revealLine', value: parseInt(lineNum) } 
+    }));
+  }
+  break;
+
+case 'selectAll':
+  window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'selectAll' } }));
+  break;
+
+case 'newTerminal':
+  setTerminalOutput("> Initializing new session...\n$ ");
+  setActiveBottomTab('Terminal');
+  editorContext.setEditorState({ isTerminalVisible: true });
+  break;
+
+case 'viewProblems':
+  setActiveBottomTab('Problems');
+  editorContext.setEditorState({ isTerminalVisible: true });
+  break;
             
           case 'closeEditor':
             setActiveEditor({ file: null, code: '', cursorLine: 1, cursorCol: 1 });
@@ -252,6 +349,109 @@ const EditorScreen: React.FC = () => {
     });
   }, [isAnalysisMode, activeEditor.file, activeEditor.code, editorContext.autoSave]);
 
+  // Auto-save functionality
+  useEffect(() => {
+    if (!editorContext.autoSave || !activeEditor.file || !activeEditor.code) {
+      return;
+    }
+
+    const autoSaveInterval = setInterval(async () => {
+      try {
+        const result = await window.api.saveFile({
+          filePath: activeEditor.file!,
+          content: activeEditor.code
+        });
+        
+        if (result.success) {
+          console.log('Auto-saved:', activeEditor.file);
+          // Optionally show a subtle notification
+        }
+      } catch (error) {
+        console.error('Auto-save error:', error);
+      }
+    }, 5000); // Auto-save every 5 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [editorContext.autoSave, activeEditor.file, activeEditor.code]);
+
+  // Apply theme to document root
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', editorContext.theme);
+  }, [editorContext.theme]);
+
+  // Parse outline from active file
+  useEffect(() => {
+    if (!activeEditor.code || !activeEditor.file) {
+      setOutlineItems([]);
+      return;
+    }
+
+    const lines = activeEditor.code.split('\n');
+    const items: any[] = [];
+    
+    lines.forEach((line, index) => {
+      // Detect functions
+      if (line.match(/function\s+(\w+)/)) {
+        const match = line.match(/function\s+(\w+)/);
+        items.push({
+          type: 'function',
+          name: match![1],
+          line: index + 1,
+          icon: 'fa-solid fa-cube'
+        });
+      }
+      // Detect classes
+      else if (line.match(/class\s+(\w+)/)) {
+        const match = line.match(/class\s+(\w+)/);
+        items.push({
+          type: 'class',
+          name: match![1],
+          line: index + 1,
+          icon: 'fa-solid fa-box'
+        });
+      }
+      // Detect const/let/var
+      else if (line.match(/(?:const|let|var)\s+(\w+)/)) {
+        const match = line.match(/(?:const|let|var)\s+(\w+)/);
+        items.push({
+          type: 'variable',
+          name: match![1],
+          line: index + 1,
+          icon: 'fa-solid fa-code'
+        });
+      }
+      // Detect interfaces (TypeScript)
+      else if (line.match(/interface\s+(\w+)/)) {
+        const match = line.match(/interface\s+(\w+)/);
+        items.push({
+          type: 'interface',
+          name: match![1],
+          line: index + 1,
+          icon: 'fa-solid fa-shapes'
+        });
+      }
+    });
+    
+    setOutlineItems(items);
+  }, [activeEditor.code, activeEditor.file]);
+
+  // Generate timeline (file history simulation)
+  useEffect(() => {
+    if (!activeEditor.file) {
+      setTimelineItems([]);
+      return;
+    }
+
+    // Simulate timeline items (in production, this would come from git history)
+    const items = [
+      { date: 'Today', time: '2:30 PM', action: 'Modified', user: 'You' },
+      { date: 'Today', time: '11:45 AM', action: 'Created', user: 'You' },
+      { date: 'Yesterday', time: '4:20 PM', action: 'Renamed', user: 'You' }
+    ];
+    
+    setTimelineItems(items);
+  }, [activeEditor.file]);
+
   // Sidebar resize handlers
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -263,14 +463,26 @@ const EditorScreen: React.FC = () => {
         const newHeight = Math.max(100, Math.min(600, window.innerHeight - e.clientY - 22));
         setTerminalHeight(newHeight);
       }
+      
+      // Handle panel dragging
+      if (isDraggingPanel) {
+        setPanelPositions(prev => ({
+          ...prev,
+          [isDraggingPanel]: {
+            x: e.clientX - dragOffset.x,
+            y: e.clientY - dragOffset.y
+          }
+        }));
+      }
     };
 
     const handleMouseUp = () => {
       setIsResizingSidebar(false);
       setIsResizingTerminal(false);
+      setIsDraggingPanel(null);
     };
 
-    if (isResizingSidebar || isResizingTerminal) {
+    if (isResizingSidebar || isResizingTerminal || isDraggingPanel) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -278,11 +490,16 @@ const EditorScreen: React.FC = () => {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizingSidebar, isResizingTerminal]);
+  }, [isResizingSidebar, isResizingTerminal, isDraggingPanel, dragOffset]);
 
   const handleFileSelect = async (file: any) => {
     // Close context menu if open
     setContextMenu(null);
+    
+    // Prevent selecting folders
+    if (file.isFolder) {
+      return;
+    }
     
     try {
       console.log('Opening file:', file.path);
@@ -328,13 +545,23 @@ const EditorScreen: React.FC = () => {
     if (!newFileName.trim()) return;
 
     try {
+      // Validate filename - ensure it has an extension and no path separators
+      let fileName = newFileName.trim();
+      
+      // Remove any path separators from the filename
+      fileName = fileName.replace(/[\\/]/g, '');
+      
+      // If no extension, add .txt by default
+      if (!fileName.includes('.')) {
+        fileName = fileName + '.txt';
+      }
+      
       // Build the file path - if creating in folder, extract just the folder name from full path
-      let fileName = newFileName;
       if (creatingInFolder) {
         // Extract relative folder path by getting just the folder name(s) after projectDir
         const folderParts = creatingInFolder.split(/[\\/]/);
         const folderName = folderParts[folderParts.length - 1];
-        fileName = `${folderName}/${newFileName}`;
+        fileName = `${folderName}/${fileName}`;
       }
       
       const result = await window.api.createFile({ 
@@ -466,16 +693,148 @@ const EditorScreen: React.FC = () => {
     if (!clipboard) return;
 
     try {
-      // Implementation depends on your backend API
-      // For now, just show a message
-      setOutputData(`Paste operation: ${clipboard.operation} ${clipboard.name}\n`);
+      const fileName = clipboard.name;
+      const sourcePath = clipboard.path;
       
-      if (clipboard.operation === 'cut') {
-        setClipboard(null);
+      // Get path parts for root calculation
+      const pathParts = sourcePath.replace(/\\/g, '/').split('/');
+      pathParts.pop(); // Remove filename
+      
+      // Determine target path (current selected folder or root)
+      let targetPath;
+      if (selectedFolder) {
+        targetPath = `${selectedFolder.replace(/\\/g, '/')}/${fileName}`;
+      } else {
+        // Paste to root
+        targetPath = `${pathParts.join('/')}/${fileName}`;
+      }
+      
+      if (clipboard.operation === 'copy') {
+        // Copy file
+        const content: any = await window.api.readFile(sourcePath);
+        const fileContent = typeof content === 'string' ? content : (content?.content || '');
+        
+        // Create new file with copied content
+        let finalPath = targetPath;
+        let counter = 1;
+        
+        // Check if file exists and add number suffix
+        while (files.some(f => f.path === finalPath)) {
+          const ext = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : '';
+          const nameWithoutExt = fileName.includes('.') ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
+          finalPath = selectedFolder 
+            ? `${selectedFolder.replace(/\\/g, '/')}/${nameWithoutExt}_${counter}${ext}`
+            : `${pathParts.join('/')}/${nameWithoutExt}_${counter}${ext}`;
+          counter++;
+        }
+        
+        const finalFileName = finalPath.split('/').pop() || fileName;
+        const result = await window.api.createFile({
+          fileName: finalFileName,
+          content: fileContent
+        });
+        
+        if (result.success) {
+          const updatedFiles = await window.api.readProjectFiles();
+          setFiles(updatedFiles);
+          setOutputData(`✅ Copied: ${fileName}\n`);
+          setActiveBottomTab('Output');
+        }
+      } else if (clipboard.operation === 'cut') {
+        // Move file using moveFile API
+        if ((window.api as any).moveFile) {
+          const result = await (window.api as any).moveFile(sourcePath, targetPath);
+          
+          if (result.success) {
+            const updatedFiles = await window.api.readProjectFiles();
+            setFiles(updatedFiles);
+            
+            if (activeEditor.file === sourcePath) {
+              setActiveEditor({ ...activeEditor, file: result.newPath || targetPath });
+            }
+            
+            setOutputData(`✅ Moved: ${fileName}\n`);
+            setActiveBottomTab('Output');
+            setClipboard(null);
+          } else {
+            setOutputData(`❌ Error moving file: ${result.msg}\n`);
+            setActiveBottomTab('Output');
+          }
+        }
       }
     } catch (error: any) {
       console.error('Error pasting file:', error);
-      setOutputData(`Error pasting file: ${error.message}\n`);
+      setOutputData(`❌ Error pasting file: ${error.message}\n`);
+      setActiveBottomTab('Output');
+    }
+  };
+
+  const handleFileDrop = async (draggedFile: any, targetFolder: any | null) => {
+    try {
+      if (!draggedFile || !(window.api as any).moveFile) return;
+      
+      // If dropping on a folder, move the file into that folder
+      if (targetFolder && targetFolder.isFolder) {
+        const fileName = draggedFile.name;
+        // Use forward slash for path construction (works on both Windows and Unix)
+        const targetPath = targetFolder.path.replace(/\\/g, '/');
+        const newPath = `${targetPath}/${fileName}`;
+        
+        console.log('Moving file:', draggedFile.path, '→', newPath);
+        
+        // Call moveFile API to move the file
+        const result = await (window.api as any).moveFile(draggedFile.path, newPath);
+        
+        if (result.success) {
+          // Reload files
+          const updatedFiles = await window.api.readProjectFiles();
+          setFiles(updatedFiles);
+          
+          // Update active editor if moved file is open
+          if (activeEditor.file === draggedFile.path) {
+            setActiveEditor({ ...activeEditor, file: result.newPath || newPath });
+          }
+          
+          // Expand the target folder to show the moved file
+          setExpandedFolders(prev => new Set([...prev, targetFolder.path]));
+          
+          setOutputData(`✅ Moved: ${draggedFile.name} → ${targetFolder.name}/\n`);
+          setActiveBottomTab('Output');
+        } else {
+          setOutputData(`❌ Error moving file: ${result.msg}\n`);
+          setActiveBottomTab('Output');
+        }
+      } else {
+        // Dropping on root - move to project root
+        const fileName = draggedFile.name;
+        const pathParts = draggedFile.path.replace(/\\/g, '/').split('/');
+        pathParts.pop(); // Remove filename
+        const projectRoot = pathParts.join('/');
+        const newPath = `${projectRoot}/${fileName}`;
+        
+        if (newPath !== draggedFile.path) {
+          const result = await (window.api as any).moveFile(draggedFile.path, newPath);
+          
+          if (result.success) {
+            const updatedFiles = await window.api.readProjectFiles();
+            setFiles(updatedFiles);
+            
+            if (activeEditor.file === draggedFile.path) {
+              setActiveEditor({ ...activeEditor, file: result.newPath || newPath });
+            }
+            
+            setOutputData(`✅ Moved: ${draggedFile.name} to root\n`);
+            setActiveBottomTab('Output');
+          } else {
+            setOutputData(`❌ Error moving file: ${result.msg}\n`);
+            setActiveBottomTab('Output');
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Error moving file:', error);
+      setOutputData(`❌ Error moving file: ${error.message}\n`);
+      setActiveBottomTab('Output');
     }
   };
 
@@ -498,7 +857,7 @@ const EditorScreen: React.FC = () => {
   return (
   <div className="ide-grid-master">
     {/* 1. TOP LAYER: HEADER */}
-    <CustomTitlebar />
+    <CustomTitlebar workspaceFolderName={workspaceFolderName} />
 
     {/* 2. MIDDLE LAYER: MAIN CONTENT */}
     <div className="ide-main-body">
@@ -515,7 +874,21 @@ const EditorScreen: React.FC = () => {
           <aside className="vs-sidebar-container" style={{ width: sidebarWidth }}>
             <div className="sidebar-header">
               {activeSidebar.toUpperCase()}
-              <i className="fa-solid fa-ellipsis" style={{ marginLeft: 'auto', cursor: 'pointer' }}></i>
+              <i 
+                className="fa-solid fa-grip-vertical" 
+                style={{ marginLeft: 'auto', cursor: 'move', opacity: 0.5, marginRight: '8px' }}
+                onMouseDown={(e) => {
+                  setIsDraggingPanel('explorer');
+                  setDragOffset({
+                    x: e.clientX - panelPositions.explorer.x,
+                    y: e.clientY - panelPositions.explorer.y
+                  });
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+                title="Drag to move panel"
+              ></i>
+              <i className="fa-solid fa-ellipsis" style={{ cursor: 'pointer' }}></i>
             </div>
             <div className="sidebar-sections-stack">
               {activeSidebar === 'Explorer' && (
@@ -542,6 +915,18 @@ const EditorScreen: React.FC = () => {
                         title="New Folder"
                       ></i>
                       <i 
+                        className="fa-solid fa-compress" 
+                        onClick={() => {
+                          setExpandedFolders(new Set());
+                          setOutputData('All folders collapsed\n');
+                          setActiveBottomTab('Output');
+                        }}
+                        style={{ cursor: 'pointer', fontSize: '12px', opacity: 0.7 }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                        title="Collapse All"
+                      ></i>
+                      <i 
                         className="fa-solid fa-rotate-right" 
                         onClick={async () => {
                           const updatedFiles = await window.api.readProjectFiles();
@@ -557,6 +942,17 @@ const EditorScreen: React.FC = () => {
                   </div>
                   <FileExplorerSidebar 
                     files={files} 
+                    workspaceFolderName={workspaceFolderName}
+                    workspaceFolderPath={workspaceFolderPath}
+                    onCloseWorkspace={() => {
+                      setFiles([]);
+                      setWorkspaceFolderName('');
+                      setWorkspaceFolderPath('');
+                      setActiveEditor({ file: null, code: '', cursorLine: 1, cursorCol: 1 });
+                      setExpandedFolders(new Set());
+                      setOutputData('Workspace closed\n');
+                      setActiveBottomTab('Output');
+                    }}
                     handleFileSelect={handleFileSelect}
                     isCreatingFile={isCreatingFile}
                     isCreatingFolder={isCreatingFolder}
@@ -582,15 +978,95 @@ const EditorScreen: React.FC = () => {
                     handleCreateFolder={handleCreateFolder}
                     handlePasteFile={handlePasteFile}
                     confirmRename={confirmRename}
+                    onFileDrop={handleFileDrop}
                   />
                 </div>
               )}
-              <div className="sidebar-section-header-only">
-                <i className="fa-solid fa-chevron-right"></i> OUTLINE
+              
+              {/* OUTLINE SECTION */}
+              <div 
+                className="sidebar-section-header-only"
+                onClick={() => setOutlineExpanded(!outlineExpanded)}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className={`fa-solid fa-chevron-${outlineExpanded ? 'down' : 'right'}`}></i> OUTLINE
               </div>
-              <div className="sidebar-section-header-only">
-                <i className="fa-solid fa-chevron-right"></i> TIMELINE
+              {outlineExpanded && (
+                <div className="sidebar-section" style={{ maxHeight: '200px', overflow: 'auto' }}>
+                  {outlineItems.length === 0 ? (
+                    <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' }}>
+                      No symbols found
+                    </div>
+                  ) : (
+                    <div style={{ padding: '4px 0' }}>
+                      {outlineItems.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="file-item"
+                          onClick={() => {
+                            // Navigate to line
+                            window.dispatchEvent(new CustomEvent('monaco-cmd', { 
+                              detail: { action: 'revealLine', value: item.line } 
+                            }));
+                          }}
+                          style={{
+                            padding: '4px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '12px'
+                          }}
+                        >
+                          <i className={item.icon} style={{ fontSize: '10px', color: 'var(--accent-primary)', width: '14px' }}></i>
+                          <span>{item.name}</span>
+                          <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '10px' }}>:{item.line}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* TIMELINE SECTION */}
+              <div 
+                className="sidebar-section-header-only"
+                onClick={() => setTimelineExpanded(!timelineExpanded)}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className={`fa-solid fa-chevron-${timelineExpanded ? 'down' : 'right'}`}></i> TIMELINE
               </div>
+              {timelineExpanded && (
+                <div className="sidebar-section" style={{ maxHeight: '200px', overflow: 'auto' }}>
+                  {timelineItems.length === 0 ? (
+                    <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' }}>
+                      No timeline available
+                    </div>
+                  ) : (
+                    <div style={{ padding: '4px 0' }}>
+                      {timelineItems.map((item, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '8px 12px',
+                            borderLeft: '2px solid var(--accent-secondary)',
+                            marginLeft: '12px',
+                            fontSize: '12px',
+                            color: 'var(--text-secondary)'
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, marginBottom: '2px' }}>{item.action}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                            {item.date} at {item.time}
+                          </div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                            by {item.user}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </aside>
           {/* Sidebar Resize Handle */}
@@ -600,7 +1076,7 @@ const EditorScreen: React.FC = () => {
             style={{
               width: '4px',
               cursor: 'col-resize',
-              background: isResizingSidebar ? '#00f2ff' : 'transparent',
+              background: isResizingSidebar ? 'var(--accent-primary)' : 'transparent',
               transition: 'background 0.2s'
             }}
           />
@@ -614,8 +1090,28 @@ const EditorScreen: React.FC = () => {
           <div className="editor-tabs">
             <div className="editor-tab active">
               <i className="fa-regular fa-file-code" style={{ fontSize: '14px', color: '#519aba' }}></i>
-              <span>{activeEditor.file.split(/[\\/]/).pop()}</span>
-              <i className="fa-solid fa-xmark close-btn" onClick={() => setActiveEditor({ file: null, code: '', cursorLine: 1, cursorCol: 1 })}></i>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {activeEditor.file.split(/[\\/]/).pop()}
+              </span>
+              <i 
+                className="fa-solid fa-xmark close-btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveEditor({ file: null, code: '', cursorLine: 1, cursorCol: 1 });
+                  setOutputData('Editor closed\n');
+                  setActiveBottomTab('Output');
+                }}
+                title="Close (Ctrl+F4)"
+                style={{ 
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px'
+                }}
+              ></i>
             </div>
           </div>
         )}
@@ -760,9 +1256,9 @@ const EditorScreen: React.FC = () => {
               style={{
                 height: '4px',
                 cursor: 'row-resize',
-                background: isResizingTerminal ? '#00f2ff' : 'transparent',
+                background: isResizingTerminal ? 'var(--accent-primary)' : 'transparent',
                 transition: 'background 0.2s',
-                borderTop: '1px solid #2d2d2d'
+                borderTop: '1px solid var(--border-color)'
               }}
             />
             <div className="vs-panel-dock" style={{ height: terminalHeight }}>
@@ -793,6 +1289,13 @@ const EditorScreen: React.FC = () => {
                   // You can add Monaco editor navigation here if needed
                   console.log(`Navigating to line ${line}, column ${column || 1}`);
                 }}
+                onDragStart={(e) => {
+                  setIsDraggingPanel('terminal');
+                  setDragOffset({
+                    x: e.clientX - panelPositions.terminal.x,
+                    y: e.clientY - panelPositions.terminal.y
+                  });
+                }}
               />
             </div>
           </>
@@ -801,11 +1304,18 @@ const EditorScreen: React.FC = () => {
 
       {/* OPTIONAL ANALYSIS PANEL */}
       {isAnalysisMode && (
-        <aside className="analysis-sidebar-fixed" style={{ width: '350px', borderLeft: '1px solid #2d2d2d' }}>
+        <aside className="analysis-sidebar-fixed" style={{ width: '350px', borderLeft: '1px solid var(--border-color)' }}>
           <AnalysisPanel 
             code={activeEditor.code} 
             language="javascript"
-            isVisible={true} 
+            isVisible={true}
+            onDragStart={(e) => {
+              setIsDraggingPanel('analysis');
+              setDragOffset({
+                x: e.clientX - panelPositions.analysis.x,
+                y: e.clientY - panelPositions.analysis.y
+              });
+            }}
           />
         </aside>
       )}
@@ -820,24 +1330,33 @@ const EditorScreen: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 999
+              zIndex: 999,
+              background: 'transparent',
+              cursor: 'default'
             }}
-            onClick={() => setContextMenu(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenu(null);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
           />
           <div
             style={{
               position: 'fixed',
               top: contextMenu.y,
               left: contextMenu.x,
-              background: '#252526',
-              border: '1px solid #454545',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-light)',
               borderRadius: '4px',
               padding: '4px 0',
               minWidth: '180px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
               zIndex: 1000,
               fontSize: '13px',
-              color: '#cccccc'
+              color: 'var(--text-secondary)'
             }}
           >
             {!contextMenu.file.isFolder && (
@@ -849,7 +1368,7 @@ const EditorScreen: React.FC = () => {
                   alignItems: 'center',
                   gap: '12px'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 onClick={() => {
                   handleFileSelect(contextMenu.file);
@@ -871,7 +1390,7 @@ const EditorScreen: React.FC = () => {
                     alignItems: 'center',
                     gap: '12px'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   onClick={() => {
                     setCreatingInFolder(contextMenu.file.path);
@@ -891,7 +1410,7 @@ const EditorScreen: React.FC = () => {
                     alignItems: 'center',
                     gap: '12px'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   onClick={() => {
                     // Future: Create subfolder
@@ -902,7 +1421,7 @@ const EditorScreen: React.FC = () => {
                   <i className="fa-solid fa-folder-plus" style={{ width: '14px' }}></i>
                   <span>New Folder</span>
                 </div>
-                <div style={{ height: '1px', background: '#454545', margin: '4px 0' }}></div>
+                <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
               </>
             )}
             
@@ -914,7 +1433,7 @@ const EditorScreen: React.FC = () => {
                 alignItems: 'center',
                 gap: '12px'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               onClick={() => {
                 setRenameFile(contextMenu.file.path);
@@ -933,7 +1452,7 @@ const EditorScreen: React.FC = () => {
                 alignItems: 'center',
                 gap: '12px'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               onClick={() => {
                 handleCopyFile(contextMenu.file);
@@ -951,7 +1470,7 @@ const EditorScreen: React.FC = () => {
                 alignItems: 'center',
                 gap: '12px'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               onClick={() => {
                 handleCutFile(contextMenu.file);
@@ -970,7 +1489,7 @@ const EditorScreen: React.FC = () => {
                   alignItems: 'center',
                   gap: '12px'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 onClick={() => {
                   handlePasteFile();
@@ -981,7 +1500,7 @@ const EditorScreen: React.FC = () => {
                 <span>Paste</span>
               </div>
             )}
-            <div style={{ height: '1px', background: '#454545', margin: '4px 0' }}></div>
+            <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
             <div
               style={{
                 padding: '6px 16px',
@@ -989,9 +1508,9 @@ const EditorScreen: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                color: '#f48771'
+                color: 'var(--error-color)'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               onClick={() => {
                 handleDeleteFile(contextMenu.file.path);

@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import Editor, { Monaco } from '@monaco-editor/react';
+import { useEditor } from '../../context/EditorContext';
 
 interface CodeEditorProps {
   code: string;
@@ -16,11 +17,12 @@ interface CodeEditorProps {
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ 
-  code, onChange, selectedFile, onSave, onRun, onClose, onCursorChange, isActive, onFocus, onProblemsDetected, editorRef    
+  code, onChange, selectedFile, onSave, onRun, onCursorChange, isActive, onFocus, onProblemsDetected, editorRef    
 }) => {
   const internalEditorRef = useRef<any>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const [isGeneratingFix, setIsGeneratingFix] = React.useState(false);
+  const editorContext = useEditor();
   const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
 
   const language = useMemo(() => {
@@ -29,6 +31,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     const map: any = { js: 'javascript', ts: 'typescript', py: 'python', json: 'json', css: 'css', html: 'html' };
     return map[ext || ''] || 'plaintext';
   }, [fileName]);
+
+  // React to Word Wrap changes from Menu
+  useEffect(() => {
+    if (internalEditorRef.current) {
+      internalEditorRef.current.updateOptions({ wordWrap: editorContext.wordWrap || 'on' });
+    }
+  }, [editorContext.wordWrap]);
 
   // AI-powered code fix generator
   const generateAIFix = async (errorMessage: string, line: number, currentCode: string): Promise<string | null> => {
@@ -104,34 +113,148 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     });
     monacoRef.current = monaco;
 
-    // Configure JavaScript/TypeScript validation
-    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-      noSemanticValidation: false,
-      noSyntaxValidation: false,
-      diagnosticCodesToIgnore: []
-    });
+    // Listen for Global Menu Commands (Go to line, Select All, etc.)
+    const monacoCommandListener = (e: any) => {
+      const { action, value } = e.detail;
+      editor.focus();
+      
+      switch(action) {
+        case 'revealLine':
+          editor.revealLineInCenter(value);
+          editor.setPosition({ lineNumber: value, column: 1 });
+          break;
+        
+        // Edit actions
+        case 'undo':
+          console.log('Undo triggered');
+          editor.trigger('menu', 'undo', {});
+          break;
+        case 'redo':
+          console.log('Redo triggered');
+          editor.trigger('menu', 'redo', {});
+          break;
+        case 'cut':
+          console.log('Cut triggered from menu');
+          editor.focus();
+          editor.trigger('menu', 'editor.action.clipboardCutAction', {});
+          break;
+        case 'copy':
+          console.log('Copy triggered from menu');
+          editor.focus();
+          editor.trigger('menu', 'editor.action.clipboardCopyAction', {});
+          break;
+        case 'paste':
+          console.log('Paste triggered from menu');
+          editor.focus();
+          editor.trigger('menu', 'editor.action.clipboardPasteAction', {});
+          break;
+        case 'find':
+          editor.trigger('menu', 'actions.find', {});
+          break;
+        case 'replace':
+          editor.trigger('menu', 'editor.action.startFindReplaceAction', {});
+          break;
+        case 'findInFiles':
+          editor.trigger('menu', 'actions.find', {});
+          break;
+        case 'toggleComment':
+          editor.trigger('menu', 'editor.action.commentLine', {});
+          break;
+        case 'toggleBlockComment':
+          editor.trigger('menu', 'editor.action.blockComment', {});
+          break;
+        
+        // Selection actions
+        case 'selectAll':
+          editor.trigger('menu', 'editor.action.selectAll', {});
+          break;
+        case 'expandSelection':
+          editor.trigger('menu', 'editor.action.smartSelect.expand', {});
+          break;
+        case 'shrinkSelection':
+          editor.trigger('menu', 'editor.action.smartSelect.shrink', {});
+          break;
+        case 'copyLineUp':
+          editor.trigger('menu', 'editor.action.copyLinesUpAction', {});
+          break;
+        case 'copyLineDown':
+          editor.trigger('menu', 'editor.action.copyLinesDownAction', {});
+          break;
+        case 'moveLineUp':
+          editor.trigger('menu', 'editor.action.moveLinesUpAction', {});
+          break;
+        case 'moveLineDown':
+          editor.trigger('menu', 'editor.action.moveLinesDownAction', {});
+          break;
+        case 'duplicateSelection':
+          editor.trigger('menu', 'editor.action.duplicateSelection', {});
+          break;
+        case 'addCursorAbove':
+          editor.trigger('menu', 'editor.action.insertCursorAbove', {});
+          break;
+        case 'addCursorBelow':
+          editor.trigger('menu', 'editor.action.insertCursorBelow', {});
+          break;
+        case 'addCursorsToLineEnds':
+          editor.trigger('menu', 'editor.action.insertCursorAtEndOfEachLineSelected', {});
+          break;
+        
+        // Go actions
+        case 'goBack':
+          // Navigate back in history
+          const model = editor.getModel();
+          if (model) {
+            const position = editor.getPosition();
+            if (position && position.lineNumber > 1) {
+              editor.setPosition({ lineNumber: position.lineNumber - 1, column: 1 });
+              editor.revealLineInCenter(position.lineNumber - 1);
+            }
+          }
+          break;
+      }
+    };
+    
+    window.addEventListener('monaco-cmd', monacoCommandListener);
 
-    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-      target: monaco.languages.typescript.ScriptTarget.ES2020,
-      allowNonTsExtensions: true,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-      module: monaco.languages.typescript.ModuleKind.CommonJS,
-      noEmit: true,
-      esModuleInterop: true,
-      allowJs: true,
-      checkJs: true,
-      strict: false,
-      noImplicitAny: false,
-      strictNullChecks: false,
-      strictFunctionTypes: false,
-      strictPropertyInitialization: false,
-      noImplicitThis: false,
-      alwaysStrict: false
-    });
+    // Ensure initial Word Wrap matches storage/context
+    editor.updateOptions({ wordWrap: editorContext.wordWrap || 'on' });
+
+    // Configure JavaScript/TypeScript validation
+    // @ts-ignore - Using deprecated API for JavaScript validation
+    if (monaco.languages.typescript && monaco.languages.typescript.javascriptDefaults) {
+      // @ts-ignore
+      monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: false,
+        noSyntaxValidation: false,
+        diagnosticCodesToIgnore: []
+      });
+
+      // @ts-ignore
+      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+        // @ts-ignore
+        target: monaco.languages.typescript.ScriptTarget.ES2020,
+        allowNonTsExtensions: true,
+        // @ts-ignore
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+        // @ts-ignore
+        module: monaco.languages.typescript.ModuleKind.CommonJS,
+        noEmit: true,
+        esModuleInterop: true,
+        allowJs: true,
+        checkJs: true,
+        strict: false,
+        noImplicitAny: false,
+        strictNullChecks: false,
+        strictFunctionTypes: false,
+        strictPropertyInitialization: false,
+        noImplicitThis: false,
+        alwaysStrict: false
+      });
+    }
 
     // Register code action provider for quick fixes
     const provider = monaco.languages.registerCodeActionProvider(language, {
-      provideCodeActions: (model, range, context) => {
+      provideCodeActions: (model, range) => {
         const actions: any[] = [];
         
         // Get diagnostics at current position
@@ -243,6 +366,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     }
 
     // Keyboard shortcuts
+    // File operations
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSave();
     });
@@ -250,10 +374,43 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       onRun();
     });
+    
+    // Edit menu shortcuts
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
+      editor.trigger('keyboard', 'undo', {});
+    });
+    
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {
+      editor.trigger('keyboard', 'redo', {});
+    });
+    
+    // Note: Cut (Ctrl+X), Copy (Ctrl+C), Paste (Ctrl+V) are handled natively by Monaco
+    // We don't override them to ensure clipboard works properly
+    
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+      editor.trigger('keyboard', 'actions.find', {});
+    });
+    
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
+      editor.trigger('keyboard', 'editor.action.startFindReplaceAction', {});
+    });
+    
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
+      editor.trigger('keyboard', 'editor.action.commentLine', {});
+    });
+    
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyA, () => {
+      editor.trigger('keyboard', 'editor.action.blockComment', {});
+    });
 
     editor.onDidFocusEditorText(() => {
       onFocus();
     });
+    
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('monaco-cmd', monacoCommandListener);
+    };
   };
 
   return (
@@ -288,7 +445,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       <Editor
         height="100%"
         width="100%"
-        theme="vs-dark"
+        theme={editorContext.theme === 'light' ? 'vs-light' : 'vs-dark'}
         language={language}
         value={code}
         onChange={(val) => onChange(val || "")}
@@ -302,7 +459,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           smoothScrolling: true,
           contextmenu: true,
           multiCursorModifier: 'ctrlCmd',
-          wordWrap: 'on',
+          wordWrap: editorContext.wordWrap || 'on',
           padding: { top: 10 },
           guides: { indentation: true, bracketPairs: true },
           bracketPairColorization: { enabled: true },
@@ -310,7 +467,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           scrollBeyondLastLine: false,
           automaticLayout: true,
           lightbulb: {
-            enabled: true
+            enabled: 'on' as any
           },
           quickSuggestions: {
             other: true,

@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('api', {
   createFolder: (folderName) => ipcRenderer.invoke('files:createFolder', folderName).catch(err => ({ success: false, msg: err.message })),
   deleteFile: (filePath) => ipcRenderer.invoke('files:deleteFile', filePath).catch(err => ({ success: false, msg: err.message })),
   renameFile: (oldPath, newName) => ipcRenderer.invoke('files:renameFile', oldPath, newName).catch(err => ({ success: false, msg: err.message })),
+  moveFile: (oldPath, newPath) => ipcRenderer.invoke('files:moveFile', oldPath, newPath).catch(err => ({ success: false, msg: err.message })),
   
   // Terminal
   runCode: (payload) => ipcRenderer.invoke('terminal:runCode', payload).catch(err => ({ stdout: "", stderr: err.message })),

@@ -4,7 +4,11 @@ import MenuBar from './Editor/MenuBar';
 import { useEditor } from '../context/EditorContext';
 import '../styles/CustomTitlebar.css';
 
-const CustomTitlebar: React.FC = () => {
+interface CustomTitlebarProps {
+  workspaceFolderName?: string;
+}
+
+const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) => {
   const editorState = useEditor();
 
   const handleMinimize = async () => {
@@ -38,7 +42,7 @@ const CustomTitlebar: React.FC = () => {
   };
 
   const handleNewFile = () => {
-    editorState.onMenuAction?.('newFile');
+    editorState.onMenuAction?.('newTextFile');
   };
 
   const handleOpenFile = async () => {
@@ -70,7 +74,10 @@ const CustomTitlebar: React.FC = () => {
       {/* LEFT: BRAND & MENUS */}
       <div className="title-left">
         <i className="fa-solid fa-bolt bolt-cyan"></i>
-        <span className="lumo-logo-text">LUMO<span>FLOW</span></span>
+        <span className="lumo-logo-text">
+          {workspaceFolderName ? workspaceFolderName.toUpperCase() : 'LUMO'}
+          <span>{workspaceFolderName ? '' : 'FLOW'}</span>
+        </span>
         <MenuBar 
           onNewFile={handleNewFile}
           onOpenFile={handleOpenFile}
@@ -79,6 +86,7 @@ const CustomTitlebar: React.FC = () => {
           onSaveAs={handleSaveAs}
           onSaveAll={() => {}}
           onCloseEditor={() => editorState.onMenuAction?.('closeEditor')}
+          onCloseFolder={() => editorState.onMenuAction?.('closeFolder')}
           autoSave={editorState.autoSave}
           onToggleAutoSave={handleToggleAutoSave}
         />

@@ -30,6 +30,7 @@ interface Window {
     createFolder: (folderName: string) => Promise<any>;
     deleteFile: (filePath: string) => Promise<any>;
     renameFile: (oldPath: string, newName: string) => Promise<any>;
+    moveFile: (oldPath: string, newPath: string) => Promise<{ success: boolean; newPath?: string; msg?: string }>;
     runCode: (payload: { filePath: string; code: string }) => Promise<{ stdout: string; stderr: string }>;
     executeCommand: (command: string) => Promise<string>;
     

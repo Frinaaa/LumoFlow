@@ -13,7 +13,10 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 let mainWindow;
 let authWindow;
-const projectDir = path.join(require('os').homedir(), 'LumoFlow_Projects');
+let projectDir = path.join(require('os').homedir(), 'LumoFlow_Projects');
+
+// Store workspace directory per window
+const windowWorkspaces = new Map();
 
 // Store pending auth callbacks
 let pendingAuthCallbacks = {};
@@ -102,7 +105,7 @@ const createWindow = async () => {
   const dbURI = process.env.MONGO_URI || 'mongodb://localhost:27017/lumoflow';
   await mongoose.connect(dbURI);
 
-  mainWindow = new BrowserWindow({
+  const newWindow = new BrowserWindow({
     width: 1200, height: 800,
     webPreferences: {
       nodeIntegration: false,
@@ -115,6 +118,19 @@ const createWindow = async () => {
     frame: false,
     show: false,
   });
+
+  // Initialize workspace for this window (default to LumoFlow_Projects)
+  windowWorkspaces.set(newWindow.id, projectDir);
+  
+  // Clean up workspace when window is closed
+  newWindow.on('closed', () => {
+    windowWorkspaces.delete(newWindow.id);
+  });
+
+  // Set as mainWindow if it's the first window
+  if (!mainWindow) {
+    mainWindow = newWindow;
+  }
 
   // Suppress all DevTools protocol warnings
   const originalWarn = console.warn;
@@ -140,19 +156,21 @@ const createWindow = async () => {
   // Removed problematic console-message handler - it was causing crashes in newer Electron versions
 
   // Handle certificate errors gracefully
-  mainWindow.webContents.session.setCertificateVerifyProc((request, callback) => {
+  newWindow.webContents.session.setCertificateVerifyProc((request, callback) => {
     callback(0); // 0 = verification success
   });
 
   const startUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
-  mainWindow.loadURL(startUrl);
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  newWindow.loadURL(startUrl);
+  newWindow.once('ready-to-show', () => newWindow.show());
 
   // Handle any uncaught exceptions
-  mainWindow.webContents.on('crashed', () => {
+  newWindow.webContents.on('crashed', () => {
     console.error('Renderer process crashed');
-    mainWindow.reload();
+    newWindow.reload();
   });
+  
+  return newWindow;
 };
 
 app.on('ready', () => {
@@ -305,12 +323,54 @@ app.on('ready', () => {
         const dir = path.dirname(oldPath);
         const newPath = path.join(dir, newName);
         fs.renameSync(oldPath, newPath);
-        return { success: true, path: newPath };
+        return { success: true, newPath: newPath };
       } catch (err) {
         return { success: false, msg: err.message };
       }
     });
     console.log('✅ Registered: files:renameFile');
+
+    ipcMain.handle('files:moveFile', async (event, oldPath, newPath) => {
+      console.log(`📦 Move file request: ${oldPath} → ${newPath}`);
+      try {
+        // Check if source file exists
+        if (!fs.existsSync(oldPath)) {
+          console.error(`❌ Source file not found: ${oldPath}`);
+          return { success: false, msg: 'Source file not found' };
+        }
+        
+        // Ensure the target directory exists
+        const targetDir = path.dirname(newPath);
+        if (!fs.existsSync(targetDir)) {
+          console.log(`📁 Creating target directory: ${targetDir}`);
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        
+        // Check if target file already exists
+        if (fs.existsSync(newPath)) {
+          console.error(`❌ Target file already exists: ${newPath}`);
+          return { success: false, msg: 'Target file already exists' };
+        }
+        
+        // Move the file
+        fs.renameSync(oldPath, newPath);
+        console.log(`✅ Moved file successfully: ${oldPath} → ${newPath}`);
+        return { success: true, newPath: newPath };
+      } catch (err) {
+        console.error('❌ Move file error:', err);
+        return { success: false, msg: err.message };
+      }
+    });
+    console.log('✅ Registered: files:moveFile');
+
+    // VERIFICATION: Test if handler is accessible
+    console.log('🔍 Verifying files:moveFile handler...');
+    const handlers = ipcMain._events || {};
+    if (handlers['files:moveFile']) {
+      console.log('✅ files:moveFile handler is accessible!');
+    } else {
+      console.error('❌ files:moveFile handler NOT accessible!');
+    }
 
     ipcMain.handle('files:createFolder', async (event, folderName) => {
       try {
@@ -802,12 +862,31 @@ app.on('ready', () => {
         if (canceled) return { canceled: true };
         
         const selectedPath = filePaths[0];
-        const files = fs.readdirSync(selectedPath).map(file => ({
-          name: file,
-          path: path.join(selectedPath, file)
-        }));
         
-        return { canceled: false, folderPath: selectedPath, files };
+        // Update the project directory
+        projectDir = selectedPath;
+        console.log('📁 Project directory updated to:', projectDir);
+        
+        // Read the folder structure recursively
+        const results = [];
+        function scanDir(dir) {
+          const items = fs.readdirSync(dir);
+          for (const item of items) {
+            const fullPath = path.join(dir, item);
+            const stat = fs.statSync(fullPath);
+            results.push({
+              name: item,
+              path: fullPath,
+              isFolder: stat.isDirectory()
+            });
+            if (stat.isDirectory()) {
+              scanDir(fullPath);
+            }
+          }
+        }
+        scanDir(selectedPath);
+        
+        return { canceled: false, folderPath: selectedPath, files: results };
       } catch (error) {
         console.error('Open folder dialog error:', error);
         return { canceled: true, error: error.message };
@@ -868,6 +947,18 @@ app.on('ready', () => {
     console.log('✅ Registered: dialog:saveAs');
 
     console.log('✅ All IPC handlers registered successfully!');
+    
+    // List all registered file handlers for verification
+    console.log('\n📋 Registered File Handlers:');
+    console.log('  - files:readProject');
+    console.log('  - files:readFile');
+    console.log('  - files:saveFile');
+    console.log('  - files:createFile');
+    console.log('  - files:deleteFile');
+    console.log('  - files:renameFile');
+    console.log('  - files:moveFile ← CHECK THIS ONE');
+    console.log('  - files:createFolder\n');
+    
   } catch (err) {
     console.error('❌ Error registering IPC handlers:', err);
   }

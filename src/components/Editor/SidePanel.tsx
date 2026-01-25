@@ -9,6 +9,7 @@ interface AnalysisPanelProps {
   code?: string;
   language?: string;
   isVisible?: boolean;
+  onDragStart?: (e: React.MouseEvent) => void;
 }
 
 interface FlowchartNode {
@@ -38,7 +39,7 @@ interface AnalysisData {
   explanation: string[];
 }
 
-const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ code = '', language = 'javascript', isVisible = false }) => {
+const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ code = '', language = 'javascript', isVisible = false, onDragStart }) => {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -124,6 +125,22 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ code = '', language = 'ja
             <span>{tab.name}</span>
           </button>
         ))}
+        <i 
+          className="fa-solid fa-grip-vertical" 
+          onMouseDown={onDragStart}
+          style={{ 
+            marginLeft: 'auto',
+            cursor: 'move', 
+            fontSize: '14px', 
+            color: 'var(--text-secondary)', 
+            opacity: 0.5,
+            padding: '8px',
+            transition: 'opacity 0.2s' 
+          }} 
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+          title="Drag to move panel"
+        ></i>
       </div>
 
       {/* Content Area */}

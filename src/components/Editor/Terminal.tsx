@@ -22,6 +22,7 @@ interface TerminalProps {
   onClose?: () => void;
   onMaximize?: () => void;
   onNavigateToLine?: (line: number, column?: number) => void;
+  onDragStart?: (e: React.MouseEvent) => void;
 }
 
 const Terminal: React.FC<TerminalProps> = ({ 
@@ -35,19 +36,24 @@ const Terminal: React.FC<TerminalProps> = ({
   onTabChange,
   onClose,
   onMaximize,
-  onNavigateToLine
+  onNavigateToLine,
+  onDragStart
 }) => {
   const [input, setInput] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [currentWorkingDir, setCurrentWorkingDir] = useState('~');
   const [expandedProblem, setExpandedProblem] = useState<number | null>(null);
   const [generatingFix, setGeneratingFix] = useState<number | null>(null);
   const [quickFixes, setQuickFixes] = useState<{[key: number]: string[]}>({});
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [terminalName, setTerminalName] = useState('Terminal');
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
   const terminalRef = useRef<HTMLDivElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const debugRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll for terminal
   useEffect(() => {
@@ -75,6 +81,46 @@ const Terminal: React.FC<TerminalProps> = ({
     if (activeTab === 'Terminal' && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [activeTab]);
+
+  // Focus rename input when renaming
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
+
+  // Keyboard shortcuts for terminal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeTab === 'Terminal') {
+        // F2 - Rename terminal
+        if (e.key === 'F2') {
+          e.preventDefault();
+          handleRename();
+        }
+        // Delete - Kill terminal (with confirmation)
+        else if (e.key === 'Delete' && e.ctrlKey) {
+          e.preventDefault();
+          if (confirm('Are you sure you want to kill this terminal?')) {
+            handleKillTerminal();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [activeTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,6 +180,88 @@ const Terminal: React.FC<TerminalProps> = ({
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Calculate position to keep menu visible
+    const menuWidth = 280;
+    const menuHeight = 320;
+    const x = e.clientX + menuWidth > window.innerWidth 
+      ? window.innerWidth - menuWidth - 10 
+      : e.clientX;
+    const y = e.clientY + menuHeight > window.innerHeight 
+      ? window.innerHeight - menuHeight - 10 
+      : e.clientY;
+    
+    setContextMenu({ x, y });
+  };
+
+  const handleSplitTerminal = () => {
+    console.log('Split Terminal - Create new terminal instance');
+    // In a real implementation, this would create a new terminal instance
+    setContextMenu(null);
+  };
+
+  const handleMoveToEditor = () => {
+    console.log('Move Terminal into Editor Area');
+    // In a real implementation, this would move terminal to editor area
+    setContextMenu(null);
+  };
+
+  const handleMoveToWindow = () => {
+    console.log('Move Terminal into New Window');
+    // In a real implementation, this would open terminal in new window
+    setContextMenu(null);
+  };
+
+  const handleChangeColor = () => {
+    console.log('Change Terminal Color');
+    // In a real implementation, this would open color picker
+    setContextMenu(null);
+  };
+
+  const handleChangeIcon = () => {
+    console.log('Change Terminal Icon');
+    // In a real implementation, this would open icon selector
+    setContextMenu(null);
+  };
+
+  const handleRename = () => {
+    setIsRenaming(true);
+    setRenameValue(terminalName);
+    setContextMenu(null);
+  };
+
+  const handleRenameSubmit = () => {
+    if (renameValue.trim()) {
+      setTerminalName(renameValue.trim());
+    }
+    setIsRenaming(false);
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleRenameSubmit();
+    } else if (e.key === 'Escape') {
+      setIsRenaming(false);
+    }
+  };
+
+  const handleToggleSize = () => {
+    console.log('Toggle Size to Content Width');
+    // In a real implementation, this would adjust terminal width
+    setContextMenu(null);
+  };
+
+  const handleKillTerminal = () => {
+    console.log('Kill Terminal');
+    if (onClose) {
+      onClose();
+    }
+    setContextMenu(null);
+  };
+
   const handleProblemClick = (problem: Problem, index: number) => {
     // Navigate to the line in the code editor
     if (onNavigateToLine) {
@@ -185,7 +313,7 @@ const Terminal: React.FC<TerminalProps> = ({
   };
 
   return (
-    <div className="vs-panel-container" style={{display:'flex', flexDirection:'column', height:'100%', background:'#1e1e1e'}}>
+    <div className="vs-panel-container" style={{display:'flex', flexDirection:'column', height:'100%', background:'var(--bg-primary)'}}>
       <div className="terminal-header">
         <span 
           className={activeTab === 'Problems' ? 'active' : ''} 
@@ -195,7 +323,7 @@ const Terminal: React.FC<TerminalProps> = ({
           PROBLEMS 
           {problems.length > 0 && (
             <span style={{
-              background: '#f14c4c', 
+              background: 'var(--error-color)', 
               padding:'2px 6px', 
               borderRadius:'10px', 
               color:'white', 
@@ -223,31 +351,69 @@ const Terminal: React.FC<TerminalProps> = ({
         <span 
           className={activeTab === 'Terminal' ? 'active' : ''} 
           onClick={() => onTabChange?.('Terminal')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          TERMINAL
+          {isRenaming && activeTab === 'Terminal' ? (
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={handleRenameSubmit}
+              onKeyDown={handleRenameKeyDown}
+              style={{
+                background: '#3c3c3c',
+                border: '1px solid #0e639c',
+                color: '#cccccc',
+                padding: '2px 6px',
+                fontSize: '11px',
+                fontFamily: 'inherit',
+                outline: 'none',
+                borderRadius: '2px',
+                width: '120px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            terminalName.toUpperCase()
+          )}
         </span>
         
         <div style={{marginLeft:'auto', display:'flex', gap:'15px', alignItems: 'center'}}>
           <i 
+            className="fa-solid fa-grip-vertical" 
+            onMouseDown={onDragStart}
+            style={{ 
+              cursor: 'move', 
+              fontSize: '12px', 
+              color: 'var(--text-secondary)', 
+              opacity: 0.5,
+              transition: 'opacity 0.2s' 
+            }} 
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+            title="Drag to move panel"
+          ></i>
+          <i 
             className="fa-solid fa-trash" 
             onClick={onClear} 
-            style={{ cursor: 'pointer', fontSize: '12px', color: '#cccccc', transition: 'color 0.2s' }} 
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#cccccc'}
+            style={{ cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} 
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
             title="Clear"
           ></i>
           <i 
             className="fa-solid fa-chevron-up" 
             onClick={onMaximize}
-            style={{ cursor: 'pointer', fontSize: '12px', color: '#cccccc', transition: 'color 0.2s' }} 
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#cccccc'}
+            style={{ cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} 
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
             title="Maximize Panel"
           ></i>
           <i 
             className="fa-solid fa-xmark" 
             onClick={onClose}
-            style={{ cursor: 'pointer', fontSize: '14px', color: '#cccccc', transition: 'color 0.2s' }} 
+            style={{ cursor: 'pointer', fontSize: '14px', color: 'var(--text-secondary)', transition: 'color 0.2s' }} 
             onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#cccccc'}
             title="Close Panel"
@@ -257,10 +423,10 @@ const Terminal: React.FC<TerminalProps> = ({
 
       {/* PROBLEMS TAB - Shows code errors and warnings */}
       {activeTab === 'Problems' && (
-        <div style={{ flex: 1, overflowY: 'auto', background: '#1e1e1e' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
           {problems.length === 0 ? (
             <div style={{ 
-              color: '#858585', 
+              color: 'var(--text-muted)', 
               textAlign: 'center', 
               padding: '40px 20px',
               display: 'flex',
@@ -268,37 +434,37 @@ const Terminal: React.FC<TerminalProps> = ({
               alignItems: 'center',
               gap: '10px'
             }}>
-              <i className="fa-solid fa-circle-check" style={{ fontSize: '32px', opacity: 0.5, color: '#4ec9b0' }}></i>
-              <div style={{ fontSize: '14px' }}>No problems detected</div>
+              <i className="fa-solid fa-circle-check" style={{ fontSize: '32px', opacity: 0.5, color: 'var(--success-color)' }}></i>
+              <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>No problems detected</div>
               <div style={{ fontSize: '12px', opacity: 0.7 }}>Your code is looking good!</div>
             </div>
           ) : (
             <div style={{ padding: '8px 0' }}>
               {problems.map((problem, idx) => (
                 <div key={idx} style={{ 
-                  borderBottom: '1px solid #2d2d2d',
+                  borderBottom: '1px solid var(--border-color)',
                 }}>
                   <div 
                     style={{ 
                       padding: '10px 16px',
                       cursor: 'pointer',
                       transition: 'background 0.2s',
-                      background: expandedProblem === idx ? '#2a2d2e' : 'transparent'
+                      background: expandedProblem === idx ? 'var(--bg-hover)' : 'transparent'
                     }}
                     onClick={() => handleProblemClick(problem, idx)}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d2e'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = expandedProblem === idx ? '#2a2d2e' : 'transparent'}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = expandedProblem === idx ? 'var(--bg-hover)' : 'transparent'}
                   >
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                       <i className={`fa-solid ${problem.type === 'error' ? 'fa-circle-xmark' : 'fa-triangle-exclamation'}`} 
                          style={{ 
-                           color: problem.type === 'error' ? '#f14c4c' : '#cca700',
+                           color: problem.type === 'error' ? 'var(--error-color)' : 'var(--warning-color)',
                            fontSize: '16px',
                            marginTop: '2px'
                          }}></i>
                       <div style={{ flex: 1 }}>
                         <div style={{ 
-                          color: problem.type === 'error' ? '#f14c4c' : '#cca700', 
+                          color: problem.type === 'error' ? 'var(--error-color)' : 'var(--warning-color)', 
                           fontSize: '13px', 
                           marginBottom: '6px',
                           fontWeight: 500,
@@ -306,13 +472,13 @@ const Terminal: React.FC<TerminalProps> = ({
                         }}>
                           {problem.message}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#858585', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <span>{problem.source}</span>
                           <span>•</span>
                           <span>Line {problem.line}{problem.column ? `, Col ${problem.column}` : ''}</span>
                           <span>•</span>
                           <span style={{ 
-                            color: problem.type === 'error' ? '#f14c4c' : '#cca700',
+                            color: problem.type === 'error' ? 'var(--error-color)' : 'var(--warning-color)',
                             textTransform: 'uppercase',
                             fontSize: '11px',
                             fontWeight: 600
@@ -322,7 +488,7 @@ const Terminal: React.FC<TerminalProps> = ({
                         </div>
                       </div>
                       <i className={`fa-solid fa-chevron-${expandedProblem === idx ? 'up' : 'down'}`} 
-                         style={{ fontSize: '12px', color: '#858585', marginTop: '4px' }}></i>
+                         style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}></i>
                     </div>
                   </div>
                   
@@ -330,8 +496,8 @@ const Terminal: React.FC<TerminalProps> = ({
                   {expandedProblem === idx && (
                     <div style={{ 
                       padding: '12px 16px 16px 42px',
-                      background: '#252526',
-                      borderTop: '1px solid #2d2d2d'
+                      background: 'var(--bg-secondary)',
+                      borderTop: '1px solid var(--border-color)'
                     }}>
                       <div style={{ 
                         display: 'flex', 
@@ -341,13 +507,13 @@ const Terminal: React.FC<TerminalProps> = ({
                       }}>
                         <div style={{ 
                           fontSize: '12px', 
-                          color: '#cccccc',
+                          color: 'var(--text-secondary)',
                           fontWeight: 600,
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px'
                         }}>
-                          <i className="fa-solid fa-wand-magic-sparkles" style={{ color: '#bc13fe' }}></i>
+                          <i className="fa-solid fa-wand-magic-sparkles" style={{ color: 'var(--accent-secondary)' }}></i>
                           AI Quick Fixes
                         </div>
                         {!quickFixes[idx] && (
@@ -358,7 +524,7 @@ const Terminal: React.FC<TerminalProps> = ({
                             }}
                             disabled={generatingFix === idx}
                             style={{
-                              background: '#0e639c',
+                              background: 'var(--accent-blue)',
                               border: 'none',
                               color: '#ffffff',
                               padding: '4px 12px',
@@ -372,7 +538,7 @@ const Terminal: React.FC<TerminalProps> = ({
                               opacity: generatingFix === idx ? 0.7 : 1
                             }}
                             onMouseEnter={(e) => !generatingFix && (e.currentTarget.style.background = '#1177bb')}
-                            onMouseLeave={(e) => !generatingFix && (e.currentTarget.style.background = '#0e639c')}
+                            onMouseLeave={(e) => !generatingFix && (e.currentTarget.style.background = 'var(--accent-blue)')}
                           >
                             {generatingFix === idx ? (
                               <>
@@ -396,8 +562,8 @@ const Terminal: React.FC<TerminalProps> = ({
                               key={fixIdx}
                               style={{
                                 padding: '10px 12px',
-                                background: '#1e1e1e',
-                                border: '1px solid #3c3c3c',
+                                background: 'var(--bg-primary)',
+                                border: '1px solid var(--border-light)',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
@@ -406,22 +572,21 @@ const Terminal: React.FC<TerminalProps> = ({
                                 gap: '10px'
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#2a2d2e';
-                                e.currentTarget.style.borderColor = '#0e639c';
+                                e.currentTarget.style.background = 'var(--bg-hover)';
+                                e.currentTarget.style.borderColor = 'var(--accent-blue)';
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.background = '#1e1e1e';
-                                e.currentTarget.style.borderColor = '#3c3c3c';
+                                e.currentTarget.style.background = 'var(--bg-primary)';
+                                e.currentTarget.style.borderColor = 'var(--border-light)';
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // In a real implementation, this would apply the fix
                                 console.log('Applying fix:', fix);
                               }}
                             >
-                              <i className="fa-solid fa-circle-check" style={{ color: '#4ec9b0', fontSize: '14px' }}></i>
-                              <span style={{ fontSize: '12px', color: '#cccccc', flex: 1 }}>{fix}</span>
-                              <i className="fa-solid fa-arrow-right" style={{ fontSize: '10px', color: '#858585' }}></i>
+                              <i className="fa-solid fa-circle-check" style={{ color: 'var(--success-color)', fontSize: '14px' }}></i>
+                              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flex: 1 }}>{fix}</span>
+                              <i className="fa-solid fa-arrow-right" style={{ fontSize: '10px', color: 'var(--text-muted)' }}></i>
                             </div>
                           ))}
                         </div>
@@ -429,7 +594,7 @@ const Terminal: React.FC<TerminalProps> = ({
                         <div style={{ 
                           padding: '20px', 
                           textAlign: 'center', 
-                          color: '#858585',
+                          color: 'var(--text-muted)',
                           fontSize: '12px'
                         }}>
                           <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
@@ -439,7 +604,7 @@ const Terminal: React.FC<TerminalProps> = ({
                         <div style={{ 
                           padding: '12px', 
                           textAlign: 'center', 
-                          color: '#858585',
+                          color: 'var(--text-muted)',
                           fontSize: '12px',
                           fontStyle: 'italic'
                         }}>
@@ -462,34 +627,34 @@ const Terminal: React.FC<TerminalProps> = ({
           style={{ 
             flex: 1, 
             padding: '12px 16px', 
-            color: '#cccccc', 
+            color: 'var(--text-secondary)', 
             fontFamily: 'Consolas, "Courier New", monospace', 
             fontSize: '13px', 
             overflowY: 'auto',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
-            background: '#1e1e1e',
+            background: 'var(--bg-primary)',
             lineHeight: '1.5'
           }}
         >
           {outputData || (
-            <div style={{ color: '#858585' }}>
+            <div style={{ color: 'var(--text-muted)' }}>
               <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fa-solid fa-play-circle" style={{ fontSize: '20px', color: '#4ec9b0' }}></i>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>Program Output</span>
+                <i className="fa-solid fa-play-circle" style={{ fontSize: '20px', color: 'var(--success-color)' }}></i>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>Program Output</span>
               </div>
               <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
                 This panel shows the output when you run your code.
                 <br />
                 <br />
-                • Click the <span style={{ color: '#0e639c', fontWeight: 600 }}>Run</span> button to execute your code
+                • Click the <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>Run</span> button to execute your code
                 <br />
                 • Standard output (stdout) appears here
                 <br />
                 • Errors are sent to the Debug Console
                 <br />
                 <br />
-                <span style={{ color: '#4ec9b0' }}>Ready to run your code!</span>
+                <span style={{ color: 'var(--success-color)' }}>Ready to run your code!</span>
               </div>
             </div>
           )}
@@ -503,21 +668,21 @@ const Terminal: React.FC<TerminalProps> = ({
           style={{ 
             flex: 1, 
             padding: '12px 16px', 
-            color: '#cccccc', 
+            color: 'var(--text-secondary)', 
             fontFamily: 'Consolas, "Courier New", monospace', 
             fontSize: '13px', 
             overflowY: 'auto',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
-            background: '#1e1e1e',
+            background: 'var(--bg-primary)',
             lineHeight: '1.5'
           }}
         >
           {debugData || (
-            <div style={{ color: '#858585' }}>
+            <div style={{ color: 'var(--text-muted)' }}>
               <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="fa-solid fa-bug" style={{ fontSize: '20px', color: '#f14c4c' }}></i>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>Debug Console</span>
+                <i className="fa-solid fa-bug" style={{ fontSize: '20px', color: 'var(--error-color)' }}></i>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>Debug Console</span>
               </div>
               <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
                 This panel shows debugging information and runtime errors.
@@ -532,7 +697,7 @@ const Terminal: React.FC<TerminalProps> = ({
                 • Debugging information
                 <br />
                 <br />
-                <span style={{ color: '#858585' }}>No debug output yet.</span>
+                <span style={{ color: 'var(--text-muted)' }}>No debug output yet.</span>
               </div>
             </div>
           )}
@@ -542,8 +707,9 @@ const Terminal: React.FC<TerminalProps> = ({
       {/* TERMINAL TAB - Interactive command line */}
       {activeTab === 'Terminal' && (
         <div 
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}
           onClick={handleTerminalClick}
+          onContextMenu={handleContextMenu}
         >
           <div 
             ref={terminalRef}
@@ -551,20 +717,20 @@ const Terminal: React.FC<TerminalProps> = ({
             style={{
               flex: 1,
               padding:'12px 16px', 
-              color:'#cccccc', 
+              color:'var(--text-secondary)', 
               fontFamily:'Consolas, "Courier New", monospace', 
               fontSize:'13px',
               overflowY: 'auto',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              background: '#1e1e1e',
+              background: 'var(--bg-primary)',
               lineHeight: '1.5',
               cursor: 'text'
             }}
           >
             {terminalOutput || (
-              <div style={{ color: '#858585' }}>
-                <div style={{ marginBottom: '8px', color: '#4ec9b0' }}>
+              <div style={{ color: 'var(--text-muted)' }}>
+                <div style={{ marginBottom: '8px', color: 'var(--success-color)' }}>
                   ╔═══════════════════════════════════════════════════════╗
                   <br />
                   ║  Welcome to LumoFlow Terminal                         ║
@@ -572,26 +738,26 @@ const Terminal: React.FC<TerminalProps> = ({
                   ╚═══════════════════════════════════════════════════════╝
                 </div>
                 <div style={{ fontSize: '12px', marginTop: '12px' }}>
-                  <div style={{ marginBottom: '6px', color: '#cccccc' }}>Available commands:</div>
-                  <div style={{ color: '#569cd6', marginLeft: '16px', lineHeight: '1.8' }}>
-                    • <span style={{ color: '#4ec9b0' }}>ls</span> / <span style={{ color: '#4ec9b0' }}>dir</span> - List files and directories
+                  <div style={{ marginBottom: '6px', color: 'var(--text-secondary)' }}>Available commands:</div>
+                  <div style={{ color: 'var(--accent-blue)', marginLeft: '16px', lineHeight: '1.8' }}>
+                    • <span style={{ color: 'var(--success-color)' }}>ls</span> / <span style={{ color: 'var(--success-color)' }}>dir</span> - List files and directories
                     <br />
-                    • <span style={{ color: '#4ec9b0' }}>cd [path]</span> - Change directory
+                    • <span style={{ color: 'var(--success-color)' }}>cd [path]</span> - Change directory
                     <br />
-                    • <span style={{ color: '#4ec9b0' }}>mkdir [name]</span> - Create directory
+                    • <span style={{ color: 'var(--success-color)' }}>mkdir [name]</span> - Create directory
                     <br />
-                    • <span style={{ color: '#4ec9b0' }}>echo [text]</span> - Print text
+                    • <span style={{ color: 'var(--success-color)' }}>echo [text]</span> - Print text
                     <br />
-                    • <span style={{ color: '#4ec9b0' }}>clear</span> - Clear terminal
+                    • <span style={{ color: 'var(--success-color)' }}>clear</span> - Clear terminal
                     <br />
-                    • <span style={{ color: '#4ec9b0' }}>npm</span> / <span style={{ color: '#4ec9b0' }}>git</span> - Run npm or git commands
+                    • <span style={{ color: 'var(--success-color)' }}>npm</span> / <span style={{ color: 'var(--success-color)' }}>git</span> - Run npm or git commands
                   </div>
-                  <div style={{ marginTop: '12px', color: '#858585', fontSize: '11px' }}>
-                    💡 Tip: Use the <span style={{ color: '#0e639c', fontWeight: 600 }}>Run</span> button to execute your code files.
+                  <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                    💡 Tip: Use the <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>Run</span> button to execute your code files.
                     <br />
                     Terminal is for shell commands only.
                   </div>
-                  <div style={{ marginTop: '12px', color: '#858585' }}>
+                  <div style={{ marginTop: '12px', color: 'var(--text-muted)' }}>
                     Keyboard shortcuts:
                     <br />
                     <span style={{ marginLeft: '16px' }}>↑/↓ - Navigate command history</span>
@@ -607,12 +773,12 @@ const Terminal: React.FC<TerminalProps> = ({
           <form onSubmit={handleSubmit} style={{ 
             display: 'flex', 
             padding: '8px 16px', 
-            borderTop: '1px solid #2d2d2d',
-            background: '#1e1e1e',
+            borderTop: '1px solid var(--border-color)',
+            background: 'var(--bg-primary)',
             alignItems: 'center'
           }}>
             <span style={{ 
-              color: '#4ec9b0', 
+              color: 'var(--success-color)', 
               marginRight: '8px', 
               fontFamily: 'Consolas, monospace', 
               fontSize: '13px',
@@ -634,13 +800,189 @@ const Terminal: React.FC<TerminalProps> = ({
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',
-                color: '#cccccc',
+                color: 'var(--text-secondary)',
                 fontFamily: 'Consolas, "Courier New", monospace',
                 fontSize: '13px',
-                caretColor: '#4ec9b0'
+                caretColor: 'var(--success-color)'
               }}
             />
           </form>
+
+          {/* Context Menu */}
+          {contextMenu && (
+            <div
+              style={{
+                position: 'fixed',
+                left: contextMenu.x,
+                top: contextMenu.y,
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-light)',
+                borderRadius: '4px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                zIndex: 10000,
+                minWidth: '280px',
+                padding: '4px 0',
+                fontFamily: 'Segoe UI, sans-serif',
+                fontSize: '13px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                onClick={handleSplitTerminal}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--text-secondary)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-columns" style={{ width: '16px', fontSize: '12px', color: 'var(--text-muted)' }}></i>
+                <span>Split Terminal</span>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>Ctrl+Shift+5</span>
+              </div>
+
+              <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
+
+              <div
+                onClick={handleMoveToEditor}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--text-secondary)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-arrow-up-right-from-square" style={{ width: '16px', fontSize: '12px', color: 'var(--text-muted)' }}></i>
+                <span>Move Terminal into Editor Area</span>
+              </div>
+
+              <div
+                onClick={handleMoveToWindow}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--text-secondary)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-window-restore" style={{ width: '16px', fontSize: '12px', color: 'var(--text-muted)' }}></i>
+                <span>Move Terminal into New Window</span>
+              </div>
+
+              <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
+
+              <div
+                onClick={handleChangeColor}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--text-secondary)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-palette" style={{ width: '16px', fontSize: '12px', color: 'var(--text-muted)' }}></i>
+                <span>Change Color...</span>
+              </div>
+
+              <div
+                onClick={handleChangeIcon}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--text-secondary)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-icons" style={{ width: '16px', fontSize: '12px', color: 'var(--text-muted)' }}></i>
+                <span>Change Icon...</span>
+              </div>
+
+              <div
+                onClick={handleRename}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--text-secondary)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-pen" style={{ width: '16px', fontSize: '12px', color: 'var(--text-muted)' }}></i>
+                <span>Rename...</span>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>F2</span>
+              </div>
+
+              <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
+
+              <div
+                onClick={handleToggleSize}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--text-secondary)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-arrows-left-right" style={{ width: '16px', fontSize: '12px', color: 'var(--text-muted)' }}></i>
+                <span>Toggle Size to Content Width</span>
+              </div>
+
+              <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }}></div>
+
+              <div
+                onClick={handleKillTerminal}
+                style={{
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: 'var(--error-color)',
+                  transition: 'background 0.1s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <i className="fa-solid fa-skull-crossbones" style={{ width: '16px', fontSize: '12px' }}></i>
+                <span>Kill Terminal</span>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>Delete</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
