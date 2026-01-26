@@ -383,3 +383,7 @@
 .terminal-header span:hover {
   color: var(--text-secondary);
 }
+.menu-item:hover {
+  background-color:  #8e44ad !important;
+  color: white !important;
+}

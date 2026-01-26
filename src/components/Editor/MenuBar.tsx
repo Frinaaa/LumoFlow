@@ -298,9 +298,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
                 Open Folder...
               </MenuItem>
              
-              <MenuItem onClick={() => {}} hasSubmenu>
-                Open Recent
-              </MenuItem>
+             
               
              
               

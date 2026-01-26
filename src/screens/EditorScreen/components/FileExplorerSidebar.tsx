@@ -203,61 +203,7 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
     >
       
       {/* Workspace Folder Header */}
-      {workspaceFolderName && (
-        <div
-          onClick={() => setWorkspaceExpanded(!workspaceExpanded)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const menuWidth = 200;
-            const menuHeight = 100;
-            let x = e.clientX;
-            let y = e.clientY;
-            
-            if (x + menuWidth > window.innerWidth) {
-              x = window.innerWidth - menuWidth - 10;
-            }
-            if (y + menuHeight > window.innerHeight) {
-              y = window.innerHeight - menuHeight - 10;
-            }
-            
-            setWorkspaceContextMenu({ x, y });
-          }}
-          style={{
-            padding: '8px',
-            marginBottom: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: 'var(--text-primary)',
-            fontSize: '13px',
-            fontWeight: 600,
-            background: 'transparent',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            userSelect: 'none',
-            transition: 'background 0.15s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          title={workspaceFolderPath}
-        >
-          <i 
-            className={`fa-solid fa-chevron-${workspaceExpanded ? 'down' : 'right'}`} 
-            style={{ 
-              fontSize: '10px', 
-              width: '12px', 
-              color: 'var(--text-muted)',
-              transition: 'transform 0.2s'
-            }}
-          ></i>
-          <i className="fa-solid fa-folder-open" style={{ color: '#dcb67a', fontSize: '16px' }}></i>
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {workspaceFolderName.toUpperCase()}
-          </span>
-        </div>
-      )}
+      
       
       {/* Workspace Context Menu */}
       {workspaceContextMenu && (
@@ -346,8 +292,16 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         </div>
       )}
       
+      {/* File/Folder Context Menu - Add this new section */}
       {isCreatingFile && !creatingInFolder && workspaceExpanded && (
-        <form onSubmit={handleCreateFile} className="new-file-form">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (newFileName.trim()) {
+            handleCreateFile(e);
+            setIsCreatingFile(false);
+            setNewFileName('');
+          }
+        }} className="new-file-form">
           <input 
             autoFocus 
             type="text" 
@@ -399,9 +353,9 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
             onBlur={() => {
               if (newFolderName.trim()) {
                 handleCreateFolder(newFolderName);
+                setIsCreatingFolder(false);
+                setNewFolderName('');
               }
-              setIsCreatingFolder(false);
-              setNewFolderName('');
             }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -436,9 +390,21 @@ export const FileExplorerSidebar: React.FC<FileExplorerSidebarProps> = ({
         </div>
       )}
 
-      {workspaceExpanded && files
-        .filter(file => !file.parentFolder)
-        .map(file => {
+     {workspaceExpanded && files
+  .filter(file => {
+    // 1. If the item has a parent, it's a sub-item, so keep it.
+    if (file.parentFolder) return true;
+
+    // 2. Determine if this item is actually the Root Project Folder itself.
+    // We check if it's a folder AND its name matches the workspace name.
+    const isRootFolder = file.isFolder && 
+      file.name.toLowerCase() === workspaceFolderName?.toLowerCase();
+
+    // 3. We only want items that are top-level AND are NOT the project root.
+    // This removes that redundant "LUMOFLOW UI" folder from the list.
+    return !file.parentFolder && !isRootFolder;
+  })
+  .map(file => {
           const isFolderItem = isFolder(file);
           const isExpanded = expandedFolders.has(file.path);
           const childFiles = files.filter(f => f.parentFolder === file.path);

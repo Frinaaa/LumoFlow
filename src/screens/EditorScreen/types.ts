@@ -5,7 +5,12 @@ export interface EditorState {
   cursorLine: number;
   cursorCol: number;
 }
-
+export interface TerminalInstance {
+  id: string;
+  name: string;
+  type: 'powershell' | 'cmd' | 'bash' | 'node';
+  output: string;
+}
 export const initialEditorState: EditorState = { 
   file: null, 
   code: "", 

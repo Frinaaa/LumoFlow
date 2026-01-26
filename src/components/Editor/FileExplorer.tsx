@@ -184,7 +184,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
           <div 
             key={file.path} 
             className={`file-item`}
-            onClick={() => onFileSelect(file)}
+            onClick={(e) => {
+              e.stopPropagation();
+              // prefer EditorScreen's prop name `onFileOpen` or fallback to existing handler prop
+              const openHandler = (props as any).onFileOpen || (props as any).handleFileSelect;
+              if (openHandler) openHandler(file, e.ctrlKey || e.metaKey);
+            }}
             style={{
               padding: '8px 12px',
               display: 'flex',

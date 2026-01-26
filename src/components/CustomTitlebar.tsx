@@ -69,15 +69,31 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
     editorState.onMenuAction?.('toggleAutoSave');
   };
 
+  const handleCloseFolder = async () => {
+    try {
+      if (editorState.onMenuAction) {
+        editorState.onMenuAction('closeFolder');
+      }
+      // Also call the API to close workspace if needed
+      if (window.api && window.api.closeWorkspace) {
+        await window.api.closeWorkspace();
+      }
+    } catch (error) {
+      console.error('Error closing folder:', error);
+    }
+  };
+
   return (
     <div className="vs-titlebar-layout">
       {/* LEFT: BRAND & MENUS */}
       <div className="title-left">
         <i className="fa-solid fa-bolt bolt-cyan"></i>
         <span className="lumo-logo-text">
-          {workspaceFolderName ? workspaceFolderName.toUpperCase() : 'LUMO'}
-          <span>{workspaceFolderName ? '' : 'FLOW'}</span>
+          LUMO<span>FLOW</span>
         </span>
+        
+        
+        
         <MenuBar 
           onNewFile={handleNewFile}
           onOpenFile={handleOpenFile}
@@ -86,7 +102,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
           onSaveAs={handleSaveAs}
           onSaveAll={() => {}}
           onCloseEditor={() => editorState.onMenuAction?.('closeEditor')}
-          onCloseFolder={() => editorState.onMenuAction?.('closeFolder')}
+          onCloseFolder={handleCloseFolder}
           autoSave={editorState.autoSave}
           onToggleAutoSave={handleToggleAutoSave}
         />
@@ -116,6 +132,9 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
           <i className="fa-solid fa-xmark close-hover" onClick={handleClose} title="Close"></i>
         </div>
       </div>
+
+      {/* Show folder name if opened */}
+      
     </div>
   );
 };
