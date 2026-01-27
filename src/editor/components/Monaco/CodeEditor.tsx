@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback, memo } from 'react';
 import Editor, { Monaco } from '@monaco-editor/react';
 import { useEditorStore } from '../../stores/editorStore';
 
@@ -115,13 +115,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
     // Listen for Global Menu Commands (Go to line, Select All, etc.)
     const monacoCommandListener = (e: any) => {
-      const { action, value } = e.detail;
+      const { action, value, column } = e.detail;
       editor.focus();
 
       switch (action) {
         case 'revealLine':
           editor.revealLineInCenter(value);
-          editor.setPosition({ lineNumber: value, column: 1 });
+          editor.setPosition({ lineNumber: value, column: column || 1 });
+          editor.focus(); // Ensure editor key focus
           break;
 
         // Edit actions
@@ -324,10 +325,11 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     // Listen to model changes to detect diagnostics in real-time
     const model = editor.getModel();
     if (model) {
+      let diagnosticTimeout: any = null;
+
       const handleDiagnosticsChange = () => {
         const diagnostics = monaco.editor.getModelMarkers({ resource: model.uri });
 
-        // Always update problems, even if empty (to clear solved errors)
         if (onProblemsDetected) {
           const problems = diagnostics.map(d => ({
             message: d.message,
@@ -341,27 +343,22 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         }
       };
 
-      // Check diagnostics on mount
-      setTimeout(handleDiagnosticsChange, 100);
-
       // Listen for marker changes (errors/warnings)
       const markerDisposable = monaco.editor.onDidChangeMarkers((uris) => {
-        // Only update if it's our model
         if (uris.some(uri => uri.toString() === model.uri.toString())) {
-          handleDiagnosticsChange();
+          if (diagnosticTimeout) clearTimeout(diagnosticTimeout);
+          diagnosticTimeout = setTimeout(handleDiagnosticsChange, 1000); // 1s debounce for problems
         }
       });
 
-      // Listen for content changes to re-validate
-      const contentDisposable = model.onDidChangeContent(() => {
-        // Debounce validation
-        setTimeout(handleDiagnosticsChange, 300);
-      });
+      // Initial check
+      diagnosticTimeout = setTimeout(handleDiagnosticsChange, 500);
 
       return () => {
+        if (diagnosticTimeout) clearTimeout(diagnosticTimeout);
         markerDisposable.dispose();
-        contentDisposable.dispose();
         provider.dispose();
+        window.removeEventListener('monaco-cmd', monacoCommandListener);
       };
     }
 
@@ -492,4 +489,4 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   );
 };
 
-export default CodeEditor;
+export default memo(CodeEditor);

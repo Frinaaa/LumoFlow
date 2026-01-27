@@ -101,7 +101,7 @@ export const FileExplorerSidebar = () => {
           onClick={() => setIsSectionExpanded(!isSectionExpanded)}
         >
           <i className={`fa-solid ${isSectionExpanded ? 'fa-chevron-down' : 'fa-chevron-right'}`}></i>
-          <span style={{ textTransform: 'uppercase' }}>{workspaceName || 'NO FOLDER OPENED'}</span>
+          <span style={{ textTransform: 'uppercase' }}>{workspaceName || (editorStore.workspaceStatus === 'Folder Opened' ? 'WORKSPACE' : 'NO FOLDER OPENED')}</span>
           <div className="vs-explorer-toolbar" style={{ marginLeft: 'auto', opacity: 1 }}>
             <div className="explorer-tool-btn" onClick={handleCreateFile} title="New File">
               <i className="fa-solid fa-file-circle-plus"></i>
@@ -125,7 +125,7 @@ export const FileExplorerSidebar = () => {
             {tree.length === 0 && !fileStore.isCreatingFile && !fileStore.isCreatingFolder ? (
               <div style={{ padding: '20px 10px', textAlign: 'center', color: '#666', fontSize: '12px' }}>
                 <i className="fa-solid fa-folder-open" style={{ display: 'block', marginBottom: '8px', fontSize: '24px' }}></i>
-                No files found
+                {workspaceName ? 'This folder is empty' : 'No folder opened'}
               </div>
             ) : (
               tree.map(node => (
@@ -150,7 +150,7 @@ const NewItemInput = ({ type, depth }: { type: 'file' | 'folder', depth: number 
       if (type === 'file') {
         await createFile(name, fileStore.creatingInFolder || '');
       } else {
-        await createFolder(name); // Note: createFolder might need to support path later
+        await createFolder(name, fileStore.creatingInFolder || '');
       }
       cleanup();
     } else if (e.key === 'Escape') {

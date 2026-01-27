@@ -37,6 +37,37 @@ export const parseErrors = (stderr: string, fileName: string, filePath?: string)
   const lines = cleanStderr.split('\n');
 
   for (const line of lines) {
+    if (!line.trim()) continue;
+
+    // Node.js / JavaScript 'at' patterns (Stack traces)
+    // Matches: "at Object.<anonymous> (c:\path\file.js:10:5)"
+    // Or: "at c:\path\file.js:10:5"
+    if (line.includes('at ') && (line.includes('.js:') || line.includes('.ts:'))) {
+      const match = line.match(/:(\d+):(\d+)\)?$/) || line.match(/:(\d+)\)?$/);
+      if (match) {
+        const lineNum = parseInt(match[1]);
+        const colNum = match[2] ? parseInt(match[2]) : 1;
+
+        // Try to find the error message (usually in the previous lines)
+        let message = 'Runtime Error';
+        for (let i = lines.indexOf(line) - 1; i >= 0; i--) {
+          const l = lines[i].trim();
+          if (l && !l.includes('at ')) {
+            message = l;
+            break;
+          }
+        }
+
+        problems.push({
+          message,
+          line: lineNum,
+          source: fileName,
+          type: 'error'
+        });
+        continue;
+      }
+    }
+
     // Python error patterns
     if (line.includes('File "') && line.includes('line ')) {
       const lineMatch = line.match(/line (\d+)/);
@@ -45,10 +76,12 @@ export const parseErrors = (stderr: string, fileName: string, filePath?: string)
       const errorIndex = lines.indexOf(line);
       let message = 'Syntax Error';
 
-      if (errorIndex < lines.length - 1) {
-        const nextLine = lines[errorIndex + 1];
-        if (nextLine && nextLine.trim()) {
-          message = nextLine.trim();
+      // Python error message is usually 2 lines down after the "    ^" line
+      for (let i = errorIndex + 1; i < lines.length; i++) {
+        const l = lines[i].trim();
+        if (l && !l.startsWith('File') && !l.includes('^')) {
+          message = l;
+          break;
         }
       }
 
@@ -60,21 +93,21 @@ export const parseErrors = (stderr: string, fileName: string, filePath?: string)
       });
     }
 
-    // JavaScript error patterns
-    else if (line.includes('SyntaxError') || line.includes('ReferenceError') || line.includes('TypeError')) {
-      const lineMatch = line.match(/:(\d+):/);
-      const lineNum = lineMatch ? parseInt(lineMatch[1]) : 1;
+    // Direct Error/Exception lines (e.g. ReferenceError: x is not defined)
+    else if (line.includes('Error:') || line.includes('Exception:') || line.includes('TypeError') || line.includes('ReferenceError') || line.includes('SyntaxError')) {
+      // Avoid duplicate if already added by stack trace parser
+      if (problems.some(p => p.message === line.trim())) continue;
 
       problems.push({
         message: line.trim(),
-        line: lineNum,
+        line: 1, // Default to line 1 if no specific line found yet
         source: fileName,
         type: 'error'
       });
     }
 
-    // Generic error patterns
-    else if (line.includes('Error:') || line.includes('Exception:')) {
+    // Command failed patterns
+    else if (line.includes('Command failed') || line.includes('is not recognized')) {
       problems.push({
         message: line.trim(),
         line: 1,

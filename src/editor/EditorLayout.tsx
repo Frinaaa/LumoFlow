@@ -354,7 +354,7 @@ export const EditorLayout: React.FC = () => {
                 onSave={() => fileOps.saveFile(activeTab.id)}
                 onClose={() => editorStore.removeTab(activeTab.id)}
                 onFocus={() => { }}
-                onProblemsDetected={editorStore.setProblems}
+                onProblemsDetected={editorStore.setStaticProblems}
               />
             ) : (
               <div

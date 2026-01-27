@@ -18,7 +18,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const handleMenuAction = async (action: string) => {
     switch (action) {
       case 'newTextFile':
-        await fileOps.createFile('untitled.txt');
+        await fileOps.createFile('untitled.js');
         break;
       case 'openFile':
         // This will be handled by the file dialog in EditorLayout
@@ -54,28 +54,8 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const handleRun = async () => {
-    const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
-    if (!activeTab) return;
-
-    try {
-      if ((window as any).api?.runCode) {
-        const result = await (window as any).api.runCode({
-          filePath: activeTab.id, // activeTab.id is the full path
-          code: activeTab.content,
-          language: activeTab.language,
-        });
-
-        if (result.stdout || result.stderr) {
-          editorStore.appendOutputData(result.stdout || '');
-          if (result.stderr) {
-            editorStore.appendOutputData(`\nError: ${result.stderr}\n`);
-          }
-        } else {
-          editorStore.appendOutputData('Execution completed with no output.\n');
-        }
-      }
-    } catch (error: any) {
-      editorStore.appendOutputData(`Execution error: ${error.message}\n`);
+    if (editorStore.activeTabId) {
+      await fileOps.runCode(editorStore.activeTabId);
     }
   };
 

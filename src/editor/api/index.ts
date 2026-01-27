@@ -5,3 +5,4 @@
 
 export { fileSystemApi } from './fileSystem';
 export { terminalApi } from './terminal';
+export { analysisApi } from './analysis';

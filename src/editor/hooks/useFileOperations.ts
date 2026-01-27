@@ -47,17 +47,19 @@ export const useFileOperations = () => {
     }
   };
 
-  const createFile = async (fileName: string, folderPath?: string): Promise<boolean> => {
+  const createFile = async (fileName: string, parentPath?: string): Promise<boolean> => {
     try {
       let fullPath = fileName;
 
-      if (folderPath) {
-        const folderName = folderPath.split(/[\\/]/).pop();
-        fullPath = `${folderName}/${fileName}`;
+      if (parentPath) {
+        // If parentPath is provided, we should join it with the filename.
+        // The electron side handles resolving absolute paths within the sandbox.
+        // We'll use a simple separator here, electron handles normalization.
+        fullPath = `${parentPath}/${fileName}`;
       }
 
-      if (!fullPath.includes('.')) {
-        fullPath += '.txt';
+      if (!fullPath.includes('.') && !fileName.includes('.')) {
+        fullPath += '.js';
       }
 
       const newFilePath = await fileSystemApi.createFile(fullPath, '');
@@ -71,11 +73,16 @@ export const useFileOperations = () => {
     }
   };
 
-  const createFolder = async (folderName: string): Promise<boolean> => {
+  const createFolder = async (folderName: string, parentPath?: string): Promise<boolean> => {
     try {
-      await fileSystemApi.createFolder(folderName);
+      let fullPath = folderName;
+      if (parentPath) {
+        fullPath = `${parentPath}/${folderName}`;
+      }
+      await fileSystemApi.createFolder(fullPath);
       await refreshFiles();
       editorStore.appendOutputData(`✅ Created folder: ${folderName}\n`);
+      editorStore.setWorkspaceStatus('Folder Opened');
       return true;
     } catch (error: any) {
       editorStore.appendOutputData(`❌ Error: ${error.message}\n`);
@@ -135,6 +142,7 @@ export const useFileOperations = () => {
         const folderName = result.folderPath.split(/[\\/]/).pop() || 'Workspace';
         fileStore.setWorkspace(result.folderPath, folderName);
         await refreshFiles();
+        editorStore.setWorkspaceStatus('Folder Opened');
         editorStore.appendOutputData(`✅ Opened: ${folderName}\n`);
         return true;
       }
@@ -150,21 +158,76 @@ export const useFileOperations = () => {
     if (!tab) return false;
 
     try {
+      // 1. Check for immediate editor-detected errors
+      const currentFileProblems = editorStore.problems.filter(p => p.source === tab.fileName && p.type === 'error');
+      if (currentFileProblems.length > 0) {
+        editorStore.setActiveBottomTab('Problems');
+        editorStore.appendOutputData(`❌ Cannot run: ${currentFileProblems.length} errors detected in ${tab.fileName}. Fix them first!\n`);
+        if (!editorStore.terminalVisible) editorStore.toggleTerminal();
+        return false;
+      }
+
+      // 2. Clear old outputs and prepare UI
       editorStore.clearOutputData();
+      editorStore.clearDebugData();
+      editorStore.clearRuntimeProblems();
       editorStore.setActiveBottomTab('Output');
+      if (!editorStore.terminalVisible) editorStore.toggleTerminal();
       editorStore.appendOutputData(`▶ Running ${tab.fileName}...\n\n`);
 
+      // 3. Execute code via Electron API
       const result = await terminalApi.runCode(tab.filePath, tab.content);
 
+      // 4. Handle results
       if (result.stdout) {
         editorStore.appendOutputData(result.stdout + '\n');
       }
 
       if (result.stderr) {
-        editorStore.appendDebugData(`[${tab.fileName}]\n${result.stderr}\n\n`);
-        editorStore.appendOutputData('\n❌ Errors occurred. Check Debug Console.\n');
+        // Switch to Problems tab if we have runtime errors
+        editorStore.setActiveBottomTab('Problems');
+
+        // Parse runtime errors into problems store so they show up in the Problems view
+        const { parseErrors } = await import('../../utils/utils');
+        const runtimeProblems = parseErrors(result.stderr, tab.fileName, tab.filePath);
+
+        // Store as runtime problems
+        if (runtimeProblems.length === 0) {
+          // Fallback if parser couldn't find specific lines but stderr exists
+          runtimeProblems.push({
+            message: result.stderr.split('\n')[0] || 'Unknown Runtime Error',
+            line: 1,
+            source: tab.fileName,
+            type: 'error'
+          } as any);
+        }
+        editorStore.setRuntimeProblems(runtimeProblems as any);
+
+        editorStore.appendDebugData(`[Runtime Error in ${tab.fileName}]\n${result.stderr}\n\n`);
+        editorStore.appendOutputData('\n❌ Execution failed. Check Problems tab for details.\n');
       } else {
         editorStore.appendOutputData('\n✅ Completed successfully.\n');
+
+        // 5. Success! Trigger Lumo AI Analysis automatically
+        try {
+          const { analysisApi } = await import('../api/analysis');
+          const analysisStore = (await import('../stores/analysisStore')).useAnalysisStore.getState();
+
+          analysisStore.setAnalyzing(true);
+          const analysisRes = await analysisApi.analyzeCode({
+            code: tab.content,
+            language: tab.language,
+            fileName: tab.fileName
+          });
+
+          if (analysisRes.success) {
+            analysisStore.setAnalysisData(analysisRes.analysis);
+            editorStore.appendOutputData(`✨ Lumo AI: Code analysis completed. Check the Analysis panel.\n`);
+          }
+          analysisStore.setAnalyzing(false);
+        } catch (aiErr) {
+          console.error('AI Analysis trigger failed:', aiErr);
+        }
       }
 
       return true;

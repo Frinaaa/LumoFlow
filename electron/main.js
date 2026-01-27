@@ -14,6 +14,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 let mainWindow;
 let authWindow;
 let projectDir = path.join(require('os').homedir(), 'LumoFlow_Projects');
+const windowWorkspaces = new Map();
 
 // Scoped Storage: Helper to resolve and validate paths within projectDir
 function resolveSafePath(providedPath) {
@@ -506,20 +507,25 @@ app.on('ready', () => {
     ipcMain.handle('terminal:runCode', async (event, { filePath, code }) => {
       return new Promise((resolve) => {
         // Save file
+        const safePath = resolveSafePath(filePath);
+
+        // Save file first
         try {
-          const safePath = resolveSafePath(filePath);
           fs.writeFileSync(safePath, code, 'utf-8');
         } catch (e) {
-          return resolve({ stdout: "", stderr: `Access Denied or Save Error: ${e.message}` });
+          return resolve({ stdout: "", stderr: `Save Error: ${e.message}` });
         }
 
         let cmd;
-        if (filePath.endsWith('.js')) {
-          cmd = `node "${filePath}"`;
-        } else if (filePath.endsWith('.py')) {
-          cmd = `python "${filePath}"`;
+        if (safePath.endsWith('.js') || safePath.endsWith('.mjs') || safePath.endsWith('.cjs')) {
+          cmd = `node "${safePath}"`;
+        } else if (safePath.endsWith('.ts') || safePath.endsWith('.tsx')) {
+          // Attempt to run with ts-node if available, otherwise fallback to node
+          cmd = `npx ts-node "${safePath}" || node "${safePath}"`;
+        } else if (safePath.endsWith('.py')) {
+          cmd = `python "${safePath}"`;
         } else {
-          return resolve({ stdout: "", stderr: "❌ Unsupported file type. Use .js or .py" });
+          return resolve({ stdout: "", stderr: "❌ Unsupported file type. LumoFlow supports .js, .mjs, .cjs, .ts, and .py" });
         }
 
         const child = exec(cmd, {
@@ -947,27 +953,6 @@ app.on('ready', () => {
       });
     });
     console.log('✅ Registered: git:remote');
-
-    const handleSetRemote = async () => {
-      if (!remoteUrl.trim()) {
-        showShortcutToast('Please enter a URL');
-        return;
-      }
-      if (!isElectronAvailable()) return;
-
-      setGitLoading(true);
-      // @ts-ignore - Assuming you added git:addRemote to main.js
-      const res = await window.api.executeCommand(`git remote remove origin && git remote add origin ${remoteUrl}`);
-
-      // Check if it looks like an error (git often outputs to stderr but returns success for empty stdout)
-      if (res.includes('error') || res.includes('fatal')) {
-        showShortcutToast('Failed to set remote');
-      } else {
-        showShortcutToast('Remote origin set!');
-        setGitCloneUrl(remoteUrl); // Sync clone URL
-      }
-      setGitLoading(false);
-    };
 
     // Dialog Handlers
     ipcMain.handle('window:new', () => {

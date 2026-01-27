@@ -128,6 +128,19 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
       {/* Context Menu */}
       {contextMenu && (
         <div className="vs-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
+          {node.isFolder && (
+            <>
+              <div className="context-menu-item" onClick={handleCreateFile}>
+                <i className="fa-solid fa-file-circle-plus" style={{ marginRight: '8px', fontSize: '12px' }}></i>
+                <span>New File</span>
+              </div>
+              <div className="context-menu-item" onClick={handleCreateFolder}>
+                <i className="fa-solid fa-folder-plus" style={{ marginRight: '8px', fontSize: '12px' }}></i>
+                <span>New Folder</span>
+              </div>
+              <div className="context-menu-divider"></div>
+            </>
+          )}
           <div className="context-menu-item" onClick={() => { setRenamingFile(node.path); setNewName(node.name); }}>
             <span>Rename</span>
             <span className="shortcut">F2</span>
@@ -158,8 +171,7 @@ const NewItemInput = ({ type, depth, parentPath }: { type: 'file' | 'folder', de
       if (type === 'file') {
         await createFile(name, parentPath);
       } else {
-        // Folder creation logic might need refinement for nested paths
-        await createFolder(name);
+        await createFolder(name, parentPath);
       }
       cleanup();
     } else if (e.key === 'Escape') {

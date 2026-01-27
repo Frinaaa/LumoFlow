@@ -47,6 +47,10 @@ export const StatusBar = () => {
           <i className="fa-solid fa-code-remote"></i>
         </div>
 
+        <div className="status-item" style={{ ...statusItemStyle, padding: '0 12px', fontWeight: '500', opacity: 0.9 }}>
+          {editorStore.workspaceStatus}
+        </div>
+
         {isRepo && (
           <div
             className="status-item clickable"

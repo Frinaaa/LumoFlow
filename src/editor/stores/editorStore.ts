@@ -33,6 +33,9 @@ interface EditorState {
   outputData: string;
   debugData: string;
   problems: Problem[];
+  staticProblems: Problem[];
+  runtimeProblems: Problem[];
+  workspaceStatus: string;
 
   // Tab Actions
   addTab: (filePath: string, fileName: string, content: string, language: string) => void;
@@ -66,7 +69,10 @@ interface EditorState {
   clearOutputData: () => void;
   appendDebugData: (output: string) => void;
   clearDebugData: () => void;
-  setProblems: (problems: Problem[]) => void;
+  setStaticProblems: (problems: Problem[]) => void;
+  setRuntimeProblems: (problems: Problem[]) => void;
+  clearRuntimeProblems: () => void;
+  setWorkspaceStatus: (status: string) => void;
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -91,6 +97,9 @@ export const useEditorStore = create<EditorState>()(
       outputData: '',
       debugData: '',
       problems: [],
+      staticProblems: [],
+      runtimeProblems: [],
+      workspaceStatus: 'No Folder Opened',
 
       // Tab Actions
       addTab: (filePath, fileName, content, language) => {
@@ -199,7 +208,19 @@ export const useEditorStore = create<EditorState>()(
       clearOutputData: () => set({ outputData: '' }),
       appendDebugData: (output) => set(state => ({ debugData: state.debugData + output })),
       clearDebugData: () => set({ debugData: '' }),
-      setProblems: (problems) => set({ problems }),
+      setStaticProblems: (staticProblems) => set(state => ({
+        staticProblems,
+        problems: [...staticProblems, ...state.runtimeProblems]
+      })),
+      setRuntimeProblems: (runtimeProblems) => set(state => ({
+        runtimeProblems,
+        problems: [...state.staticProblems, ...runtimeProblems]
+      })),
+      clearRuntimeProblems: () => set(state => ({
+        runtimeProblems: [],
+        problems: [...state.staticProblems]
+      })),
+      setWorkspaceStatus: (status) => set({ workspaceStatus: status }),
     }),
     {
       name: 'editor-storage',
