@@ -11,7 +11,7 @@ interface EditorState {
   // Tabs
   tabs: EditorTab[];
   activeTabId: string | null;
-  
+
   // UI State
   sidebarVisible: boolean;
   sidebarWidth: number;
@@ -20,20 +20,20 @@ interface EditorState {
   activeSidebar: SidebarView;
   activeBottomTab: BottomPanelTab;
   commandPaletteVisible: boolean;
-  
+
   // Settings
   theme: Theme;
   fontSize: number;
   wordWrap: WordWrap;
   autoSave: boolean;
   autoSaveDelay: number;
-  
+
   // Output
   terminalOutput: string;
   outputData: string;
   debugData: string;
   problems: Problem[];
-  
+
   // Tab Actions
   addTab: (filePath: string, fileName: string, content: string, language: string) => void;
   removeTab: (tabId: string) => void;
@@ -42,7 +42,8 @@ interface EditorState {
   markTabDirty: (tabId: string, isDirty: boolean) => void;
   updateCursorPosition: (tabId: string, line: number, column: number) => void;
   closeAllTabs: () => void;
-  
+  closeOtherTabs: (tabId: string) => void;
+
   // UI Actions
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
@@ -51,13 +52,13 @@ interface EditorState {
   setActiveSidebar: (sidebar: SidebarView) => void;
   setActiveBottomTab: (tab: BottomPanelTab) => void;
   toggleCommandPalette: () => void;
-  
+
   // Settings Actions
   setTheme: (theme: Theme) => void;
   setFontSize: (size: number) => void;
   toggleWordWrap: () => void;
   toggleAutoSave: () => void;
-  
+
   // Output Actions
   appendTerminalOutput: (output: string) => void;
   clearTerminalOutput: () => void;
@@ -90,7 +91,7 @@ export const useEditorStore = create<EditorState>()(
       outputData: '',
       debugData: '',
       problems: [],
-      
+
       // Tab Actions
       addTab: (filePath, fileName, content, language) => {
         const existingTab = get().tabs.find(t => t.filePath === filePath);
@@ -98,7 +99,7 @@ export const useEditorStore = create<EditorState>()(
           set({ activeTabId: existingTab.id });
           return;
         }
-        
+
         const newTab: EditorTab = {
           id: `${Date.now()}-${Math.random()}`,
           filePath,
@@ -108,18 +109,18 @@ export const useEditorStore = create<EditorState>()(
           isDirty: false,
           cursorPosition: { line: 1, column: 1 },
         };
-        
+
         set(state => ({
           tabs: [...state.tabs, newTab],
           activeTabId: newTab.id,
         }));
       },
-      
+
       removeTab: (tabId) => {
         set(state => {
           const tabs = state.tabs.filter(t => t.id !== tabId);
           let activeTabId = state.activeTabId;
-          
+
           if (activeTabId === tabId) {
             const index = state.tabs.findIndex(t => t.id === tabId);
             if (tabs.length > 0) {
@@ -128,13 +129,13 @@ export const useEditorStore = create<EditorState>()(
               activeTabId = null;
             }
           }
-          
+
           return { tabs, activeTabId };
         });
       },
-      
+
       setActiveTab: (tabId) => set({ activeTabId: tabId }),
-      
+
       updateTabContent: (tabId, content) => {
         set(state => ({
           tabs: state.tabs.map(t =>
@@ -142,7 +143,7 @@ export const useEditorStore = create<EditorState>()(
           ),
         }));
       },
-      
+
       markTabDirty: (tabId, isDirty) => {
         set(state => ({
           tabs: state.tabs.map(t =>
@@ -150,7 +151,7 @@ export const useEditorStore = create<EditorState>()(
           ),
         }));
       },
-      
+
       updateCursorPosition: (tabId, line, column) => {
         set(state => ({
           tabs: state.tabs.map(t =>
@@ -158,9 +159,20 @@ export const useEditorStore = create<EditorState>()(
           ),
         }));
       },
-      
+
       closeAllTabs: () => set({ tabs: [], activeTabId: null }),
-      
+
+      closeOtherTabs: (tabId) => {
+        set(state => {
+          const tabToKeep = state.tabs.find(t => t.id === tabId);
+          if (!tabToKeep) return state;
+          return {
+            tabs: [tabToKeep],
+            activeTabId: tabId
+          };
+        });
+      },
+
       // UI Actions
       toggleSidebar: () => set(state => ({ sidebarVisible: !state.sidebarVisible })),
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
@@ -169,17 +181,17 @@ export const useEditorStore = create<EditorState>()(
       setActiveSidebar: (sidebar) => set({ activeSidebar: sidebar }),
       setActiveBottomTab: (tab) => set({ activeBottomTab: tab }),
       toggleCommandPalette: () => set(state => ({ commandPaletteVisible: !state.commandPaletteVisible })),
-      
+
       // Settings Actions
       setTheme: (theme) => {
         set({ theme });
         document.documentElement.setAttribute('data-theme', theme);
       },
-      
+
       setFontSize: (size) => set({ fontSize: size }),
       toggleWordWrap: () => set(state => ({ wordWrap: state.wordWrap === 'on' ? 'off' : 'on' })),
       toggleAutoSave: () => set(state => ({ autoSave: !state.autoSave })),
-      
+
       // Output Actions
       appendTerminalOutput: (output) => set(state => ({ terminalOutput: state.terminalOutput + output })),
       clearTerminalOutput: () => set({ terminalOutput: '' }),

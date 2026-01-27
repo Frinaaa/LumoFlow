@@ -69,3 +69,4 @@ export const FileExplorerSidebar = () => {
     </div>
   );
 };
+export default FileExplorerSidebar;

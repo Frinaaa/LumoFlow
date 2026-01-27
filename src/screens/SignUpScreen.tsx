@@ -5,7 +5,7 @@ import '../styles/SignUpScreen.css';
 
 const SignUpScreen: React.FC = () => {
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,7 +17,7 @@ const SignUpScreen: React.FC = () => {
   const [touched, setTouched] = useState<any>({}); // Tracks if user clicked a field
   const [errors, setErrors] = useState<any>({});   // Tracks specific errors
   const [isFormValid, setIsFormValid] = useState(false); // Disables button if false
-  
+
   // Password Strength Checkers
   const [passwordCriteria, setPasswordCriteria] = useState({
     length: false,
@@ -42,7 +42,7 @@ const SignUpScreen: React.FC = () => {
 
     // Name Validation
     if (!formData.name.trim()) newErrors.name = "Full Name is required";
-    
+
     // Email Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email) newErrors.email = "Email is required";
@@ -57,10 +57,10 @@ const SignUpScreen: React.FC = () => {
     if (formData.confirmPassword !== formData.password) newErrors.confirmPassword = "Passwords do not match";
 
     setErrors(newErrors);
-    
+
     // Only enable button if no errors and all fields are filled
     setIsFormValid(
-      Object.keys(newErrors).length === 0 && 
+      Object.keys(newErrors).length === 0 &&
       Object.values(formData).every(val => val !== '')
     );
   }, [formData]);
@@ -81,7 +81,7 @@ const SignUpScreen: React.FC = () => {
 
     setLoading(true);
     setServerError('');
-    
+
     try {
       const res = await authService.signup({
         name: formData.name.trim(),
@@ -92,7 +92,7 @@ const SignUpScreen: React.FC = () => {
       if (res.success) {
         navigate('/login');
       } else {
-        setServerError(res.msg);
+        setServerError(res.msg || 'Signup failed.');
       }
     } catch (err) {
       setServerError("Connection failed.");
@@ -113,7 +113,7 @@ const SignUpScreen: React.FC = () => {
 
       <header className="signup-header">
         <div className="app-brand small" onClick={() => navigate('/login')} style={{ cursor: 'pointer' }}>
-          
+
         </div>
         <button className="about-btn" onClick={() => navigate('/about')}>About Us</button>
       </header>
@@ -126,15 +126,15 @@ const SignUpScreen: React.FC = () => {
           {serverError && <div className="server-error-banner">{serverError}</div>}
 
           <form onSubmit={handleSignUp}>
-            
+
             {/* NAME FIELD */}
             <div className="form-group">
               <label>Full Name</label>
               <div className="input-wrapper">
-                <input 
-                  type="text" name="name" 
+                <input
+                  type="text" name="name"
                   className={`signup-input ${getInputClass('name')}`}
-                  placeholder="Enter your full name" 
+                  placeholder="Enter your full name"
                   value={formData.name}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -149,10 +149,10 @@ const SignUpScreen: React.FC = () => {
             <div className="form-group">
               <label>Email Address</label>
               <div className="input-wrapper">
-                <input 
+                <input
                   type="email" name="email"
                   className={`signup-input ${getInputClass('email')}`}
-                  placeholder="Enter your email" 
+                  placeholder="Enter your email"
                   value={formData.email}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -165,10 +165,10 @@ const SignUpScreen: React.FC = () => {
             {/* PASSWORD FIELD */}
             <div className="form-group">
               <label>Password</label>
-              <input 
+              <input
                 type="password" name="password"
                 className={`signup-input ${getInputClass('password')}`}
-                placeholder="••••••••" 
+                placeholder="••••••••"
                 value={formData.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -186,10 +186,10 @@ const SignUpScreen: React.FC = () => {
             <div className="form-group">
               <label>Confirm Password</label>
               <div className="input-wrapper">
-                <input 
+                <input
                   type="password" name="confirmPassword"
                   className={`signup-input ${getInputClass('confirmPassword')}`}
-                  placeholder="••••••••" 
+                  placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -205,7 +205,7 @@ const SignUpScreen: React.FC = () => {
           </form>
 
           <div className="login-redirect">
-             Already have an account? <span onClick={() => navigate('/login')}>Login</span>
+            Already have an account? <span onClick={() => navigate('/login')}>Login</span>
           </div>
         </div>
       </main>

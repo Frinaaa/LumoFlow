@@ -1,6 +1,7 @@
 import { useEditorStore } from '../stores/editorStore';
 import { useFileStore } from '../stores/fileStore';
 import { fileSystemApi, terminalApi } from '../api';
+import { getLanguageFromFile } from '../../config/fileTypes';
 
 /**
  * File Operations Hook
@@ -11,30 +12,12 @@ export const useFileOperations = () => {
   const editorStore = useEditorStore();
   const fileStore = useFileStore();
 
-  const getLanguageFromExtension = (fileName: string): string => {
-    const ext = fileName.split('.').pop()?.toLowerCase() || 'txt';
-    const languageMap: Record<string, string> = {
-      js: 'javascript',
-      jsx: 'javascript',
-      ts: 'typescript',
-      tsx: 'typescript',
-      py: 'python',
-      java: 'java',
-      html: 'html',
-      css: 'css',
-      json: 'json',
-      md: 'markdown',
-      txt: 'plaintext',
-    };
-    return languageMap[ext] || 'plaintext';
-  };
-
   const openFile = async (filePath: string): Promise<boolean> => {
     try {
       const content = await fileSystemApi.readFile(filePath);
       const fileName = filePath.split(/[\\/]/).pop() || 'untitled';
-      const language = getLanguageFromExtension(fileName);
-      
+      const language = getLanguageFromFile(fileName);
+
       editorStore.addTab(filePath, fileName, content, language);
       editorStore.appendOutputData(`✅ Opened: ${fileName}\n`);
       return true;
@@ -49,9 +32,14 @@ export const useFileOperations = () => {
     if (!tab) return false;
 
     try {
-      await fileSystemApi.saveFile(tab.filePath, tab.content);
+      // Get user ID for atomic save
+      const userString = localStorage.getItem('user_info');
+      const user = userString ? JSON.parse(userString) : null;
+      const userId = user?._id || user?.id || '';
+
+      await fileSystemApi.saveAtomic(tab.filePath, tab.content, userId);
       editorStore.markTabDirty(tabId, false);
-      editorStore.appendOutputData(`✅ Saved: ${tab.fileName}\n`);
+      editorStore.appendOutputData(`✅ Saved & Synced: ${tab.fileName}\n`);
       return true;
     } catch (error: any) {
       editorStore.appendOutputData(`❌ Error saving: ${error.message}\n`);
@@ -62,16 +50,16 @@ export const useFileOperations = () => {
   const createFile = async (fileName: string, folderPath?: string): Promise<boolean> => {
     try {
       let fullPath = fileName;
-      
+
       if (folderPath) {
         const folderName = folderPath.split(/[\\/]/).pop();
         fullPath = `${folderName}/${fileName}`;
       }
-      
+
       if (!fullPath.includes('.')) {
         fullPath += '.txt';
       }
-      
+
       const newFilePath = await fileSystemApi.createFile(fullPath, '');
       await refreshFiles();
       await openFile(newFilePath);
@@ -101,13 +89,13 @@ export const useFileOperations = () => {
     try {
       await fileSystemApi.deleteFile(filePath);
       await refreshFiles();
-      
+
       // Close tab if open
       const tab = editorStore.tabs.find(t => t.filePath === filePath);
       if (tab) {
         editorStore.removeTab(tab.id);
       }
-      
+
       const fileName = filePath.split(/[\\/]/).pop();
       editorStore.appendOutputData(`✅ Deleted: ${fileName}\n`);
       return true;
@@ -165,20 +153,20 @@ export const useFileOperations = () => {
       editorStore.clearOutputData();
       editorStore.setActiveBottomTab('Output');
       editorStore.appendOutputData(`▶ Running ${tab.fileName}...\n\n`);
-      
+
       const result = await terminalApi.runCode(tab.filePath, tab.content);
-      
+
       if (result.stdout) {
         editorStore.appendOutputData(result.stdout + '\n');
       }
-      
+
       if (result.stderr) {
         editorStore.appendDebugData(`[${tab.fileName}]\n${result.stderr}\n\n`);
         editorStore.appendOutputData('\n❌ Errors occurred. Check Debug Console.\n');
       } else {
         editorStore.appendOutputData('\n✅ Completed successfully.\n');
       }
-      
+
       return true;
     } catch (error: any) {
       editorStore.appendOutputData(`\n❌ Error: ${error.message}\n`);

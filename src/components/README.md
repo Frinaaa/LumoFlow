@@ -1,146 +1,151 @@
 # LumoFlow Components
 
-## IDE Components
+> **Note:** This documentation has been updated to reflect the current project structure. The primary editor components now reside in `src/editor/components/`.
 
-### IDEHeader
-**Location:** `src/components/IDEHeader/IDEHeader.tsx`
-
-Header component for the code editor with action buttons.
-
-**Props:**
-- `onAnalyze: () => void` - Callback for analyze button
-- `onRun: () => void` - Callback for run button
-- `onSave: () => void` - Callback for save button
-- `isRunning: boolean` - Loading state for run button
-
-**Features:**
-- Brand logo display
-- Analyze, Run, Save buttons
-- Navigation to Dashboard and Settings
-
----
-
-### FileExplorer
-**Location:** `src/components/FileExplorer/FileExplorer.tsx`
-
-Sidebar component for browsing project files.
-
-**Props:**
-- `files: any[]` - Array of file objects with `name` and `path`
-- `selectedFile: string | null` - Currently selected file path
-- `onFileSelect: (file: any) => void` - Callback when file is clicked
-
-**Features:**
-- File list with icons (Python/JavaScript)
-- Active file highlighting
-- Sidebar tabs (Explorer, Search, GitHub)
-
----
-
-### CodeEditor
-**Location:** `src/components/CodeEditor/CodeEditor.tsx`
-
-Monaco editor wrapper for code editing.
-
-**Props:**
-- `code: string` - Current code content
-- `onChange: (value: string) => void` - Callback on code change
-- `selectedFile: string | null` - Currently open file
-- `onSave: () => void` - Callback for save action
-
-**Features:**
-- Syntax highlighting (Python/JavaScript)
-- Minimap display
-- Tab display with file name
-- Dark theme
-
----
-
-### Terminal
-**Location:** `src/components/Terminal/Terminal.tsx`
-
-Terminal output display component.
-
-**Props:**
-- `output: string[]` - Array of terminal output lines
-
-**Features:**
-- Auto-scroll to latest output
-- Blinking cursor animation
-- Multiple tabs (Terminal, Output, Debug Console)
-- Monospace font rendering
-
----
-
-## Usage Example
-
-```tsx
-import { IDEHeader, FileExplorer, CodeEditor, Terminal } from '../components';
-
-// In your screen component
-<IDEHeader 
-  onAnalyze={handleAnalyze}
-  onRun={handleRun}
-  onSave={handleSave}
-  isRunning={isRunning}
-/>
-
-<FileExplorer 
-  files={files}
-  selectedFile={selectedFile}
-  onFileSelect={handleFileSelect}
-/>
-
-<CodeEditor 
-  code={code}
-  onChange={setCode}
-  selectedFile={selectedFile}
-  onSave={handleSave}
-/>
-
-<Terminal output={terminalOutput} />
-```
-
----
-
-## Component Architecture
+## Project Structure
 
 ```
 src/
-├── components/
-│   ├── IDEHeader/
-│   │   └── IDEHeader.tsx
-│   ├── FileExplorer/
-│   │   └── FileExplorer.tsx
-│   ├── CodeEditor/
-│   │   └── CodeEditor.tsx
-│   ├── Terminal/
-│   │   └── Terminal.tsx
-│   ├── index.ts
-│   └── README.md
-├── screens/
-│   └── TerminalScreen.tsx
-└── styles/
-    └── TerminalScreen.css
+├── components/           # Shared UI Components
+│   ├── AnalysisPanel/   # Code analysis visualization
+│   ├── CustomTitlebar.tsx  # Full-featured titlebar for IDE
+│   └── SimpleTitlebar.tsx  # Minimal titlebar for other screens
+│
+├── config/              # Centralized Configuration
+│   └── fileTypes.ts     # Unified file extension/icon/language mappings
+│
+├── editor/              # IDE Components (Main Editor)
+│   ├── components/
+│   │   ├── Explorer/    # File explorer sidebar
+│   │   ├── Layout/      # Panel layouts
+│   │   ├── Monaco/      # Monaco editor wrapper
+│   │   ├── Terminal/    # Integrated terminal
+│   │   ├── Workspace/   # Tab management
+│   │   └── MenuBar.tsx  # Application menu
+│   ├── hooks/           # Editor-specific hooks
+│   ├── stores/          # Zustand stores for editor state
+│   └── EditorLayout.tsx # Main editor layout
+│
+├── hooks/               # Shared React Hooks
+│   └── useWindowControls.ts  # Electron window controls
+│
+├── services/            # API & Business Logic
+│   ├── apiProvider.ts   # Unified Electron/Web API layer
+│   └── authService.ts   # Authentication service
+│
+├── screens/             # Full-page screens
+│   ├── LoginScreen.tsx
+│   ├── DashboardScreen.tsx
+│   ├── GameSelectorScreen.tsx
+│   └── ... (game screens)
+│
+└── utils/
+    ├── generators/      # Game puzzle generators (consolidated)
+    │   ├── bugHuntGenerator.ts
+    │   ├── debugGenerator.ts
+    │   └── index.ts
+    └── utils.ts         # Shared utility functions
 ```
 
 ---
 
-## Benefits of Component-Based Architecture
+## Key Components
 
-1. **Reusability** - Components can be used in other screens
-2. **Maintainability** - Each component has a single responsibility
-3. **Testability** - Easier to unit test isolated components
-4. **Scalability** - Easy to add new features or components
-5. **Readability** - Cleaner, more organized code structure
+### CustomTitlebar
+**Location:** `src/components/CustomTitlebar.tsx`
+
+Full-featured VS Code-style titlebar with:
+- Brand logo
+- Menu bar (File, Edit, View)
+- Search bar
+- Analyze & Run buttons
+- Window controls (minimize, maximize, close)
+
+Uses the `useWindowControls` hook for Electron window operations.
 
 ---
 
-## Future Enhancements
+### Editor Components
+**Location:** `src/editor/components/`
 
-- Add file context menu (delete, rename, duplicate)
-- Implement code formatting (Prettier integration)
-- Add breakpoint debugging
-- Support for multiple file tabs
-- Code completion and IntelliSense
-- Theme customization
+The main IDE functionality is split into:
+
+| Component | Purpose |
+|-----------|---------|
+| `Explorer/FileTree` | File tree navigation |
+| `Monaco/CodeEditor` | Monaco editor wrapper |
+| `Terminal/Terminal` | Integrated terminal |
+| `Workspace/TabBar` | Open file tabs |
+| `Layout/Sidebar` | Collapsible sidebar |
+
+---
+
+## Shared Utilities
+
+### File Type Configuration
+**Location:** `src/config/fileTypes.ts`
+
+Single source of truth for:
+- File extension → Language mapping
+- File extension → Icon mapping
+- File extension → Color mapping
+
+```typescript
+import { getFileTypeInfo, getLanguageFromFile } from '../config/fileTypes';
+
+const info = getFileTypeInfo('app.tsx');
+// { lang: 'typescript', icon: 'fa-brands fa-react', color: '#3178c6' }
+```
+
+---
+
+### API Provider
+**Location:** `src/services/apiProvider.ts`
+
+Unified API layer that automatically routes requests:
+- **Electron:** Uses IPC channels
+- **Web:** Uses fetch API
+
+```typescript
+import { apiProvider } from '../services/apiProvider';
+
+const result = await apiProvider.execute('login', credentials);
+```
+
+---
+
+### Window Controls Hook
+**Location:** `src/hooks/useWindowControls.ts`
+
+Shared hook for Electron window operations:
+
+```typescript
+import { useWindowControls } from '../hooks/useWindowControls';
+
+const { minimize, maximize, close } = useWindowControls();
+```
+
+---
+
+## Game Generators
+**Location:** `src/utils/generators/`
+
+All puzzle generators are consolidated here:
+
+```typescript
+import { 
+  getNextBugLevel,    // Bug Hunt game
+  getNextBug,         // Debug Race game
+  getNextErrorRound,  // Error Match game
+} from '../utils/generators';
+```
+
+---
+
+## Architecture Benefits
+
+1. **Single Source of Truth** - No duplicate implementations
+2. **Backwards Compatibility** - Re-exports maintain existing imports
+3. **Environment Agnostic** - Same code runs in Electron and web
+4. **Type Safety** - Full TypeScript support
+5. **Easy Maintenance** - Changes in one place affect everywhere

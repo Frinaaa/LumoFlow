@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
-import '../styles/LoginScreen.css'; 
+import '../styles/LoginScreen.css';
 
 const ResetPasswordScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get email passed from ForgotPasswordScreen state
   const email = location.state?.email || "";
 
@@ -34,7 +34,7 @@ const ResetPasswordScreen: React.FC = () => {
         alert("Password updated! Please login with your new password.");
         navigate('/login');
       } else {
-        setError(res.msg);
+        setError(res.msg || 'Reset failed.');
       }
     } catch (err) {
       setError("Server connection failed.");
@@ -46,7 +46,7 @@ const ResetPasswordScreen: React.FC = () => {
   return (
     <div className="login-screen-wrapper">
       <div className="bg-grid"></div>
-      
+
       <header className="login-header">
         <div className="login-brand-wrapper">
           <div className="login-logo-circle"><i className="fa-solid fa-bolt"></i></div>
@@ -59,29 +59,29 @@ const ResetPasswordScreen: React.FC = () => {
           <h1>Verify OTP</h1>
           <p className="subtitle">Enter the 6-digit code sent to {email}</p>
 
-          {error && <div className="error-msg" style={{color: '#ff4444', marginBottom: '15px', background: 'rgba(255,0,0,0.1)', padding: '10px', borderRadius: '8px'}}>{error}</div>}
+          {error && <div className="error-msg" style={{ color: '#ff4444', marginBottom: '15px', background: 'rgba(255,0,0,0.1)', padding: '10px', borderRadius: '8px' }}>{error}</div>}
 
           <form onSubmit={handleReset}>
             <div className="input-group">
-              <input 
+              <input
                 type="text" className="lumo-input" placeholder="6-Digit Recovery Code" maxLength={6}
-                value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value})} required 
+                value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} required
               />
               <i className="fa-solid fa-key input-icon"></i>
             </div>
 
             <div className="input-group">
-              <input 
+              <input
                 type="password" className="lumo-input" placeholder="New Password"
-                value={formData.newPassword} onChange={(e) => setFormData({...formData, newPassword: e.target.value})} required 
+                value={formData.newPassword} onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })} required
               />
               <i className="fa-solid fa-lock input-icon"></i>
             </div>
 
             <div className="input-group">
-              <input 
+              <input
                 type="password" className="lumo-input" placeholder="Confirm New Password"
-                value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} required 
+                value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} required
               />
               <i className="fa-solid fa-shield-check input-icon"></i>
             </div>
@@ -91,7 +91,7 @@ const ResetPasswordScreen: React.FC = () => {
             </button>
           </form>
 
-          <button type="button" className="text-link" style={{marginTop: '20px'}} onClick={() => navigate('/forgot-password')}>
+          <button type="button" className="text-link" style={{ marginTop: '20px' }} onClick={() => navigate('/forgot-password')}>
             Didn't get a code? Resend
           </button>
         </div>

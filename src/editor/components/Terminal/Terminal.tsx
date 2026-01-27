@@ -85,11 +85,11 @@ const Terminal: React.FC<TerminalProps> = ({
     if (commandInput.trim()) {
       // Simulate adding command to output (In production, wait for IPC result)
       const timestampedOutput = `\n${commandInput}\nPS C:\\LumoFlow> `;
-      
-      setSessions(prev => prev.map(s => 
+
+      setSessions(prev => prev.map(s =>
         s.id === activeSessionId ? { ...s, output: s.output + timestampedOutput } : s
       ));
-      
+
       onCommand(commandInput);
       setCommandInput('');
     }
@@ -102,15 +102,11 @@ const Terminal: React.FC<TerminalProps> = ({
 
       // Map menu actions to terminal helpers in this component
       if (action === 'newTerminal' || action === 'add') {
-        // create a new shell/session (adjust default shell if you prefer)
-        if (typeof handleAddTerminal === 'function') handleAddTerminal('powershell');
-      } else if (action === 'splitTerminal') {
-        if (typeof handleSplitTerminal === 'function') handleSplitTerminal();
-      } else if (action === 'closeTerminal') {
-        if (typeof handleCloseTerminal === 'function') handleCloseTerminal();
-      } else if (action === 'focus') {
-        // optional: focus last terminal session
-        if (typeof focusLastTerminal === 'function') focusLastTerminal();
+        createTerminal('powershell');
+      } else if (action === 'kill' || action === 'closeTerminal') {
+        killSession(activeSessionId);
+      } else if (action === 'maximize') {
+        onMaximize();
       }
     };
 
@@ -125,7 +121,7 @@ const Terminal: React.FC<TerminalProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-primary)' }}>
-      
+
       {/* HEADER */}
       <div style={{
         display: 'flex', alignItems: 'center', height: '35px', background: 'var(--bg-secondary)',
@@ -160,7 +156,7 @@ const Terminal: React.FC<TerminalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', position: 'relative' }}>
               <i className="fa-solid fa-plus" onClick={() => createTerminal()} style={{ cursor: 'pointer', padding: '4px' }} title="New Terminal"></i>
               <i className="fa-solid fa-chevron-down" onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ cursor: 'pointer', fontSize: '10px', padding: '4px' }}></i>
-              
+
               {showProfileMenu && (
                 <TerminalProfileMenu onSelect={createTerminal} onClose={() => setShowProfileMenu(false)} />
               )}
@@ -175,11 +171,11 @@ const Terminal: React.FC<TerminalProps> = ({
 
       {/* MAIN BODY (Content + Instances Sidebar) */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        
+
         {/* VIEWPORT */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
           <div ref={scrollRef} style={{
-            flex: 1, overflow: 'auto', padding: '10px 15px', 
+            flex: 1, overflow: 'auto', padding: '10px 15px',
             fontFamily: '"Cascadia Code", Consolas, monospace', fontSize: '13px'
           }}>
             {activeTab === 'Problems' && <ProblemsView problems={problems} onNavigate={onNavigateToLine} />}
@@ -190,7 +186,7 @@ const Terminal: React.FC<TerminalProps> = ({
 
           {activeTab === 'Terminal' && (
             <form onSubmit={handleCommandSubmit} style={{
-              padding: '5px 15px', display: 'flex', alignItems: 'center', gap: '8px', 
+              padding: '5px 15px', display: 'flex', alignItems: 'center', gap: '8px',
               background: 'var(--bg-primary)', borderTop: '1px solid var(--border-light)'
             }}>
               <span style={{ color: '#00ff00', fontWeight: 'bold' }}>PS {'>'}</span>
@@ -225,12 +221,12 @@ const Terminal: React.FC<TerminalProps> = ({
                   color: activeSessionId === s.id ? 'var(--text-primary)' : 'var(--text-muted)'
                 }}
               >
-                <i className={s.type === 'node' ? 'fa-brands fa-node-js' : 'fa-solid fa-terminal'} 
-                   style={{ fontSize: '14px', width: '15px' }}></i>
+                <i className={s.type === 'node' ? 'fa-brands fa-node-js' : 'fa-solid fa-terminal'}
+                  style={{ fontSize: '14px', width: '15px' }}></i>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
-                <i className="fa-solid fa-trash-can kill-icon" 
-                   onClick={(e) => killSession(s.id, e)} 
-                   style={{ fontSize: '10px', opacity: activeSessionId === s.id ? 1 : 0 }}></i>
+                <i className="fa-solid fa-trash-can kill-icon"
+                  onClick={(e) => killSession(s.id, e)}
+                  style={{ fontSize: '10px', opacity: activeSessionId === s.id ? 1 : 0 }}></i>
               </div>
             ))}
           </div>
@@ -256,7 +252,7 @@ const TerminalProfileMenu = ({ onSelect, onClose }: { onSelect: (type: any, name
   }}>
     <div style={menuHeaderStyle}>New Terminal</div>
     <div className="menu-item" onClick={() => onSelect('powershell', 'powershell')} style={menuItemStyle}>
-        <span>PowerShell</span> <span style={shortcutStyle}>Ctrl+Shift+`</span>
+      <span>PowerShell</span> <span style={shortcutStyle}>Ctrl+Shift+`</span>
     </div>
     <div className="menu-item" onClick={() => onSelect('cmd', 'cmd')} style={menuItemStyle}>Command Prompt</div>
     <div className="menu-item" onClick={() => onSelect('node', 'js-debug')} style={menuItemStyle}>JavaScript Debug Terminal</div>

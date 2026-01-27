@@ -21,20 +21,20 @@ const ForgotPasswordScreen: React.FC = () => {
 
       if (response.success) {
         // Code was generated successfully
-        if (response.msg.includes('Email delivery failed')) {
+        if (response.msg?.includes('Email delivery failed')) {
           // Email failed but code was generated
           setSuccessMessage('⚠️ Code generated! Check your email or spam folder.');
         } else {
           // Email sent successfully
           setSuccessMessage('✅ Recovery code sent! Redirecting...');
         }
-        
+
         setTimeout(() => {
           navigate('/reset-password', { state: { email } });
         }, 1500);
       } else {
         // User not found or other error
-        setGeneralError(response.msg);
+        setGeneralError(response.msg || 'An unknown error occurred.');
       }
     } catch (error: any) {
       setGeneralError('Could not connect to the authentication server.');
@@ -50,12 +50,12 @@ const ForgotPasswordScreen: React.FC = () => {
       {/* --- Header --- */}
       <header className="login-header">
         <div className="app-brand small">
-            <div className="app-brand-icon">
-                <i className="fa-solid fa-bolt"></i>
-            </div>
-            <h1 className="app-brand-text">
-                LUMO<span className="app-brand-highlight">FLOW</span>
-            </h1>
+          <div className="app-brand-icon">
+            <i className="fa-solid fa-bolt"></i>
+          </div>
+          <h1 className="app-brand-text">
+            LUMO<span className="app-brand-highlight">FLOW</span>
+          </h1>
         </div>
       </header>
 
@@ -81,12 +81,12 @@ const ForgotPasswordScreen: React.FC = () => {
 
           <form onSubmit={handleSendCode}>
             <div className="input-group">
-              <input 
-                type="email" 
-                className="lumo-input" 
-                placeholder="Enter your registered Email" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
+              <input
+                type="email"
+                className="lumo-input"
+                placeholder="Enter your registered Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 required
               />
@@ -105,9 +105,9 @@ const ForgotPasswordScreen: React.FC = () => {
           <div className="divider">OR</div>
 
           {/* Back to Login Button */}
-          <button 
-            type="button" 
-            className="text-link" 
+          <button
+            type="button"
+            className="text-link"
             style={{ width: '100%', textAlign: 'center' }}
             onClick={() => navigate('/login')}
           >

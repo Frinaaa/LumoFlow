@@ -11,28 +11,41 @@ export const fileSystemApi = {
    */
   async readFile(path: string): Promise<string> {
     const res = await window.api.readFile(path);
-    
+
     if (typeof res === 'string') {
       return res;
     }
-    
-    if (res.success === false) {
-      throw new Error(res.msg || 'Failed to read file');
+
+    if ((res as any).success === false) {
+      throw new Error((res as any).msg || 'Failed to read file');
     }
-    
-    return res.content || '';
+
+    return (res as any).content || '';
   },
 
   /**
-   * Save file content to disk
+   * Save file content to disk and database (atomic)
    */
-  async saveFile(filePath: string, content: string): Promise<boolean> {
-    const result = await window.api.saveFile({ filePath, content });
-    
+  async saveAtomic(filePath: string, content: string, userId: string): Promise<boolean> {
+    const result = await (window.api as any).saveAtomic({ filePath, content, userId });
+
     if (!result.success) {
       throw new Error(result.msg || 'Failed to save file');
     }
-    
+
+    return true;
+  },
+
+  /**
+   * Save file content to disk (legacy/fallback)
+   */
+  async saveFile(filePath: string, content: string): Promise<boolean> {
+    const result = await window.api.saveFile({ filePath, content });
+
+    if (!result.success) {
+      throw new Error(result.msg || 'Failed to save file');
+    }
+
     return true;
   },
 
@@ -41,11 +54,11 @@ export const fileSystemApi = {
    */
   async createFile(fileName: string, content: string = ''): Promise<string> {
     const result = await window.api.createFile({ fileName, content });
-    
+
     if (!result.success) {
       throw new Error(result.msg || 'Failed to create file');
     }
-    
+
     return result.path || fileName;
   },
 
@@ -54,11 +67,11 @@ export const fileSystemApi = {
    */
   async createFolder(folderName: string): Promise<boolean> {
     const result = await window.api.createFolder(folderName);
-    
+
     if (!result.success) {
       throw new Error(result.msg || 'Failed to create folder');
     }
-    
+
     return true;
   },
 
@@ -67,11 +80,11 @@ export const fileSystemApi = {
    */
   async deleteFile(filePath: string): Promise<boolean> {
     const result = await window.api.deleteFile(filePath);
-    
+
     if (!result.success) {
       throw new Error(result.msg || 'Failed to delete file');
     }
-    
+
     return true;
   },
 
@@ -80,11 +93,11 @@ export const fileSystemApi = {
    */
   async renameFile(oldPath: string, newName: string): Promise<string> {
     const result = await window.api.renameFile(oldPath, newName);
-    
+
     if (!result.success) {
       throw new Error(result.msg || 'Failed to rename file');
     }
-    
+
     return result.newPath || newName;
   },
 
@@ -95,13 +108,13 @@ export const fileSystemApi = {
     if (!(window.api as any).moveFile) {
       throw new Error('Move operation not supported');
     }
-    
+
     const result = await (window.api as any).moveFile(sourcePath, targetPath);
-    
+
     if (!result.success) {
       throw new Error(result.msg || 'Failed to move file');
     }
-    
+
     return result.newPath || targetPath;
   },
 

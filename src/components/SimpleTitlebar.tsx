@@ -1,53 +1,9 @@
 import React from 'react';
+import { useWindowControls } from '../hooks/useWindowControls';
 
 const SimpleTitlebar: React.FC = () => {
-  const isElectronAvailable = () => {
-    return typeof window !== 'undefined' && window.api;
-  };
-
-  const handleMinimize = async () => {
-    console.log('SimpleTitlebar: Minimize clicked');
-    if (!isElectronAvailable()) {
-      console.log('Electron API not available');
-      return;
-    }
-    try {
-      console.log('Calling window.api.minimizeWindow()');
-      const result = await window.api.minimizeWindow();
-      console.log('Minimize result:', result);
-    } catch (error) {
-      console.error('Error minimizing window:', error);
-    }
-  };
-
-  const handleMaximize = async () => {
-    console.log('SimpleTitlebar: Maximize clicked');
-    if (!isElectronAvailable()) {
-      console.log('Electron API not available');
-      return;
-    }
-    try {
-      console.log('Calling window.api.maximizeWindow()');
-      const result = await window.api.maximizeWindow();
-      console.log('Maximize result:', result);
-    } catch (error) {
-      console.error('Error maximizing window:', error);
-    }
-  };
-
-  const handleClose = async () => {
-    console.log('SimpleTitlebar: Close clicked');
-    if (!isElectronAvailable()) {
-      console.log('Electron API not available');
-      return;
-    }
-    try {
-      console.log('Calling window.api.closeWindow()');
-      await window.api.closeWindow();
-    } catch (error) {
-      console.error('Error closing window:', error);
-    }
-  };
+  // Use shared window controls hook
+  const { minimize, maximize, close } = useWindowControls();
 
   return (
     <div style={{
@@ -68,11 +24,11 @@ const SimpleTitlebar: React.FC = () => {
       {/* LEFT: Logo and Name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <i className="fa-solid fa-bolt" style={{ color: '#00f2ff', fontSize: '14px' }}></i>
-        <span style={{ 
-          fontFamily: 'Orbitron, sans-serif', 
-          fontWeight: 'bold', 
-          fontSize: '13px', 
-          color: 'white' 
+        <span style={{
+          fontFamily: 'Orbitron, sans-serif',
+          fontWeight: 'bold',
+          fontSize: '13px',
+          color: 'white'
         }}>
           LUMO<span style={{ color: '#00f2ff' }}>FLOW</span>
         </span>
@@ -80,12 +36,12 @@ const SimpleTitlebar: React.FC = () => {
 
       {/* RIGHT: Window Controls */}
       <div style={{ display: 'flex', gap: '18px' }}>
-        <i 
-          className="fa-solid fa-minus" 
-          onClick={handleMinimize}
-          style={{ 
-            cursor: 'pointer', 
-            color: '#888', 
+        <i
+          className="fa-solid fa-minus"
+          onClick={minimize}
+          style={{
+            cursor: 'pointer',
+            color: '#888',
             fontSize: '12px',
             transition: 'color 0.2s',
             padding: '4px 8px'
@@ -94,12 +50,12 @@ const SimpleTitlebar: React.FC = () => {
           onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
           title="Minimize"
         ></i>
-        <i 
-          className="fa-regular fa-square" 
-          onClick={handleMaximize}
-          style={{ 
-            cursor: 'pointer', 
-            color: '#888', 
+        <i
+          className="fa-regular fa-square"
+          onClick={maximize}
+          style={{
+            cursor: 'pointer',
+            color: '#888',
             fontSize: '12px',
             transition: 'color 0.2s',
             padding: '4px 8px'
@@ -108,12 +64,12 @@ const SimpleTitlebar: React.FC = () => {
           onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
           title="Maximize"
         ></i>
-        <i 
-          className="fa-solid fa-xmark" 
-          onClick={handleClose}
-          style={{ 
-            cursor: 'pointer', 
-            color: '#888', 
+        <i
+          className="fa-solid fa-xmark"
+          onClick={close}
+          style={{
+            cursor: 'pointer',
+            color: '#888',
             fontSize: '14px',
             transition: 'color 0.2s',
             padding: '4px 8px'

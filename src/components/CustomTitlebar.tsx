@@ -4,6 +4,7 @@ import MenuBar from '../editor/components/MenuBar';
 import { useEditor } from '../context/EditorContext';
 import { useAnalysisStore } from '../editor/stores/analysisStore';
 import { useEditorStore } from '../editor/stores/editorStore';
+import { useWindowControls } from '../hooks/useWindowControls';
 import '../styles/CustomTitlebar.css';
 
 interface CustomTitlebarProps {
@@ -15,35 +16,8 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
   const analysisStore = useAnalysisStore();
   const { activeTabId, tabs } = useEditorStore();
 
-  const handleMinimize = async () => {
-    try {
-      if (window.api && window.api.minimizeWindow) {
-        await window.api.minimizeWindow();
-      }
-    } catch (error) {
-      console.error('Error minimizing window:', error);
-    }
-  };
-
-  const handleMaximize = async () => {
-    try {
-      if (window.api && window.api.maximizeWindow) {
-        await window.api.maximizeWindow();
-      }
-    } catch (error) {
-      console.error('Error maximizing window:', error);
-    }
-  };
-
-  const handleClose = async () => {
-    try {
-      if (window.api && window.api.closeWindow) {
-        await window.api.closeWindow();
-      }
-    } catch (error) {
-      console.error('Error closing window:', error);
-    }
-  };
+  // Use shared window controls hook
+  const { minimize, maximize, close } = useWindowControls();
 
   const handleNewFile = () => {
     editorState.onMenuAction?.('newTextFile');
@@ -78,10 +52,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
       if (editorState.onMenuAction) {
         editorState.onMenuAction('closeFolder');
       }
-      // Also call the API to close workspace if needed
-      if (window.api && window.api.closeWorkspace) {
-        await window.api.closeWorkspace();
-      }
+      // Note: workspace:close IPC could be added to preload.js if backend cleanup is needed
     } catch (error) {
       console.error('Error closing folder:', error);
     }
@@ -118,16 +89,16 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
         <span className="lumo-logo-text">
           LUMO<span>FLOW</span>
         </span>
-        
-        
-        
-        <MenuBar 
+
+
+
+        <MenuBar
           onNewFile={handleNewFile}
           onOpenFile={handleOpenFile}
           onOpenFolder={handleOpenFolder}
           onSave={handleSave}
           onSaveAs={handleSaveAs}
-          onSaveAll={() => {}}
+          onSaveAll={() => { }}
           onCloseEditor={() => editorState.onMenuAction?.('closeEditor')}
           onCloseFolder={handleCloseFolder}
           autoSave={editorState.autoSave}
@@ -154,14 +125,14 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
           </button>
         </div>
         <div className="vs-window-buttons">
-          <i className="fa-solid fa-minus" onClick={handleMinimize} title="Minimize"></i>
-          <i className="fa-regular fa-square" onClick={handleMaximize} title="Maximize"></i>
-          <i className="fa-solid fa-xmark close-hover" onClick={handleClose} title="Close"></i>
+          <i className="fa-solid fa-minus" onClick={minimize} title="Minimize"></i>
+          <i className="fa-regular fa-square" onClick={maximize} title="Maximize"></i>
+          <i className="fa-solid fa-xmark close-hover" onClick={close} title="Close"></i>
         </div>
       </div>
 
       {/* Show folder name if opened */}
-      
+
     </div>
   );
 };

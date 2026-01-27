@@ -76,30 +76,30 @@ const SettingsScreen: React.FC = () => {
         // Get user ID from localStorage
         const userString = localStorage.getItem('user_info');
         console.log('📦 localStorage user_info:', userString);
-        
+
         if (!userString) {
           console.error('❌ No user_info in localStorage');
           setLoading(false);
           return;
         }
-        
+
         const currentUser = JSON.parse(userString);
         console.log('👤 Parsed user:', currentUser);
-        
+
         const userId = currentUser._id || currentUser.id;
         console.log('🔑 Using userId:', userId);
-        
+
         if (!userId) {
           console.error('❌ No userId found in user object');
           setLoading(false);
           return;
         }
-        
+
         // Fetch fresh data from backend
         console.log('🔄 Fetching dashboard data...');
         const res = await authService.getDashboardData(userId);
         console.log('📥 Dashboard response:', res);
-        
+
         if (res.success && res.user) {
           console.log('✅ Setting form data with user:', res.user);
           setFormData({
@@ -109,7 +109,7 @@ const SettingsScreen: React.FC = () => {
             avatar: res.user.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'
           });
         } else {
-          console.error('❌ Failed to load user data:', res.msg);
+          console.error('❌ Failed to load user data:', res.msg || 'Unknown error');
           // Fallback to cached data
           setFormData({
             name: currentUser.name || '',
@@ -195,7 +195,7 @@ const SettingsScreen: React.FC = () => {
 
     try {
       // Only send name, bio, avatar (not preferences for now)
-      const payload = { 
+      const payload = {
         name: formData.name,
         bio: formData.bio,
         avatar: formData.avatar
@@ -204,7 +204,7 @@ const SettingsScreen: React.FC = () => {
       console.log("Saving profile with payload:", { ...payload, avatar: payload.avatar.substring(0, 50) + '...' });
 
       const res = await authService.updateProfile(payload);
-      
+
       console.log("Update response:", res);
 
       if (res.success) {
@@ -242,25 +242,25 @@ const SettingsScreen: React.FC = () => {
 
       <div className="settings-scroll-area">
         <div className="settings-content">
-          
+
           {/* LEFT: PROFILE CARD */}
           <div className="profile-card">
             <div className="avatar-container">
               <div className="avatar-glow"></div>
-              <img 
-                src={formData.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'} 
-                alt="Avatar" 
-                className="user-avatar" 
+              <img
+                src={formData.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'}
+                alt="Avatar"
+                className="user-avatar"
               />
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                style={{ display: 'none' }} 
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
                 accept="image/*"
                 onChange={handleImageUpload}
               />
-              
+
               <div className="avatar-actions">
                 <button className="action-btn camera" onClick={startCamera} type="button" title="Take Photo">
                   <i className="fa-solid fa-camera"></i>
@@ -299,39 +299,39 @@ const SettingsScreen: React.FC = () => {
           {/* RIGHT: SETTINGS FORM */}
           <div className="settings-form-card">
             <h2 className="form-title">Profile Settings</h2>
-            
+
             <form onSubmit={handleSave}>
               <h3 className="section-title">GENERAL INFORMATION</h3>
-              
+
               <div className="input-row">
                 <div className="form-group">
                   <label>Username</label>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    value={formData.name} 
-                    onChange={handleChange} 
-                    className="settings-input" 
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="settings-input"
                   />
                 </div>
                 <div className="form-group">
                   <label>Email Address</label>
                   {/* Email is disabled (read-only) but populated via state */}
-                  <input 
-                    type="email" 
-                    name="email" 
-                    value={formData.email} 
-                    disabled 
-                    className="settings-input disabled" 
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    disabled
+                    className="settings-input disabled"
                   />
                 </div>
               </div>
 
               <div className="form-group">
                 <label>Bio</label>
-                <textarea 
+                <textarea
                   name="bio"
-                  value={formData.bio} 
+                  value={formData.bio}
                   onChange={handleChange}
                   placeholder="Tell us about your coding journey..."
                   className="settings-textarea"
@@ -339,7 +339,7 @@ const SettingsScreen: React.FC = () => {
                 ></textarea>
               </div>
 
-              <h3 className="section-title" style={{marginTop: '30px'}}>PREFERENCES</h3>
+              <h3 className="section-title" style={{ marginTop: '30px' }}>PREFERENCES</h3>
               <div className="prefs-row">
                 <div className="toggle-group" onClick={() => togglePreference('sound')}>
                   <span>Sound Effects</span>
@@ -363,7 +363,7 @@ const SettingsScreen: React.FC = () => {
               </div>
             </form>
           </div>
-         
+
           {/* CAMERA MODAL */}
           {showCamera && (
             <div className="camera-modal-overlay">
@@ -371,7 +371,7 @@ const SettingsScreen: React.FC = () => {
                 <h3>Capture Profile</h3>
                 <div className="video-container">
                   <video ref={videoRef} autoPlay playsInline></video>
-                  <canvas ref={canvasRef} width="300" height="300" style={{display:'none'}}></canvas>
+                  <canvas ref={canvasRef} width="300" height="300" style={{ display: 'none' }}></canvas>
                 </div>
                 <div className="modal-actions">
                   <button className="cancel-btn" onClick={stopCamera}>Cancel</button>

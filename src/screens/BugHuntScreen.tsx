@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNextBugLevel, BugHuntLevel, reshuffleLevels } from '../utils/bugHuntGenerator';
+import { getNextBugLevel, BugHuntLevel, reshuffleLevels } from '../utils/generators';
 import '../styles/BugHunt.css';
 
 const BugHuntScreen: React.FC = () => {
   const navigate = useNavigate();
-  
+
   // Game Data
   const [level, setLevel] = useState(1);
   const [data, setData] = useState<BugHuntLevel | null>(null);
-  
+
   // Interaction
   const [selectedLineIdx, setSelectedLineIdx] = useState<number | null>(null);
   const [showHint, setShowHint] = useState(false);
@@ -62,20 +62,20 @@ const BugHuntScreen: React.FC = () => {
       else if (part.includes('(') && !part.startsWith('//')) cls = 'func';
       else if (/^\d+;?$/.test(part)) cls = 'num';
       else if (part.startsWith('//')) cls = 'cmt';
-      
+
       return <span key={i} className={cls}>{part} </span>;
     });
   };
 
-  if (!data) return <div style={{color:'white', padding:50}}>Loading...</div>;
+  if (!data) return <div style={{ color: 'white', padding: 50 }}>Loading...</div>;
 
   return (
     <div className="bug-hunt-wrapper">
-      
+
       {/* HEADER */}
       <header className="bug-header">
-       
-        
+
+
         <div className="level-pill">
           BIG HUNT &nbsp;|&nbsp; <span>Level {level} / ∞</span>
         </div>
@@ -87,7 +87,7 @@ const BugHuntScreen: React.FC = () => {
 
       {/* GAME AREA */}
       <div className="bh-game-wrapper">
-        
+
         {/* CARD 1: EDITOR */}
         <div className="editor-card">
           <div className="editor-top-bar">
@@ -101,7 +101,7 @@ const BugHuntScreen: React.FC = () => {
 
           <div className="code-container">
             {data.lines.map((line: { text: string; indent: number; isBug: boolean }, idx: number) => (
-              <div 
+              <div
                 key={idx}
                 className={`code-row ${selectedLineIdx === idx ? 'selected' : ''}`}
                 onClick={() => !isSolved && setSelectedLineIdx(idx)}
@@ -142,8 +142,8 @@ const BugHuntScreen: React.FC = () => {
             <button className="btn btn-reveal" onClick={() => setShowHint(true)}>
               <i className="fa-regular fa-lightbulb"></i> Reveal Hint
             </button>
-            <button 
-              className="btn btn-mark" 
+            <button
+              className="btn btn-mark"
               onClick={handleMarkBug}
               style={{ opacity: isSolved ? 0.5 : 1, cursor: isSolved ? 'not-allowed' : 'pointer' }}
             >
@@ -152,7 +152,7 @@ const BugHuntScreen: React.FC = () => {
           </div>
 
           {/* Next Level Footer */}
-          <div 
+          <div
             className={`next-level-area ${isSolved ? 'unlocked' : ''}`}
             onClick={handleNextLevel}
           >

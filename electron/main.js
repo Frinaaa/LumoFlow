@@ -121,7 +121,7 @@ const createWindow = async () => {
 
   // Initialize workspace for this window (default to LumoFlow_Projects)
   windowWorkspaces.set(newWindow.id, projectDir);
-  
+
   // Clean up workspace when window is closed
   newWindow.on('closed', () => {
     windowWorkspaces.delete(newWindow.id);
@@ -135,16 +135,16 @@ const createWindow = async () => {
   // Suppress all DevTools protocol warnings
   const originalWarn = console.warn;
   const originalError = console.error;
-  
-  console.warn = function(...args) {
+
+  console.warn = function (...args) {
     const message = args[0]?.toString() || '';
     if (message.includes('Autofill') || message.includes("wasn't found")) {
       return;
     }
     originalWarn.apply(console, args);
   };
-  
-  console.error = function(...args) {
+
+  console.error = function (...args) {
     const message = args[0]?.toString() || '';
     if (message.includes('Autofill') || message.includes("wasn't found")) {
       return;
@@ -169,7 +169,7 @@ const createWindow = async () => {
     console.error('Renderer process crashed');
     newWindow.reload();
   });
-  
+
   return newWindow;
 };
 
@@ -177,95 +177,95 @@ app.on('ready', () => {
   // Disable Autofill at Chromium level
   app.commandLine.appendSwitch('disable-autofill-keyboard-accessory-view');
   app.commandLine.appendSwitch('disable-autofill');
-  
+
   console.log('🚀 App ready - Registering IPC handlers...');
-  
+
   // Re-import dialog to ensure it's available in this scope
   const { dialog: electronDialog } = require('electron');
-  
+
   // Suppress Chromium DevTools protocol warnings
   const originalError = console.error;
-  console.error = function(...args) {
+  console.error = function (...args) {
     const message = args[0]?.toString() || '';
-    if (message.includes('Autofill.enable') || 
-        message.includes('Autofill.setAddresses') ||
-        message.includes("wasn't found")) {
+    if (message.includes('Autofill.enable') ||
+      message.includes('Autofill.setAddresses') ||
+      message.includes("wasn't found")) {
       return; // Suppress these warnings
     }
     originalError.apply(console, args);
   };
-  
+
   try {
     // Register IPC Handlers FIRST
     ipcMain.handle('auth:login', authController.login);
     console.log('✅ Registered: auth:login');
-    
+
     ipcMain.handle('auth:signup', authController.signup);
     console.log('✅ Registered: auth:signup');
-    
+
     ipcMain.handle('auth:logout', authController.logout);
     console.log('✅ Registered: auth:logout');
-    
+
     ipcMain.handle('auth:forgotPassword', authController.forgotPassword);
     console.log('✅ Registered: auth:forgotPassword');
-    
+
     ipcMain.handle('auth:resetPassword', authController.resetPassword);
     console.log('✅ Registered: auth:resetPassword');
-    
+
     ipcMain.handle('auth:google-oauth', async (event, code) => handleGoogleOAuth(code));
     console.log('✅ Registered: auth:google-oauth');
-    
+
     ipcMain.handle('auth:github-oauth', async (event, code) => handleGitHubOAuth(code));
     console.log('✅ Registered: auth:github-oauth');
-    
+
     ipcMain.handle('user:getDashboardStats', userController.getDashboardData);
     console.log('✅ Registered: user:getDashboardStats');
-    
+
     ipcMain.handle('user:updateProfile', userController.updateProfile);
     console.log('✅ Registered: user:updateProfile');
 
     // File System
-   ipcMain.handle('files:readProject', async () => {
-    const results = [];
-    
-    // Helper function to scan folders deep
-    function scanDir(currentPath, parentFolder = null) {
+    ipcMain.handle('files:readProject', async () => {
+      const results = [];
+
+      // Helper function to scan folders deep
+      function scanDir(currentPath, parentFolder = null) {
         if (!fs.existsSync(currentPath)) return;
         const items = fs.readdirSync(currentPath);
-        
+
         items.forEach(name => {
-            const fullPath = path.join(currentPath, name);
-            const isFolder = fs.statSync(fullPath).isDirectory();
-            
-            results.push({
-                name,
-                path: fullPath,
-                isFolder,
-                parentFolder // This links children to their folders
-            });
+          const fullPath = path.join(currentPath, name);
+          const isFolder = fs.statSync(fullPath).isDirectory();
 
-            if (isFolder) {
-                scanDir(fullPath, fullPath); 
-            }
+          results.push({
+            name,
+            path: fullPath,
+            isFolder,
+            parentFolder // This links children to their folders
+          });
+
+          if (isFolder) {
+            scanDir(fullPath, fullPath);
+          }
         });
-    }
+      }
 
-    scanDir(projectDir);
-    return results;
-});
+      scanDir(projectDir);
+      return results;
+    });
 
     ipcMain.handle('files:createFile', async (event, { fileName, content }) => {
       try {
         // Normalize the file path to handle both forward and back slashes
         const normalizedFileName = fileName.replace(/\\/g, '/');
         const filePath = path.join(projectDir, normalizedFileName);
-        
+
         // Create parent directory if it doesn't exist
         const dir = path.dirname(filePath);
         if (!fs.existsSync(dir)) {
           fs.mkdirSync(dir, { recursive: true });
         }
-        
+
         if (fs.existsSync(filePath)) return { success: false, msg: 'File exists' };
         fs.writeFileSync(filePath, content || '', 'utf-8');
         return { success: true, path: filePath };
@@ -299,6 +299,30 @@ app.on('ready', () => {
       }
     });
     console.log('✅ Registered: files:saveFile');
+
+    ipcMain.handle('files:saveAtomic', async (event, { filePath, content, userId }) => {
+      try {
+        // 1. Save to Disk
+        fs.writeFileSync(filePath, content, 'utf-8');
+
+        // 2. Save to Database (if userId provided)
+        let dbResult = { success: true, msg: 'No userId, skipped DB save' };
+        if (userId) {
+          dbResult = await codeController.saveCodeToDatabase(event, { filePath, content, userId });
+        }
+
+        return {
+          success: true,
+          disk: true,
+          database: dbResult.success,
+          dbMsg: dbResult.msg
+        };
+      } catch (err) {
+        console.error('Atomic save error:', err);
+        return { success: false, msg: err.message };
+      }
+    });
+    console.log('✅ Registered: files:saveAtomic');
 
     ipcMain.handle('files:deleteFile', async (event, filePath) => {
       try {
@@ -338,20 +362,20 @@ app.on('ready', () => {
           console.error(`❌ Source file not found: ${oldPath}`);
           return { success: false, msg: 'Source file not found' };
         }
-        
+
         // Ensure the target directory exists
         const targetDir = path.dirname(newPath);
         if (!fs.existsSync(targetDir)) {
           console.log(`📁 Creating target directory: ${targetDir}`);
           fs.mkdirSync(targetDir, { recursive: true });
         }
-        
+
         // Check if target file already exists
         if (fs.existsSync(newPath)) {
           console.error(`❌ Target file already exists: ${newPath}`);
           return { success: false, msg: 'Target file already exists' };
         }
-        
+
         // Move the file
         fs.renameSync(oldPath, newPath);
         console.log(`✅ Moved file successfully: ${oldPath} → ${newPath}`);
@@ -388,25 +412,25 @@ app.on('ready', () => {
     ipcMain.handle('files:search', async (event, { query, rootPath }) => {
       const results = [];
       const ignoreDirs = new Set(['node_modules', '.git', 'dist', 'build', '.next', '.venv', '__pycache__']);
-      
+
       function searchDir(dir) {
         try {
           if (!fs.existsSync(dir)) return;
           const items = fs.readdirSync(dir);
-          
+
           for (const item of items) {
             if (ignoreDirs.has(item)) continue;
-            
+
             const fullPath = path.join(dir, item);
             const stat = fs.statSync(fullPath);
-            
+
             if (stat.isDirectory()) {
               searchDir(fullPath);
             } else {
               try {
                 const content = fs.readFileSync(fullPath, 'utf-8');
                 const lines = content.split('\n');
-                
+
                 lines.forEach((line, index) => {
                   if (line.toLowerCase().includes(query.toLowerCase())) {
                     results.push({
@@ -425,11 +449,11 @@ app.on('ready', () => {
           console.error('Search error:', err);
         }
       }
-      
+
       if (query && rootPath) {
         searchDir(rootPath);
       }
-      
+
       return results;
     });
     console.log('✅ Registered: files:search');
@@ -440,37 +464,37 @@ app.on('ready', () => {
     ipcMain.handle('terminal:runCode', async (event, { filePath, code }) => {
       return new Promise((resolve) => {
         // Save file
-        try { 
-          fs.writeFileSync(filePath, code, 'utf-8'); 
-        } catch(e) {
+        try {
+          fs.writeFileSync(filePath, code, 'utf-8');
+        } catch (e) {
           return resolve({ stdout: "", stderr: "Failed to save file before execution." });
         }
-        
+
         let cmd;
         if (filePath.endsWith('.js')) {
           cmd = `node "${filePath}"`;
         } else if (filePath.endsWith('.py')) {
-          cmd = `python "${filePath}"`; 
+          cmd = `python "${filePath}"`;
         } else {
           return resolve({ stdout: "", stderr: "❌ Unsupported file type. Use .js or .py" });
         }
 
-        const child = exec(cmd, { 
+        const child = exec(cmd, {
           timeout: 10000,
-          maxBuffer: 5 * 1024 * 1024 
+          maxBuffer: 5 * 1024 * 1024
         }, (error, stdout, stderr) => {
-          
+
           // Function to strip ANSI escape sequences (comprehensive pattern)
           const stripAnsi = (str) => {
             return str.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
           };
-          
+
           // Clean stdout - remove ANSI codes and system messages
           let cleanStdout = stdout || "";
           if (cleanStdout) {
             cleanStdout = stripAnsi(cleanStdout).trim();
           }
-          
+
           // Clean stderr - remove ANSI codes but keep error messages for problem parsing
           let cleanStderr = stderr || "";
           if (cleanStderr) {
@@ -496,7 +520,7 @@ app.on('ready', () => {
           const stripAnsi = (str) => {
             return str.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
           };
-          
+
           // Combine outputs for the interactive terminal view
           let output = stdout ? stripAnsi(stdout) : '';
           if (stderr) output += `\n${stripAnsi(stderr)}`;
@@ -562,7 +586,7 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: window:close');
 
-   
+
     // Code Management Handlers
     ipcMain.handle('code:saveToDatabase', codeController.saveCodeToDatabase);
     console.log('✅ Registered: code:saveToDatabase');
@@ -691,60 +715,60 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: git:commit');
 
-   ipcMain.handle('git:push', async (event, { remote, branch, repoPath }) => {
-    return new Promise((resolve) => {
-      // FIX: Added -u to set upstream tracking, otherwise subsequent pulls fail
-      const targetRemote = remote || 'origin';
-      const targetBranch = branch || 'main';
-      const cmd = `git push -u ${targetRemote} ${targetBranch}`;
-      
-      console.log(`Executing: ${cmd}`);
-      
-      exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-        if (error) {
-          // Send back stderr because git often puts status info there
-          resolve({ success: false, error: stderr || error.message });
-        } else {
-          resolve({ success: true, message: 'Changes pushed to remote' });
-        }
-      });
-    });
-  });
+    ipcMain.handle('git:push', async (event, { remote, branch, repoPath }) => {
+      return new Promise((resolve) => {
+        // FIX: Added -u to set upstream tracking, otherwise subsequent pulls fail
+        const targetRemote = remote || 'origin';
+        const targetBranch = branch || 'main';
+        const cmd = `git push -u ${targetRemote} ${targetBranch}`;
 
-  ipcMain.handle('git:pull', async (event, { remote, branch, repoPath }) => {
-    return new Promise((resolve) => {
-      const targetRemote = remote || 'origin';
-      const targetBranch = branch || 'main';
-      const cmd = `git pull ${targetRemote} ${targetBranch}`;
+        console.log(`Executing: ${cmd}`);
 
-      console.log(`Executing: ${cmd}`);
-
-      exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-        if (error) {
-          resolve({ success: false, error: stderr || error.message });
-        } else {
-          resolve({ success: true, message: 'Changes pulled from remote' });
-        }
-      });
-    });
-  });
-
-  // ADD THIS NEW HANDLER: To allow setting the remote URL
-  ipcMain.handle('git:addRemote', async (event, { url }) => {
-    return new Promise((resolve) => {
-      // Remove existing origin first to avoid "remote origin already exists" error
-      exec('git remote remove origin', { cwd: projectDir }, () => {
-        // Then add the new one
-        exec(`git remote add origin ${url}`, { cwd: projectDir }, (error, stdout, stderr) => {
+        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
           if (error) {
+            // Send back stderr because git often puts status info there
             resolve({ success: false, error: stderr || error.message });
           } else {
-            resolve({ success: true, message: 'Remote origin configured' });
+            resolve({ success: true, message: 'Changes pushed to remote' });
           }
         });
       });
     });
-  });
+
+    ipcMain.handle('git:pull', async (event, { remote, branch, repoPath }) => {
+      return new Promise((resolve) => {
+        const targetRemote = remote || 'origin';
+        const targetBranch = branch || 'main';
+        const cmd = `git pull ${targetRemote} ${targetBranch}`;
+
+        console.log(`Executing: ${cmd}`);
+
+        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
+          if (error) {
+            resolve({ success: false, error: stderr || error.message });
+          } else {
+            resolve({ success: true, message: 'Changes pulled from remote' });
+          }
+        });
+      });
+    });
+
+    // ADD THIS NEW HANDLER: To allow setting the remote URL
+    ipcMain.handle('git:addRemote', async (event, { url }) => {
+      return new Promise((resolve) => {
+        // Remove existing origin first to avoid "remote origin already exists" error
+        exec('git remote remove origin', { cwd: projectDir }, () => {
+          // Then add the new one
+          exec(`git remote add origin ${url}`, { cwd: projectDir }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'Remote origin configured' });
+            }
+          });
+        });
+      });
+    });
 
     ipcMain.handle('git:checkout', async (event, { branch, repoPath }) => {
       return new Promise((resolve) => {
@@ -819,7 +843,7 @@ app.on('ready', () => {
           resolve({ success: false, error: 'Invalid action' });
           return;
         }
-        
+
         exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
           if (error) {
             resolve({ success: false, error: stderr || error.message });
@@ -842,26 +866,26 @@ app.on('ready', () => {
     console.log('✅ Registered: git:remote');
 
     const handleSetRemote = async () => {
-    if (!remoteUrl.trim()) {
-      showShortcutToast('Please enter a URL');
-      return;
-    }
-    if (!isElectronAvailable()) return;
-    
-    setGitLoading(true);
-    // @ts-ignore - Assuming you added git:addRemote to main.js
-    const res = await window.api.executeCommand(`git remote remove origin && git remote add origin ${remoteUrl}`);
-    
-    // Check if it looks like an error (git often outputs to stderr but returns success for empty stdout)
-    if (res.includes('error') || res.includes('fatal')) {
-       showShortcutToast('Failed to set remote');
-    } else {
-       showShortcutToast('Remote origin set!');
-       setGitCloneUrl(remoteUrl); // Sync clone URL
-    }
-    setGitLoading(false);
-  };
-  
+      if (!remoteUrl.trim()) {
+        showShortcutToast('Please enter a URL');
+        return;
+      }
+      if (!isElectronAvailable()) return;
+
+      setGitLoading(true);
+      // @ts-ignore - Assuming you added git:addRemote to main.js
+      const res = await window.api.executeCommand(`git remote remove origin && git remote add origin ${remoteUrl}`);
+
+      // Check if it looks like an error (git often outputs to stderr but returns success for empty stdout)
+      if (res.includes('error') || res.includes('fatal')) {
+        showShortcutToast('Failed to set remote');
+      } else {
+        showShortcutToast('Remote origin set!');
+        setGitCloneUrl(remoteUrl); // Sync clone URL
+      }
+      setGitLoading(false);
+    };
+
     // Dialog Handlers
     ipcMain.handle('window:new', () => {
       createWindow(); // Calls your existing function to spawn a new window
@@ -876,7 +900,7 @@ app.on('ready', () => {
           console.error('Dialog module not available');
           return { canceled: true, error: 'Dialog module not available' };
         }
-        
+
         const { canceled, filePaths } = await dialog.showOpenDialog({
           properties: ['openFile'],
           defaultPath: require('os').homedir(), // Start from user's home directory
@@ -886,7 +910,7 @@ app.on('ready', () => {
           ]
         });
         if (canceled) return { canceled: true };
-        
+
         const content = fs.readFileSync(filePaths[0], 'utf-8');
         const fileName = path.basename(filePaths[0]);
         return { canceled: false, filePath: filePaths[0], fileName, content };
@@ -904,19 +928,19 @@ app.on('ready', () => {
           console.error('Dialog module not available');
           return { canceled: true, error: 'Dialog module not available' };
         }
-        
+
         const { canceled, filePaths } = await dialog.showOpenDialog({
           properties: ['openDirectory'],
           defaultPath: require('os').homedir() // Start from user's home directory
         });
         if (canceled) return { canceled: true };
-        
+
         const selectedPath = filePaths[0];
-        
+
         // Update the project directory
         projectDir = selectedPath;
         console.log('📁 Project directory updated to:', projectDir);
-        
+
         // Read the folder structure recursively
         const results = [];
         function scanDir(dir) {
@@ -935,7 +959,7 @@ app.on('ready', () => {
           }
         }
         scanDir(selectedPath);
-        
+
         return { canceled: false, folderPath: selectedPath, files: results };
       } catch (error) {
         console.error('Open folder dialog error:', error);
@@ -951,10 +975,10 @@ app.on('ready', () => {
           console.error('Dialog module not available');
           return { canceled: true, error: 'Dialog module not available' };
         }
-        
+
         const os = require('os');
         const documentsPath = path.join(os.homedir(), 'Documents');
-        
+
         const { canceled, filePath } = await dialog.showSaveDialog({
           title: 'Save File',
           defaultPath: path.join(documentsPath, 'untitled.js'), // Save to Documents folder
@@ -967,7 +991,7 @@ app.on('ready', () => {
           ]
         });
         if (canceled) return { canceled: true };
-        
+
         fs.writeFileSync(filePath, content || '', 'utf-8');
         const fileName = path.basename(filePath);
         return { canceled: false, filePath, fileName };
@@ -982,7 +1006,7 @@ app.on('ready', () => {
     ipcMain.handle('system:getUserDirectories', () => {
       const os = require('os');
       const homeDir = os.homedir();
-      
+
       return {
         home: homeDir,
         documents: path.join(homeDir, 'Documents'),
@@ -997,7 +1021,7 @@ app.on('ready', () => {
     console.log('✅ Registered: dialog:saveAs');
 
     console.log('✅ All IPC handlers registered successfully!');
-    
+
     // List all registered file handlers for verification
     console.log('\n📋 Registered File Handlers:');
     console.log('  - files:readProject');
@@ -1008,7 +1032,7 @@ app.on('ready', () => {
     console.log('  - files:renameFile');
     console.log('  - files:moveFile ← CHECK THIS ONE');
     console.log('  - files:createFolder\n');
-    
+
   } catch (err) {
     console.error('❌ Error registering IPC handlers:', err);
   }
@@ -1021,17 +1045,17 @@ app.on('ready', () => {
   // Start local server to handle OAuth callbacks
   const http = require('http');
   const url = require('url');
-  
+
   const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
     const query = parsedUrl.query;
-    
+
     // Handle Google callback
     if (pathname === '/auth/google/callback') {
       const code = query.code;
       const error = query.error;
-      
+
       if (error) {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end('<h1>Authentication Failed</h1><p>You can close this window.</p>');
@@ -1046,7 +1070,7 @@ app.on('ready', () => {
     else if (pathname === '/auth/github/callback') {
       const code = query.code;
       const error = query.error;
-      
+
       if (error) {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end('<h1>Authentication Failed</h1><p>You can close this window.</p>');
@@ -1062,11 +1086,11 @@ app.on('ready', () => {
       res.end('Not Found');
     }
   });
-  
+
   server.listen(3000, () => {
     console.log('OAuth callback server listening on http://localhost:3000');
   });
-  
+
   createWindow();
 });
 

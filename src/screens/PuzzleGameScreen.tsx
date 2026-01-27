@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNextPuzzle, PuzzleData, reshufflePuzzles } from '../utils/logicPuzzleGenerator';
+import { getNextPuzzle, PuzzleData, reshufflePuzzles } from '../utils/generators';
 import '../styles/LogicPuzzle.css';
 
 const LogicPuzzleScreen: React.FC = () => {
   const navigate = useNavigate();
-  
+
   // -- Game State --
   const [level, setLevel] = useState(1);
   const [puzzle, setPuzzle] = useState<PuzzleData | null>(null);
-  
+
   // -- Slots State (Array of fragment IDs) --
   const [slots, setSlots] = useState<(string | null)[]>([]);
-  
+
   // -- UI State --
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
@@ -42,7 +42,7 @@ const LogicPuzzleScreen: React.FC = () => {
   const isPlaced = (id: string) => slots.includes(id);
 
   // --- Drag & Drop ---
-  
+
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id);
     e.dataTransfer.effectAllowed = 'move';
@@ -59,7 +59,7 @@ const LogicPuzzleScreen: React.FC = () => {
       // Remove from old slot if it exists there
       const oldIndex = newSlots.indexOf(draggedId);
       if (oldIndex !== -1) newSlots[oldIndex] = null;
-      
+
       // Place in new slot (overwrite/replace)
       newSlots[index] = draggedId;
       return newSlots;
@@ -93,7 +93,7 @@ const LogicPuzzleScreen: React.FC = () => {
     }
   };
 
-  if (!puzzle) return <div style={{color:'white', padding: 50}}>Loading Neural Interface...</div>;
+  if (!puzzle) return <div style={{ color: 'white', padding: 50 }}>Loading Neural Interface...</div>;
 
   return (
     <div className="logic-puzzle-wrapper">
@@ -101,7 +101,7 @@ const LogicPuzzleScreen: React.FC = () => {
 
       {/* HEADER */}
       <header className="puzzle-header">
-       
+
         <div className="level-pill">PUZZLE: LEVEL {level}/∞</div>
         <button className="exit-btn" onClick={() => navigate('/games')}>
           <i className="fa-solid fa-arrow-right-from-bracket"></i> Exit Game
@@ -109,28 +109,28 @@ const LogicPuzzleScreen: React.FC = () => {
       </header>
 
       <div className="puzzle-container">
-        
+
         {/* LEFT PANEL: Drop Zones */}
         <div className="editor-panel">
           <div className="panel-top-bar">
             <div className="circle red"></div><div className="circle yellow"></div><div className="circle green"></div>
             <div className="filename">logic_level_{level}.js</div>
           </div>
-          
+
           <div className="drop-zone">
             {slots.map((contentId, index) => {
-              const fragment = contentId ? puzzle.fragments.find(f => f.id === contentId) : null;
+              const fragment = contentId ? puzzle.fragments.find((f: any) => f.id === contentId) : null;
               return (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`drop-slot ${isSuccess ? 'success-glow' : ''}`}
                   data-line={index + 1}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDropInSlot(index)}
                 >
                   {fragment && (
-                    <div 
-                      className="code-card" 
+                    <div
+                      className="code-card"
                       draggable={!isSuccess}
                       onDragStart={(e) => handleDragStart(e, fragment.id)}
                       style={{ width: '100%', border: 'none', background: 'transparent', margin: 0, padding: 0 }}
@@ -146,11 +146,11 @@ const LogicPuzzleScreen: React.FC = () => {
 
         {/* RIGHT PANEL: Info & Fragments */}
         <div className="sidebar-panel">
-          
+
           <div className="info-card">
             <h2 className="fancy-heading">{puzzle.title}</h2>
             <p className="description">{puzzle.description}</p>
-            
+
             {showHint && (
               <div className="hint-text">
                 <i className="fa-solid fa-lightbulb"></i> {puzzle.hint}
@@ -159,8 +159,8 @@ const LogicPuzzleScreen: React.FC = () => {
 
             <div className="btn-group">
               {isSuccess ? (
-                <button 
-                  className="action-btn btn-check" 
+                <button
+                  className="action-btn btn-check"
                   style={{ background: '#00ff88', color: '#000', border: 'none' }}
                   onClick={handleNextLevel}
                 >
@@ -180,20 +180,20 @@ const LogicPuzzleScreen: React.FC = () => {
           </div>
 
           <div className="fragments-header">FRAGMENTS</div>
-          
+
           {/* Source Zone */}
-          <div 
+          <div
             className="fragments-container"
             onDragOver={handleDragOver}
             onDrop={handleDropInSidebar}
           >
-            {puzzle.fragments.map((frag) => {
+            {puzzle.fragments.map((frag: any) => {
               if (isPlaced(frag.id)) return null; // Hide if placed
-              
+
               return (
-                <div 
-                  key={frag.id} 
-                  className="code-card" 
+                <div
+                  key={frag.id}
+                  className="code-card"
                   draggable={!isSuccess}
                   onDragStart={(e) => handleDragStart(e, frag.id)}
                 >
@@ -201,9 +201,9 @@ const LogicPuzzleScreen: React.FC = () => {
                 </div>
               );
             })}
-            
+
             {slots.every(s => s !== null) && (
-              <div style={{ textAlign:'center', color:'#444', fontSize:'0.8rem', marginTop: 20 }}>
+              <div style={{ textAlign: 'center', color: '#444', fontSize: '0.8rem', marginTop: 20 }}>
                 All fragments placed.
               </div>
             )}

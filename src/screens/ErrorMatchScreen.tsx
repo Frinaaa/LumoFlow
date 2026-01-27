@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNextErrorCard, ErrorCardData, reshuffleErrors } from '../utils/errorGenerator';
+import { getNextErrorCard, ErrorCardData, reshuffleErrors } from '../utils/generators';
 import '../styles/ErrorMatch.css';
 
 const ErrorMatchScreen: React.FC = () => {
@@ -22,13 +22,13 @@ const ErrorMatchScreen: React.FC = () => {
   };
 
   // --- Drag & Drop Logic ---
-  
+
   const handleDragStart = (e: React.DragEvent) => {
     if (!currentCard) return;
     setIsDragging(true);
     e.dataTransfer.setData("text/plain", currentCard.type);
     e.dataTransfer.effectAllowed = "move";
-    
+
     // Hide original element visually but keep it in DOM for drag
     const target = e.target as HTMLElement;
     setTimeout(() => { target.style.opacity = '0.01'; }, 0);
@@ -64,74 +64,74 @@ const ErrorMatchScreen: React.FC = () => {
     setIsDragging(false);
   };
 
-  if (!currentCard) return <div style={{color:'white', padding:50}}>Loading Stream...</div>;
+  if (!currentCard) return <div style={{ color: 'white', padding: 50 }}>Loading Stream...</div>;
 
   return (
     <div className="error-match-wrapper">
-      
+
       {/* HEADER */}
       <header className="error-header">
         <div className="score-box">DETECTED: <span className="score-val">{score}</span></div>
-        
+
         <button className="exit-btn" onClick={() => navigate('/games')}>EXIT</button>
       </header>
 
       <div className="em-game-container">
-        
+
         {/* BASKETS ROW */}
         <div className="baskets-row">
-            
-            {['syntax', 'ref', 'type', 'logic'].map((type) => (
-              <div 
-                key={type}
-                className={`basket ${type} ${isDragging ? 'highlight' : ''}`}
-                onDragOver={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.classList.add('drag-over');
-                }}
-                onDragLeave={(e) => {
-                    e.currentTarget.classList.remove('drag-over');
-                }}
-                onDrop={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.classList.remove('drag-over');
-                    handleDrop(type);
-                }}
-              >
-                <i className={`fa-solid ${getIcon(type)}`}></i>
-                <span>{type.toUpperCase()} ERROR</span>
-              </div>
-            ))}
+
+          {['syntax', 'ref', 'type', 'logic'].map((type) => (
+            <div
+              key={type}
+              className={`basket ${type} ${isDragging ? 'highlight' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('drag-over');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('drag-over');
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+                handleDrop(type);
+              }}
+            >
+              <i className={`fa-solid ${getIcon(type)}`}></i>
+              <span>{type.toUpperCase()} ERROR</span>
+            </div>
+          ))}
 
         </div>
 
         {/* CODE CARD */}
         <div className="card-zone">
-            <div 
-                className="code-card" 
-                draggable 
-                onDragStart={handleDragStart} 
-                onDragEnd={handleDragEnd}
-                style={{ borderLeftColor: currentCard.color }} 
-            >
-                <div className="cc-header">
-                    <span className="cc-filename">error_log_{currentCard.id}.js</span>
-                    <i className="fa-solid fa-grip-vertical cc-icon"></i>
-                </div>
-                
-                <div className="cc-body">
-                    {currentCard.code}
-                </div>
-
-                <div className="cc-hint">
-                    <i className="fa-solid fa-lightbulb"></i>
-                    <span><b>HINT:</b> {currentCard.hint}</span>
-                </div>
+          <div
+            className="code-card"
+            draggable
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            style={{ borderLeftColor: currentCard.color }}
+          >
+            <div className="cc-header">
+              <span className="cc-filename">error_log_{currentCard.id}.js</span>
+              <i className="fa-solid fa-grip-vertical cc-icon"></i>
             </div>
-            
-            {feedback && (
-                <div className={`feedback-overlay ${feedback.type}`}>{feedback.text}</div>
-            )}
+
+            <div className="cc-body">
+              {currentCard.code}
+            </div>
+
+            <div className="cc-hint">
+              <i className="fa-solid fa-lightbulb"></i>
+              <span><b>HINT:</b> {currentCard.hint}</span>
+            </div>
+          </div>
+
+          {feedback && (
+            <div className={`feedback-overlay ${feedback.type}`}>{feedback.text}</div>
+          )}
         </div>
 
       </div>
@@ -141,13 +141,13 @@ const ErrorMatchScreen: React.FC = () => {
 
 // Helper for Icons
 const getIcon = (type: string) => {
-    switch(type) {
-        case 'syntax': return 'fa-code';
-        case 'ref': return 'fa-link-slash';
-        case 'type': return 'fa-shapes';
-        case 'logic': return 'fa-brain';
-        default: return 'fa-bug';
-    }
+  switch (type) {
+    case 'syntax': return 'fa-code';
+    case 'ref': return 'fa-link-slash';
+    case 'type': return 'fa-shapes';
+    case 'logic': return 'fa-brain';
+    default: return 'fa-bug';
+  }
 };
 
 export default ErrorMatchScreen;
