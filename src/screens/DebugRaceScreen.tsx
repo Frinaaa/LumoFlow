@@ -163,7 +163,7 @@ const DebugRaceScreen: React.FC = () => {
       </header>
 
       <div className="progress-line">
-        <div className="progress-fill" style={{ width: `${(timeLeft / DURATION) * 100}%` }}></div>
+        <div className="debug-progress-fill" style={{ width: `${(timeLeft / DURATION) * 100}%` }}></div>
       </div>
 
       <div className="interface-container">

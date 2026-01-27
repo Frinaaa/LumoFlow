@@ -26,7 +26,7 @@ export const StatusBar = () => {
   return (
     <div className="vs-status-bar" style={{
       height: '22px',
-      background: errorCount > 0 ? '#cc3333' : '#007acc',
+      background: errorCount > 0 ? '#cc3333' : '#7b1fa2',
       color: 'white',
       display: 'flex',
       alignItems: 'center',
