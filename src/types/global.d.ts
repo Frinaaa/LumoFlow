@@ -31,6 +31,7 @@ interface Window {
     deleteFile: (filePath: string) => Promise<any>;
     renameFile: (oldPath: string, newName: string) => Promise<any>;
     moveFile: (oldPath: string, newPath: string) => Promise<{ success: boolean; newPath?: string; msg?: string }>;
+    searchFiles: (payload: { query: string; rootPath: string }) => Promise<Array<{ filePath: string; line: number; preview: string }>>;
     runCode: (payload: { filePath: string; code: string }) => Promise<{ stdout: string; stderr: string }>;
     executeCommand: (command: string) => Promise<string>;
     

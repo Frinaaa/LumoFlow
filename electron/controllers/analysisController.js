@@ -1,4 +1,6 @@
 const { AnalysisResult, Visualization } = require('../models');
+const acorn = require('acorn');
+const walk = require('acorn-walk');
 
 const analysisController = {
   // Analyze code and generate visualization data
@@ -84,15 +86,21 @@ const analysisController = {
   }
 };
 
-// JavaScript code analyzer
+/**
+ * Analyze JavaScript code using AST parsing
+ * Handles modern JS: arrow functions, classes, async/await, destructuring, etc.
+ */
 function analyzeJavaScript(code) {
-  const lines = code.split('\n').filter(line => line.trim());
   const analysis = {
     language: 'JavaScript',
-    totalLines: lines.length,
+    totalLines: code.split('\n').length,
     functions: [],
     variables: [],
+    classes: [],
+    imports: [],
+    exports: [],
     controlFlow: [],
+    asyncOperations: [],
     flowchart: {
       nodes: [],
       connections: []
@@ -114,111 +122,274 @@ function analyzeJavaScript(code) {
   });
   currentY += 80;
 
-  // Analyze each line
-  lines.forEach((line, index) => {
-    const trimmedLine = line.trim();
-    
-    // Function declarations
-    if (trimmedLine.includes('function ') || trimmedLine.includes('=>')) {
-      const funcName = extractFunctionName(trimmedLine);
-      analysis.functions.push({
-        name: funcName,
-        line: index + 1,
-        type: 'function'
-      });
-      
-      analysis.flowchart.nodes.push({
-        id: nodeId++,
-        type: 'function',
-        label: `Function: ${funcName}`,
-        x: 200,
-        y: currentY,
-        color: '#bc13fe'
-      });
-      currentY += 80;
+  try {
+    // Parse code into AST
+    const ast = acorn.parse(code, { 
+      ecmaVersion: 'latest', 
+      sourceType: 'module',
+      locations: true 
+    });
 
-      analysis.explanation.push(`Line ${index + 1}: Function '${funcName}' is declared`);
-    }
-    
-    // Variable declarations
-    else if (trimmedLine.includes('let ') || trimmedLine.includes('const ') || trimmedLine.includes('var ')) {
-      const varName = extractVariableName(trimmedLine);
-      analysis.variables.push({
-        name: varName,
-        line: index + 1,
-        type: 'declaration'
-      });
+    // Walk the AST and collect information
+    walk.simple(ast, {
+      // Function declarations: function foo() {}
+      FunctionDeclaration(node) {
+        const funcName = node.id?.name || 'anonymous';
+        const line = node.loc?.start.line || 0;
+        
+        analysis.functions.push({
+          name: funcName,
+          line: line,
+          type: 'function',
+          params: node.params.length,
+          async: node.async
+        });
 
-      analysis.flowchart.nodes.push({
-        id: nodeId++,
-        type: 'variable',
-        label: `Variable: ${varName}`,
-        x: 200,
-        y: currentY,
-        color: '#00ff88'
-      });
-      currentY += 80;
+        analysis.flowchart.nodes.push({
+          id: nodeId++,
+          type: 'function',
+          label: `Function: ${funcName}${node.async ? ' (async)' : ''}`,
+          x: 200,
+          y: currentY,
+          color: '#bc13fe'
+        });
+        currentY += 80;
 
-      analysis.explanation.push(`Line ${index + 1}: Variable '${varName}' is declared`);
-    }
-    
-    // Control flow (if statements)
-    else if (trimmedLine.includes('if ') || trimmedLine.includes('else')) {
-      analysis.controlFlow.push({
-        type: 'conditional',
-        line: index + 1,
-        condition: trimmedLine
-      });
+        analysis.explanation.push(`Line ${line}: Function '${funcName}' declared${node.async ? ' (async)' : ''}`);
+      },
 
-      analysis.flowchart.nodes.push({
-        id: nodeId++,
-        type: 'decision',
-        label: 'Decision',
-        x: 200,
-        y: currentY,
-        color: '#ff6b35'
-      });
-      currentY += 80;
+      // Arrow functions: const foo = () => {}
+      ArrowFunctionExpression(node) {
+        // Only process if it's assigned to a variable (handled by VariableDeclarator)
+      },
 
-      analysis.explanation.push(`Line ${index + 1}: Conditional statement - ${trimmedLine}`);
-    }
-    
-    // Loops
-    else if (trimmedLine.includes('for ') || trimmedLine.includes('while ')) {
-      analysis.controlFlow.push({
-        type: 'loop',
-        line: index + 1,
-        condition: trimmedLine
-      });
+      // Variable declarations: const/let/var
+      VariableDeclarator(node) {
+        if (node.id.type === 'Identifier') {
+          const varName = node.id.name;
+          const line = node.loc?.start.line || 0;
+          const isArrowFunc = node.init?.type === 'ArrowFunctionExpression';
+          
+          analysis.variables.push({
+            name: varName,
+            line: line,
+            type: isArrowFunc ? 'arrow-function' : 'variable',
+            async: isArrowFunc && node.init?.async
+          });
 
-      analysis.flowchart.nodes.push({
-        id: nodeId++,
-        type: 'loop',
-        label: 'Loop',
-        x: 200,
-        y: currentY,
-        color: '#ff0055'
-      });
-      currentY += 80;
+          if (isArrowFunc) {
+            analysis.functions.push({
+              name: varName,
+              line: line,
+              type: 'arrow-function',
+              params: node.init?.params?.length || 0,
+              async: node.init?.async
+            });
 
-      analysis.explanation.push(`Line ${index + 1}: Loop statement - ${trimmedLine}`);
-    }
-    
-    // Console/output statements
-    else if (trimmedLine.includes('console.log') || trimmedLine.includes('alert')) {
-      analysis.flowchart.nodes.push({
-        id: nodeId++,
-        type: 'output',
-        label: 'Output',
-        x: 200,
-        y: currentY,
-        color: '#ffd700'
-      });
-      currentY += 80;
+            analysis.flowchart.nodes.push({
+              id: nodeId++,
+              type: 'function',
+              label: `Arrow Function: ${varName}${node.init?.async ? ' (async)' : ''}`,
+              x: 200,
+              y: currentY,
+              color: '#bc13fe'
+            });
+            currentY += 80;
 
-      analysis.explanation.push(`Line ${index + 1}: Output statement`);
-    }
-  });
+            analysis.explanation.push(`Line ${line}: Arrow function '${varName}' defined${node.init?.async ? ' (async)' : ''}`);
+          } else {
+            analysis.flowchart.nodes.push({
+              id: nodeId++,
+              type: 'variable',
+              label: `Variable: ${varName}`,
+              x: 200,
+              y: currentY,
+              color: '#00ff88'
+            });
+            currentY += 80;
+
+            analysis.explanation.push(`Line ${line}: Variable '${varName}' declared`);
+          }
+        }
+      },
+
+      // Class declarations
+      ClassDeclaration(node) {
+        const className = node.id?.name || 'AnonymousClass';
+        const line = node.loc?.start.line || 0;
+        
+        analysis.classes.push({
+          name: className,
+          line: line,
+          methods: node.body.body.filter(m => m.type === 'MethodDefinition').map(m => m.key.name)
+        });
+
+        analysis.flowchart.nodes.push({
+          id: nodeId++,
+          type: 'class',
+          label: `Class: ${className}`,
+          x: 200,
+          y: currentY,
+          color: '#4ec9b0'
+        });
+        currentY += 80;
+
+        analysis.explanation.push(`Line ${line}: Class '${className}' defined`);
+      },
+
+      // Import statements
+      ImportDeclaration(node) {
+        const source = node.source.value;
+        const line = node.loc?.start.line || 0;
+        
+        analysis.imports.push({
+          source: source,
+          line: line,
+          specifiers: node.specifiers.map(s => s.local.name)
+        });
+
+        analysis.explanation.push(`Line ${line}: Import from '${source}'`);
+      },
+
+      // Export statements
+      ExportNamedDeclaration(node) {
+        const line = node.loc?.start.line || 0;
+        if (node.declaration) {
+          const name = node.declaration.id?.name || 'unnamed';
+          analysis.exports.push({ name, line, type: 'named' });
+          analysis.explanation.push(`Line ${line}: Export '${name}'`);
+        }
+      },
+
+      ExportDefaultDeclaration(node) {
+        const line = node.loc?.start.line || 0;
+        const name = node.declaration.id?.name || 'default';
+        analysis.exports.push({ name, line, type: 'default' });
+        analysis.explanation.push(`Line ${line}: Export default '${name}'`);
+      },
+
+      // If statements
+      IfStatement(node) {
+        const line = node.loc?.start.line || 0;
+        analysis.controlFlow.push({
+          type: 'conditional',
+          line: line
+        });
+
+        analysis.flowchart.nodes.push({
+          id: nodeId++,
+          type: 'decision',
+          label: 'Conditional',
+          x: 200,
+          y: currentY,
+          color: '#ff6b35'
+        });
+        currentY += 80;
+
+        analysis.explanation.push(`Line ${line}: Conditional statement`);
+      },
+
+      // Loops
+      ForStatement(node) {
+        const line = node.loc?.start.line || 0;
+        analysis.controlFlow.push({
+          type: 'loop',
+          line: line,
+          loopType: 'for'
+        });
+
+        analysis.flowchart.nodes.push({
+          id: nodeId++,
+          type: 'loop',
+          label: 'For Loop',
+          x: 200,
+          y: currentY,
+          color: '#ff0055'
+        });
+        currentY += 80;
+
+        analysis.explanation.push(`Line ${line}: For loop`);
+      },
+
+      WhileStatement(node) {
+        const line = node.loc?.start.line || 0;
+        analysis.controlFlow.push({
+          type: 'loop',
+          line: line,
+          loopType: 'while'
+        });
+
+        analysis.flowchart.nodes.push({
+          id: nodeId++,
+          type: 'loop',
+          label: 'While Loop',
+          x: 200,
+          y: currentY,
+          color: '#ff0055'
+        });
+        currentY += 80;
+
+        analysis.explanation.push(`Line ${line}: While loop`);
+      },
+
+      // Async/await
+      AwaitExpression(node) {
+        const line = node.loc?.start.line || 0;
+        analysis.asyncOperations.push({
+          type: 'await',
+          line: line
+        });
+
+        analysis.explanation.push(`Line ${line}: Await expression`);
+      },
+
+      // Try/catch
+      TryStatement(node) {
+        const line = node.loc?.start.line || 0;
+        analysis.controlFlow.push({
+          type: 'try-catch',
+          line: line
+        });
+
+        analysis.flowchart.nodes.push({
+          id: nodeId++,
+          type: 'error-handling',
+          label: 'Try/Catch',
+          x: 200,
+          y: currentY,
+          color: '#ffa500'
+        });
+        currentY += 80;
+
+        analysis.explanation.push(`Line ${line}: Try/catch block`);
+      },
+
+      // Console/output
+      CallExpression(node) {
+        if (node.callee.type === 'MemberExpression' &&
+            node.callee.object.name === 'console') {
+          const method = node.callee.property.name;
+          const line = node.loc?.start.line || 0;
+
+          analysis.flowchart.nodes.push({
+            id: nodeId++,
+            type: 'output',
+            label: `console.${method}()`,
+            x: 200,
+            y: currentY,
+            color: '#ffd700'
+          });
+          currentY += 80;
+
+          analysis.explanation.push(`Line ${line}: console.${method}() output`);
+        }
+      }
+    });
+
+  } catch (error) {
+    analysis.explanation.push(`Syntax Error: ${error.message}`);
+    console.error('AST parsing error:', error);
+  }
 
   // Add end node
   analysis.flowchart.nodes.push({

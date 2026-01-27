@@ -12,8 +12,8 @@ import AboutUsScreen from './screens/AboutUsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import AuthCallback from './pages/AuthCallback';
 import authService from './services/authService';
-import TerminalScreen from './screens/EditorScreen';
-import { EditorProvider, useEditor } from './context/EditorContext';
+import { EditorLayout } from './editor';
+import { EditorProvider } from './context/EditorContext';
 import './styles/App.css';
 import GameSelectorScreen from './screens/GameSelectorScreen';
 import LogicPuzzleScreen from './screens/PuzzleGameScreen'; 
@@ -95,7 +95,13 @@ function AppLayout() {
 
         <Route
           path="/editor"
-          element={isAuthenticated ? <TerminalScreen /> : <Navigate to="/login" replace />}
+          element={isAuthenticated ? (
+            <EditorProvider>
+              <EditorLayout />
+            </EditorProvider>
+          ) : (
+            <Navigate to="/login" replace />
+          )}
         />
 
         <Route
@@ -119,9 +125,7 @@ function AppLayout() {
 function App() {
   return (
     <Router>
-      <EditorProvider>
-        <AppLayout />
-      </EditorProvider>
+      <AppLayout />
     </Router>
   );
 }

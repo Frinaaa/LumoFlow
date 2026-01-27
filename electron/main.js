@@ -384,6 +384,56 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: files:createFolder');
 
+    // Global Search Handler
+    ipcMain.handle('files:search', async (event, { query, rootPath }) => {
+      const results = [];
+      const ignoreDirs = new Set(['node_modules', '.git', 'dist', 'build', '.next', '.venv', '__pycache__']);
+      
+      function searchDir(dir) {
+        try {
+          if (!fs.existsSync(dir)) return;
+          const items = fs.readdirSync(dir);
+          
+          for (const item of items) {
+            if (ignoreDirs.has(item)) continue;
+            
+            const fullPath = path.join(dir, item);
+            const stat = fs.statSync(fullPath);
+            
+            if (stat.isDirectory()) {
+              searchDir(fullPath);
+            } else {
+              try {
+                const content = fs.readFileSync(fullPath, 'utf-8');
+                const lines = content.split('\n');
+                
+                lines.forEach((line, index) => {
+                  if (line.toLowerCase().includes(query.toLowerCase())) {
+                    results.push({
+                      filePath: fullPath,
+                      line: index + 1,
+                      preview: line.trim().substring(0, 100)
+                    });
+                  }
+                });
+              } catch (e) {
+                // Skip binary files
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Search error:', err);
+        }
+      }
+      
+      if (query && rootPath) {
+        searchDir(rootPath);
+      }
+      
+      return results;
+    });
+    console.log('✅ Registered: files:search');
+
     // Terminal Execution
     // --- REPLACE YOUR EXISTING terminal:runCode WITH THIS BLOCK ---
 

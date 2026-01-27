@@ -1,7 +1,9 @@
 /* 🟢 FULL FILE */
 import React from 'react';
-import MenuBar from './Editor/MenuBar';
+import MenuBar from '../editor/components/MenuBar';
 import { useEditor } from '../context/EditorContext';
+import { useAnalysisStore } from '../editor/stores/analysisStore';
+import { useEditorStore } from '../editor/stores/editorStore';
 import '../styles/CustomTitlebar.css';
 
 interface CustomTitlebarProps {
@@ -10,6 +12,8 @@ interface CustomTitlebarProps {
 
 const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) => {
   const editorState = useEditor();
+  const analysisStore = useAnalysisStore();
+  const { activeTabId, tabs } = useEditorStore();
 
   const handleMinimize = async () => {
     try {
@@ -83,6 +87,29 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
     }
   };
 
+  const handleAnalyze = async () => {
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    if (!activeTab) return;
+
+    analysisStore.setAnalyzing(true);
+    analysisStore.togglePanel();
+
+    try {
+      const result = await (window as any).api.analyzeCode({
+        code: activeTab.content,
+        language: activeTab.language,
+      });
+
+      if (result.success) {
+        analysisStore.setAnalysisData(result.analysis || result.data);
+      }
+    } catch (e) {
+      console.error('Analysis error:', e);
+    } finally {
+      analysisStore.setAnalyzing(false);
+    }
+  };
+
   return (
     <div className="vs-titlebar-layout">
       {/* LEFT: BRAND & MENUS */}
@@ -119,7 +146,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
       {/* RIGHT: ACTIONS & CONTROLS */}
       <div className="title-right">
         <div className="btn-group">
-          <button className="btn-analyze" onClick={editorState.onAnalyze}>
+          <button className="btn-analyze" onClick={handleAnalyze}>
             <i className="fa-solid fa-microchip"></i> Analyze
           </button>
           <button className="btn-run" onClick={editorState.onRun}>
