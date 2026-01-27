@@ -58,16 +58,20 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!activeTab) return;
 
     try {
-      if ((window as any).api?.executeCode) {
-        const result = await (window as any).api.executeCode({
+      if ((window as any).api?.runCode) {
+        const result = await (window as any).api.runCode({
+          filePath: activeTab.id, // activeTab.id is the full path
           code: activeTab.content,
           language: activeTab.language,
         });
-        
-        if (result.success) {
-          editorStore.appendOutputData(result.output || '');
+
+        if (result.stdout || result.stderr) {
+          editorStore.appendOutputData(result.stdout || '');
+          if (result.stderr) {
+            editorStore.appendOutputData(`\nError: ${result.stderr}\n`);
+          }
         } else {
-          editorStore.appendOutputData(`Error: ${result.error}\n`);
+          editorStore.appendOutputData('Execution completed with no output.\n');
         }
       }
     } catch (error: any) {

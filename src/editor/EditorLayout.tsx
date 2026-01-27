@@ -6,7 +6,7 @@ import { useGitStore } from './stores/gitStore';
 import { useFileOperations } from './hooks/useFileOperations';
 
 // Components
-import { StatusBar, AnalysisPanelWrapper } from './components/Layout';
+import { StatusBar } from './components/Layout';
 import { CodeEditor } from './components/Monaco';
 import { Terminal } from './components/Terminal';
 import { CommandPalette } from './components/CommandPalette';
@@ -14,9 +14,11 @@ import { FileExplorerSidebar } from './components/Explorer/FileExplorerSidebar';
 import { GitSidebar } from './components/Explorer/GitSidebar';
 import { SearchSidebar } from './components/Explorer/SearchSidebar';
 import { QuickOpen } from './components/QuickOpen';
-import CustomTitlebar from '../components/CustomTitlebar';
-
-import '../styles/TerminalScreen.css';
+import CustomTitlebar from './components/Layout/CustomTitlebar';
+// src/editor/EditorLayout.tsx (Simplified Concept)
+import { useAnalysisStore } from './stores/analysisStore';
+import AnalysisPanel from '../components/AnalysisPanel';
+import './styles/TerminalScreen.css';
 
 /**
  * EditorLayout - Main entry point for the Code Editor feature
@@ -27,11 +29,11 @@ export const EditorLayout: React.FC = () => {
   const fileStore = useFileStore();
   const gitStore = useGitStore();
   const fileOps = useFileOperations();
-  
+
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
-  
+
   const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
 
   // Initialize data on mount
@@ -39,7 +41,7 @@ export const EditorLayout: React.FC = () => {
     const init = async () => {
       // Load files
       fileOps.refreshFiles();
-      
+
       // Load git status
       try {
         if ((window as any).api?.gitStatus) {
@@ -89,6 +91,21 @@ export const EditorLayout: React.FC = () => {
       };
     }
   }, [isResizingSidebar, isResizingTerminal]);
+
+  useEffect(() => {
+    const handleOpenFile = (e: any) => {
+      const { path } = e.detail;
+      if (path) fileOps.openFile(path);
+    };
+    const handleQuickOpenToggle = () => setQuickOpenVisible(prev => !prev);
+
+    window.addEventListener('open-file', handleOpenFile);
+    window.addEventListener('quick-open-toggle', handleQuickOpenToggle);
+    return () => {
+      window.removeEventListener('open-file', handleOpenFile);
+      window.removeEventListener('quick-open-toggle', handleQuickOpenToggle);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -158,7 +175,7 @@ export const EditorLayout: React.FC = () => {
       <CustomTitlebar workspaceFolderName={fileStore.workspaceName} />
       <CommandPalette />
       <QuickOpen visible={quickOpenVisible} onClose={() => setQuickOpenVisible(false)} />
-      
+
       <div className="ide-main-body">
         {/* Activity Bar */}
         <div
@@ -240,65 +257,88 @@ export const EditorLayout: React.FC = () => {
         <main className="editor-terminal-stack" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {/* Tab Bar */}
           {editorStore.tabs.length > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                background: '#2d2d30',
-                borderBottom: '1px solid #3c3c3c',
-                height: '35px',
-                overflowX: 'auto',
-              }}
-            >
-              {editorStore.tabs.map(tab => (
-                <div
-                  key={tab.id}
-                  onClick={() => editorStore.setActiveTab(tab.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '0 12px',
-                    minWidth: '120px',
-                    maxWidth: '200px',
-                    background: tab.id === editorStore.activeTabId ? '#1e1e1e' : 'transparent',
-                    borderTop: tab.id === editorStore.activeTabId ? '2px solid #00f2ff' : '2px solid transparent',
-                    borderRight: '1px solid #3c3c3c',
-                    color: tab.id === editorStore.activeTabId ? '#fff' : '#969696',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                  }}
-                >
-                  <span
+            <>
+              <div
+                className="vs-tabs-container"
+                style={{
+                  display: 'flex',
+                  background: '#2d2d30',
+                  borderBottom: '1px solid #3c3c3c',
+                  height: '35px',
+                  overflowX: 'auto',
+                  scrollbarWidth: 'none',
+                }}
+              >
+                {editorStore.tabs.map((tab) => (
+                  <div
+                    key={tab.id}
+                    onClick={() => editorStore.setActiveTab(tab.id)}
                     style={{
-                      flex: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '0 12px',
+                      minWidth: '120px',
+                      maxWidth: '200px',
+                      background: tab.id === editorStore.activeTabId ? '#1e1e1e' : 'transparent',
+                      borderTop: tab.id === editorStore.activeTabId ? '2px solid #00f2ff' : '2px solid transparent',
+                      borderRight: '1px solid #3c3c3c',
+                      color: tab.id === editorStore.activeTabId ? '#fff' : '#969696',
+                      cursor: 'pointer',
+                      fontSize: '13px',
                     }}
                   >
-                    {tab.fileName}
-                  </span>
-                  {tab.isDirty && (
-                    <div
+                    <span
                       style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        background: '#00f2ff',
+                        flex: 1,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                       }}
+                    >
+                      {tab.fileName}
+                    </span>
+                    {tab.isDirty && (
+                      <div
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                        }}
+                      />
+                    )}
+                    <i
+                      className="fa-solid fa-xmark"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        editorStore.removeTab(tab.id);
+                      }}
+                      style={{ fontSize: '14px', opacity: 0.7, cursor: 'pointer' }}
                     />
-                  )}
-                  <i
-                    className="fa-solid fa-xmark"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      editorStore.removeTab(tab.id);
-                    }}
-                    style={{ fontSize: '14px', opacity: 0.7, cursor: 'pointer' }}
-                  />
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Breadcrumbs */}
+              <div style={{
+                height: '22px',
+                background: '#1e1e1e',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 16px',
+                gap: '8px',
+                fontSize: '12px',
+                color: '#888',
+                borderBottom: '1px solid #2d2d2d'
+              }}>
+                <i className="fa-solid fa-folder-open" style={{ fontSize: '10px' }}></i>
+                <span>{fileStore.workspaceName || 'Project'}</span>
+                <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px' }}></i>
+                <i className="fa-solid fa-file-code" style={{ fontSize: '10px', color: '#00f2ff' }}></i>
+                <span style={{ color: '#ccc' }}>{activeTab?.fileName}</span>
+              </div>
+            </>
           )}
 
           {/* Editor Area */}
@@ -313,7 +353,7 @@ export const EditorLayout: React.FC = () => {
                 onCursorChange={(line, col) => editorStore.updateCursorPosition(activeTab.id, line, col)}
                 onSave={() => fileOps.saveFile(activeTab.id)}
                 onClose={() => editorStore.removeTab(activeTab.id)}
-                onFocus={() => {}}
+                onFocus={() => { }}
                 onProblemsDetected={editorStore.setProblems}
               />
             ) : (
@@ -363,8 +403,16 @@ export const EditorLayout: React.FC = () => {
                   onMaximize={() =>
                     editorStore.setTerminalHeight(editorStore.terminalHeight === 240 ? 500 : 240)
                   }
-                  onNavigateToLine={(line) => {
-                    if (activeTab) editorStore.updateCursorPosition(activeTab.id, line, 1);
+                  onNavigateToLine={(line: number, column?: number, source?: string) => {
+                    if (source) {
+                      window.dispatchEvent(new CustomEvent('open-file', { detail: { path: source } }));
+                      // Wait a bit for file to open if needed, then reveal
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('monaco-cmd', {
+                          detail: { action: 'revealLine', value: line, column: column || 1, file: source }
+                        }));
+                      }, 100);
+                    }
                   }}
                 />
               </div>
@@ -373,7 +421,7 @@ export const EditorLayout: React.FC = () => {
         </main>
 
         {/* Analysis Panel (LumoFlow) */}
-        <AnalysisPanelWrapper />
+        <AnalysisPanel />
       </div>
 
       {/* Status Bar */}

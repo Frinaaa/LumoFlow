@@ -143,6 +143,7 @@ const Titlebar: React.FC<TitlebarProps> = ({ workspaceFolderName }) => {
         >
           <i className="fa-solid fa-xmark" style={{ fontSize: '14px' }}></i>
         </button>
+        
       </div>
     </div>
   );

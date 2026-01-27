@@ -3,7 +3,7 @@ import SimpleTitlebar from '../components/SimpleTitlebar';
 import '../styles/SplashScreen.css';
 
 interface SplashScreenProps {
-    onComplete: () => void;
+  onComplete: () => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
@@ -39,44 +39,43 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
 
   return (
     <>
-      <SimpleTitlebar />
-      <div className={`splash-container ${isReady ? 'ready' : ''}`} style={{ paddingTop: '35px' }}>
-      <div className="splash-bg-grid" />
-      <div className="ambient-glow" />
+      <div className={`splash-container ${isReady ? 'ready' : ''}`}>
+        <div className="splash-bg-grid" />
+        <div className="ambient-glow" />
 
-      <div className="splash-content">
+        <div className="splash-content">
 
-        {/* --- ORIGINAL LOGO STRUCTURE --- */}
-        <div className="splash-logo-container">
-          <span className="splash-logo-icon">
-            <i className="fa-solid fa-bolt"></i>
-          </span>
-        </div>
-
-        <h1 className="splash-title">
-          LUMO<span className="splash-title-highlight">FLOW</span>
-        </h1>
-        {/* ------------------------------- */}
-
-        <p className="splash-subtitle">Illuminating Workflows</p>
-
-        {!isReady ? (
-          <div className="loader-container">
-            <div className="status-row">
-              <span className="status-text">{statusText}</span>
-              <span className="status-text">{progress}%</span>
-            </div>
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${progress}%` }} />
-            </div>
+          {/* --- ORIGINAL LOGO STRUCTURE --- */}
+          <div className="splash-logo-container">
+            <span className="splash-logo-icon">
+              <i className="fa-solid fa-bolt"></i>
+            </span>
           </div>
-        ) : (
-          <button className="enter-btn" onClick={handleEnter}>
-            Enter Application →
-          </button>
-        )}
+
+          <h1 className="splash-title">
+            LUMO<span className="splash-title-highlight">FLOW</span>
+          </h1>
+          {/* ------------------------------- */}
+
+          <p className="splash-subtitle">Illuminating Workflows</p>
+
+          {!isReady ? (
+            <div className="loader-container">
+              <div className="status-row">
+                <span className="status-text">{statusText}</span>
+                <span className="status-text">{progress}%</span>
+              </div>
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          ) : (
+            <button className="enter-btn" onClick={handleEnter}>
+              Enter Application →
+            </button>
+          )}
+        </div>
       </div>
-    </div>
     </>
   );
 };

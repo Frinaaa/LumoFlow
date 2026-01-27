@@ -1,0 +1,184 @@
+/* CustomTitlebar.css - VS Code Style */
+
+.vs-titlebar-container {
+  height: 35px;
+  background-color: #1e1e1e;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0;
+  border-bottom: 1px solid #2b2b2b;
+  user-select: none;
+  -webkit-app-region: drag;
+  position: relative;
+  z-index: 1000;
+}
+
+/* Draggable area fixes */
+.titlebar-section {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-section.left {
+  justify-content: flex-start;
+  padding-left: 10px;
+}
+
+.titlebar-section.center {
+  justify-content: center;
+  width: 100%;
+}
+
+.titlebar-section.right {
+  justify-content: flex-end;
+}
+
+/* LEFT: Logo & MenuBar */
+.titlebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+}
+
+.titlebar-logo i {
+  color: #00f2ff;
+  font-size: 14px;
+}
+
+.logo-text {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.logo-text span {
+  color: #00f2ff;
+}
+
+.titlebar-menu-wrapper {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* CENTER: Search Bar */
+.titlebar-search {
+  background: #2a2a2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  height: 24px;
+  min-width: 300px;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  color: #969696;
+  font-size: 12px;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.titlebar-search:hover {
+  background: #333337;
+  border-color: #444;
+}
+
+.titlebar-search span {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+}
+
+.active-file {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.search-placeholder {
+  color: #999;
+}
+
+.titlebar-search:hover .search-placeholder {
+  color: #ccc;
+}
+
+.titlebar-search i {
+  font-size: 12px;
+}
+
+/* RIGHT: Action Buttons & Window Controls */
+.action-btns {
+  display: flex;
+  gap: 4px;
+  margin-right: 12px;
+}
+
+.purple-btn {
+  background: #6a1b9a;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  height: 24px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.purple-btn:hover {
+  background: #7b1fa2;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.purple-btn:active {
+  background: #4a148c;
+  transform: translateY(1px);
+}
+
+.purple-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.purple-btn i {
+  font-size: 12px;
+}
+
+/* Native-style Window Controls */
+.window-controls {
+  display: flex;
+  height: 100%;
+}
+
+.control-btn {
+  width: 45px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cccccc;
+  font-size: 12px;
+  transition: background-color 0.1s;
+  cursor: pointer;
+}
+
+.control-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.control-btn.close:hover {
+  background-color: #e81123;
+  color: white;
+}

@@ -16,11 +16,12 @@ import { EditorLayout } from './editor';
 import { EditorProvider } from './context/EditorContext';
 import './styles/App.css';
 import GameSelectorScreen from './screens/GameSelectorScreen';
-import LogicPuzzleScreen from './screens/PuzzleGameScreen'; 
+import LogicPuzzleScreen from './screens/PuzzleGameScreen';
 import DebugRaceScreen from './screens/DebugRaceScreen';
 import PredictGameScreen from './screens/PredictGameScreen';
 import BugHuntScreen from './screens/BugHuntScreen';
 import ErrorMatchScreen from './screens/ErrorMatchScreen';
+import SimpleTitlebar from './components/SimpleTitlebar';
 
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
@@ -32,7 +33,7 @@ function AppLayout() {
     const initFlow = async () => {
       const token = localStorage.getItem('authToken');
       const userInfo = localStorage.getItem('user_info');
-      
+
       if (token && userInfo) {
         try {
           const res = await authService.getProfile();
@@ -67,57 +68,70 @@ function AppLayout() {
   }
 
   // 3. Main Routing 
-  // 🟢 REMOVED <CustomTitlebar /> from here to fix the double header and clumping
+  const isEditor = location.pathname.startsWith('/editor');
+
   return (
-    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', width: '100%', height: '100vh' }}>
-      <Routes>
-        <Route path="/auth/google/callback" element={<AuthCallback />} />
-        <Route path="/auth/github/callback" element={<AuthCallback />} />
-        <Route path="/signup" element={<SignUpScreen />} />
-        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-        <Route path="/reset-password" element={<ResetPasswordScreen />} />
-        <Route path="/about" element={<AboutUsScreen />} />
+    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', width: '100%', height: '100vh', background: '#050508' }}>
+      {!isEditor && <SimpleTitlebar />}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        paddingTop: !isEditor ? '35px' : '0',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <Routes>
+          <Route path="/auth/google/callback" element={<AuthCallback />} />
+          <Route path="/auth/github/callback" element={<AuthCallback />} />
+          <Route path="/signup" element={<SignUpScreen />} />
+          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+          <Route path="/reset-password" element={<ResetPasswordScreen />} />
+          <Route path="/about" element={<AboutUsScreen />} />
 
-        <Route
-          path="/login"
-          element={!isAuthenticated ? <LoginScreen setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/dashboard" replace />}
-        />
+          <Route
+            path="/login"
+            element={!isAuthenticated ? <LoginScreen setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/dashboard" replace />}
+          />
 
-        <Route
-          path="/dashboard"
-          element={isAuthenticated ? <DashboardScreen /> : <Navigate to="/login" replace />}
-        />
+          <Route
+            path="/dashboard"
+            element={isAuthenticated ? <DashboardScreen /> : <Navigate to="/login" replace />}
+          />
 
-        <Route
-          path="/settings"
-          element={isAuthenticated ? <SettingsScreen /> : <Navigate to="/login" replace />}
-        />
+          <Route
+            path="/settings"
+            element={isAuthenticated ? <SettingsScreen /> : <Navigate to="/login" replace />}
+          />
 
-        <Route
-          path="/editor"
-          element={isAuthenticated ? (
-            <EditorProvider>
-              <EditorLayout />
-            </EditorProvider>
-          ) : (
-            <Navigate to="/login" replace />
-          )}
-        />
+          <Route
+            path="/editor"
+            element={isAuthenticated ? (
+              <EditorProvider>
+                <EditorLayout />
+              </EditorProvider>
+            ) : (
+              <Navigate to="/login" replace />
+            )}
+          />
 
-        <Route
-          path="/games"
-          element={isAuthenticated ? <GameSelectorScreen /> : <Navigate to="/login" replace />}
-        />
-        
-        <Route path="/games/debug" element={isAuthenticated ? <DebugRaceScreen /> : <Navigate to="/login" replace />} />
-        <Route path="/games/error" element={isAuthenticated ? <ErrorMatchScreen /> : <Navigate to="/login" replace />} />
-        <Route path="/games/bughunt" element={isAuthenticated ? <BugHuntScreen /> : <Navigate to="/login" replace />} />
-        <Route path="/games/predict" element={isAuthenticated ? <PredictGameScreen /> : <Navigate to="/login" replace />} />
-        <Route path="/games/puzzle" element={isAuthenticated ? <LogicPuzzleScreen /> : <Navigate to="/login" replace />} />
+          <Route
+            path="/games"
+            element={isAuthenticated ? <GameSelectorScreen /> : <Navigate to="/login" replace />}
+          />
 
-        <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+          <Route path="/games/debug" element={isAuthenticated ? <DebugRaceScreen /> : <Navigate to="/login" replace />} />
+          <Route path="/games/error" element={isAuthenticated ? <ErrorMatchScreen /> : <Navigate to="/login" replace />} />
+          <Route path="/games/bughunt" element={isAuthenticated ? <BugHuntScreen /> : <Navigate to="/login" replace />} />
+          <Route path="/games/predict" element={isAuthenticated ? <PredictGameScreen /> : <Navigate to="/login" replace />} />
+          <Route path="/games/puzzle" element={isAuthenticated ? <LogicPuzzleScreen /> : <Navigate to="/login" replace />} />
+
+          <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,88 @@
+/* MenuBar.css - VS Code native style */
+
+.menu-bar {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  align-items: center;
+}
+
+.menu-item {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.menu-trigger {
+  height: 100%;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  color: #cccccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  display: flex;
+  align-items: center;
+}
+
+.menu-trigger:hover {
+  background-color: #3c3c3c;
+  color: #ffffff;
+}
+
+.menu-item.active .menu-trigger {
+  background-color: #3c3c3c;
+  color: #ffffff;
+}
+
+/* Dropdown Menu */
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #252526;
+  border: 1px solid #454545;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  min-width: 220px;
+  max-width: 320px;
+  z-index: 10000;
+  padding: 4px 0;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px 6px 25px;
+  color: #cccccc;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menu-option:hover {
+  background-color: #04395e;
+  color: #ffffff;
+}
+
+.menu-option .shortcut {
+  color: #888888;
+  font-size: 11px;
+  margin-left: 20px;
+}
+
+.menu-option:hover .shortcut {
+  color: #ffffff;
+  opacity: 0.8;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #454545;
+  margin: 4px 0;
+}

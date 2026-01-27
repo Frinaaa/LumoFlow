@@ -15,8 +15,36 @@ let mainWindow;
 let authWindow;
 let projectDir = path.join(require('os').homedir(), 'LumoFlow_Projects');
 
-// Store workspace directory per window
-const windowWorkspaces = new Map();
+// Scoped Storage: Helper to resolve and validate paths within projectDir
+function resolveSafePath(providedPath) {
+  if (!providedPath) return projectDir;
+
+  // Normalize provided path
+  const normalizedProvided = path.normalize(providedPath);
+
+  // Resolve to absolute
+  const absolutePath = path.isAbsolute(normalizedProvided)
+    ? normalizedProvided
+    : path.join(projectDir, normalizedProvided);
+
+  const finalPath = path.normalize(absolutePath);
+
+  // Check if finalPath is within projectDir
+  const relative = path.relative(projectDir, finalPath);
+
+  // if relative starts with '..' or is absolute (meaning it's on a different drive or outside root)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    console.error(`🛑 Access denied for path: ${finalPath}`);
+    throw new Error('Access Denied: Path is outside the sandboxed workspace.');
+  }
+
+  return finalPath;
+}
+
+// Ensure sandbox exists
+if (!fs.existsSync(projectDir)) {
+  fs.mkdirSync(projectDir, { recursive: true });
+}
 
 // Store pending auth callbacks
 let pendingAuthCallbacks = {};
@@ -115,7 +143,7 @@ const createWindow = async () => {
       enableRemoteModule: false,
       sandbox: true,
     },
-    frame: false,
+    titleBarStyle: 'hidden',
     show: false,
   });
 
@@ -250,7 +278,7 @@ app.on('ready', () => {
         });
       }
 
-      scanDir(projectDir);
+      scanDir(resolveSafePath(''));
       return results;
     });
 
@@ -258,7 +286,7 @@ app.on('ready', () => {
       try {
         // Normalize the file path to handle both forward and back slashes
         const normalizedFileName = fileName.replace(/\\/g, '/');
-        const filePath = path.join(projectDir, normalizedFileName);
+        const filePath = resolveSafePath(normalizedFileName);
 
         // Create parent directory if it doesn't exist
         const dir = path.dirname(filePath);
@@ -277,11 +305,12 @@ app.on('ready', () => {
 
     ipcMain.handle('files:readFile', async (event, filePath) => {
       try {
-        const stats = fs.statSync(filePath);
+        const safePath = resolveSafePath(filePath);
+        const stats = fs.statSync(safePath);
         if (stats.isDirectory()) {
           return { success: false, msg: 'Path is a directory, not a file' };
         }
-        const content = fs.readFileSync(filePath, 'utf-8');
+        const content = fs.readFileSync(safePath, 'utf-8');
         return { success: true, content };
       } catch (err) {
         return { success: false, msg: err.message };
@@ -291,7 +320,8 @@ app.on('ready', () => {
 
     ipcMain.handle('files:saveFile', async (event, { filePath, content }) => {
       try {
-        fs.writeFileSync(filePath, content, 'utf-8');
+        const safePath = resolveSafePath(filePath);
+        fs.writeFileSync(safePath, content, 'utf-8');
         return { success: true };
       } catch (err) {
         console.error('Error saving file:', err);
@@ -302,8 +332,9 @@ app.on('ready', () => {
 
     ipcMain.handle('files:saveAtomic', async (event, { filePath, content, userId }) => {
       try {
+        const safePath = resolveSafePath(filePath);
         // 1. Save to Disk
-        fs.writeFileSync(filePath, content, 'utf-8');
+        fs.writeFileSync(safePath, content, 'utf-8');
 
         // 2. Save to Database (if userId provided)
         let dbResult = { success: true, msg: 'No userId, skipped DB save' };
@@ -326,12 +357,13 @@ app.on('ready', () => {
 
     ipcMain.handle('files:deleteFile', async (event, filePath) => {
       try {
-        if (fs.existsSync(filePath)) {
-          const stats = fs.statSync(filePath);
+        const safePath = resolveSafePath(filePath);
+        if (fs.existsSync(safePath)) {
+          const stats = fs.statSync(safePath);
           if (stats.isDirectory()) {
-            fs.rmSync(filePath, { recursive: true, force: true });
+            fs.rmSync(safePath, { recursive: true, force: true });
           } else {
-            fs.unlinkSync(filePath);
+            fs.unlinkSync(safePath);
           }
           return { success: true };
         }
@@ -344,10 +376,12 @@ app.on('ready', () => {
 
     ipcMain.handle('files:renameFile', async (event, oldPath, newName) => {
       try {
-        const dir = path.dirname(oldPath);
-        const newPath = path.join(dir, newName);
-        fs.renameSync(oldPath, newPath);
-        return { success: true, newPath: newPath };
+        const safeOldPath = resolveSafePath(oldPath);
+        const dir = path.dirname(safeOldPath);
+        const safeNewPath = resolveSafePath(path.join(dir, newName));
+
+        fs.renameSync(safeOldPath, safeNewPath);
+        return { success: true, newPath: safeNewPath };
       } catch (err) {
         return { success: false, msg: err.message };
       }
@@ -357,29 +391,32 @@ app.on('ready', () => {
     ipcMain.handle('files:moveFile', async (event, oldPath, newPath) => {
       console.log(`📦 Move file request: ${oldPath} → ${newPath}`);
       try {
+        const safeOldPath = resolveSafePath(oldPath);
+        const safeNewPath = resolveSafePath(newPath);
+
         // Check if source file exists
-        if (!fs.existsSync(oldPath)) {
-          console.error(`❌ Source file not found: ${oldPath}`);
+        if (!fs.existsSync(safeOldPath)) {
+          console.error(`❌ Source file not found: ${safeOldPath}`);
           return { success: false, msg: 'Source file not found' };
         }
 
         // Ensure the target directory exists
-        const targetDir = path.dirname(newPath);
+        const targetDir = path.dirname(safeNewPath);
         if (!fs.existsSync(targetDir)) {
           console.log(`📁 Creating target directory: ${targetDir}`);
           fs.mkdirSync(targetDir, { recursive: true });
         }
 
         // Check if target file already exists
-        if (fs.existsSync(newPath)) {
-          console.error(`❌ Target file already exists: ${newPath}`);
+        if (fs.existsSync(safeNewPath)) {
+          console.error(`❌ Target file already exists: ${safeNewPath}`);
           return { success: false, msg: 'Target file already exists' };
         }
 
         // Move the file
-        fs.renameSync(oldPath, newPath);
-        console.log(`✅ Moved file successfully: ${oldPath} → ${newPath}`);
-        return { success: true, newPath: newPath };
+        fs.renameSync(safeOldPath, safeNewPath);
+        console.log(`✅ Moved file successfully: ${safeOldPath} → ${safeNewPath}`);
+        return { success: true, newPath: safeNewPath };
       } catch (err) {
         console.error('❌ Move file error:', err);
         return { success: false, msg: err.message };
@@ -398,7 +435,7 @@ app.on('ready', () => {
 
     ipcMain.handle('files:createFolder', async (event, folderName) => {
       try {
-        const folderPath = path.join(projectDir, folderName);
+        const folderPath = resolveSafePath(folderName);
         if (fs.existsSync(folderPath)) return { success: false, msg: 'Folder exists' };
         fs.mkdirSync(folderPath, { recursive: true });
         return { success: true, path: folderPath };
@@ -451,7 +488,12 @@ app.on('ready', () => {
       }
 
       if (query && rootPath) {
-        searchDir(rootPath);
+        try {
+          const safeRoot = resolveSafePath(rootPath);
+          searchDir(safeRoot);
+        } catch (e) {
+          console.error('Search aborted:', e.message);
+        }
       }
 
       return results;
@@ -465,9 +507,10 @@ app.on('ready', () => {
       return new Promise((resolve) => {
         // Save file
         try {
-          fs.writeFileSync(filePath, code, 'utf-8');
+          const safePath = resolveSafePath(filePath);
+          fs.writeFileSync(safePath, code, 'utf-8');
         } catch (e) {
-          return resolve({ stdout: "", stderr: "Failed to save file before execution." });
+          return resolve({ stdout: "", stderr: `Access Denied or Save Error: ${e.message}` });
         }
 
         let cmd;
@@ -613,63 +656,83 @@ app.on('ready', () => {
     // Git/GitHub Handlers
     ipcMain.handle('git:status', async (event, repoPath) => {
       return new Promise((resolve) => {
-        exec('git status --porcelain', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message });
-          } else {
-            const changes = stdout.split('\n').filter(line => line.trim()).map(line => {
-              const status = line.substring(0, 2).trim();
-              const file = line.substring(3);
-              return { status, file };
-            });
-            resolve({ success: true, changes });
-          }
-        });
+        try {
+          const safePath = resolveSafePath(repoPath);
+          exec('git status --porcelain', { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              const changes = stdout.split('\n').filter(line => line.trim()).map(line => {
+                const status = line.substring(0, 2).trim();
+                const file = line.substring(3);
+                return { status, file };
+              });
+              resolve({ success: true, changes });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
       });
     });
     console.log('✅ Registered: git:status');
 
     ipcMain.handle('git:branch', async (event, repoPath) => {
       return new Promise((resolve) => {
-        exec('git branch --show-current', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message, branch: 'main' });
-          } else {
-            resolve({ success: true, branch: stdout.trim() || 'main' });
-          }
-        });
+        try {
+          const safePath = resolveSafePath(repoPath);
+          exec('git branch --show-current', { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message, branch: 'main' });
+            } else {
+              resolve({ success: true, branch: stdout.trim() || 'main' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message, branch: 'main' });
+        }
       });
     });
     console.log('✅ Registered: git:branch');
 
     ipcMain.handle('git:branches', async (event, repoPath) => {
       return new Promise((resolve) => {
-        exec('git branch -a', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message, branches: [] });
-          } else {
-            const branches = stdout.split('\n')
-              .filter(line => line.trim())
-              .map(line => ({
-                name: line.replace('*', '').trim(),
-                current: line.startsWith('*')
-              }));
-            resolve({ success: true, branches });
-          }
-        });
+        try {
+          const safePath = resolveSafePath(repoPath);
+          exec('git branch -a', { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message, branches: [] });
+            } else {
+              const branches = stdout.split('\n')
+                .filter(line => line.trim())
+                .map(line => ({
+                  name: line.replace('*', '').trim(),
+                  current: line.startsWith('*')
+                }));
+              resolve({ success: true, branches });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message, branches: [] });
+        }
       });
     });
     console.log('✅ Registered: git:branches');
 
     ipcMain.handle('git:init', async (event, repoPath) => {
       return new Promise((resolve) => {
-        exec('git init', { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message });
-          } else {
-            resolve({ success: true, message: 'Repository initialized' });
-          }
-        });
+        try {
+          const safePath = resolveSafePath(repoPath);
+          exec('git init', { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'Repository initialized' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
       });
     });
     console.log('✅ Registered: git:init');
@@ -690,66 +753,86 @@ app.on('ready', () => {
 
     ipcMain.handle('git:add', async (event, { files, repoPath }) => {
       return new Promise((resolve) => {
-        const fileList = files.join(' ');
-        exec(`git add ${fileList}`, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message });
-          } else {
-            resolve({ success: true, message: 'Files staged' });
-          }
-        });
+        try {
+          const safePath = resolveSafePath(repoPath);
+          const fileList = files.join(' ');
+          exec(`git add ${fileList}`, { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'Files staged' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
       });
     });
     console.log('✅ Registered: git:add');
 
     ipcMain.handle('git:commit', async (event, { message, repoPath }) => {
       return new Promise((resolve) => {
-        exec(`git commit -m "${message}"`, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message });
-          } else {
-            resolve({ success: true, message: 'Changes committed' });
-          }
-        });
+        try {
+          const safePath = resolveSafePath(repoPath);
+          exec(`git commit -m "${message}"`, { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'Changes committed' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
       });
     });
     console.log('✅ Registered: git:commit');
 
     ipcMain.handle('git:push', async (event, { remote, branch, repoPath }) => {
       return new Promise((resolve) => {
-        // FIX: Added -u to set upstream tracking, otherwise subsequent pulls fail
-        const targetRemote = remote || 'origin';
-        const targetBranch = branch || 'main';
-        const cmd = `git push -u ${targetRemote} ${targetBranch}`;
+        try {
+          const safePath = resolveSafePath(repoPath);
+          // FIX: Added -u to set upstream tracking, otherwise subsequent pulls fail
+          const targetRemote = remote || 'origin';
+          const targetBranch = branch || 'main';
+          const cmd = `git push -u ${targetRemote} ${targetBranch}`;
 
-        console.log(`Executing: ${cmd}`);
+          console.log(`Executing: ${cmd}`);
 
-        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            // Send back stderr because git often puts status info there
-            resolve({ success: false, error: stderr || error.message });
-          } else {
-            resolve({ success: true, message: 'Changes pushed to remote' });
-          }
-        });
+          exec(cmd, { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              // Send back stderr because git often puts status info there
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'Changes pushed to remote' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
       });
     });
 
     ipcMain.handle('git:pull', async (event, { remote, branch, repoPath }) => {
       return new Promise((resolve) => {
-        const targetRemote = remote || 'origin';
-        const targetBranch = branch || 'main';
-        const cmd = `git pull ${targetRemote} ${targetBranch}`;
+        try {
+          const safePath = resolveSafePath(repoPath);
+          const targetRemote = remote || 'origin';
+          const targetBranch = branch || 'main';
+          const cmd = `git pull ${targetRemote} ${targetBranch}`;
 
-        console.log(`Executing: ${cmd}`);
+          console.log(`Executing: ${cmd}`);
 
-        exec(cmd, { cwd: repoPath || projectDir }, (error, stdout, stderr) => {
-          if (error) {
-            resolve({ success: false, error: stderr || error.message });
-          } else {
-            resolve({ success: true, message: 'Changes pulled from remote' });
-          }
-        });
+          exec(cmd, { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'Changes pulled from remote' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
       });
     });
 
@@ -938,8 +1021,8 @@ app.on('ready', () => {
         const selectedPath = filePaths[0];
 
         // Update the project directory
-        projectDir = selectedPath;
-        console.log('📁 Project directory updated to:', projectDir);
+        projectDir = resolveSafePath(selectedPath);
+        console.log('📁 Project directory updated to (restricted):', projectDir);
 
         // Read the folder structure recursively
         const results = [];

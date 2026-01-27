@@ -12,12 +12,12 @@ interface CodeEditorProps {
   onCursorChange: (line: number, col: number) => void;
   isActive: boolean;
   onFocus: () => void;
-  onProblemsDetected?: (problems: Array<{message: string; line: number; source: string; type: 'error' | 'warning'; column?: number}>) => void;
+  onProblemsDetected?: (problems: Array<{ message: string; line: number; source: string; type: 'error' | 'warning'; column?: number }>) => void;
   editorRef?: React.MutableRefObject<any>;
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ 
-  code, onChange, selectedFile, onSave, onRun, onCursorChange, isActive, onFocus, onProblemsDetected, editorRef    
+const CodeEditor: React.FC<CodeEditorProps> = ({
+  code, onChange, selectedFile, onSave, onRun, onCursorChange, isActive, onFocus, onProblemsDetected, editorRef
 }) => {
   const internalEditorRef = useRef<any>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -42,31 +42,31 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   // AI-powered code fix generator
   const generateAIFix = async (errorMessage: string, line: number, currentCode: string): Promise<string | null> => {
     setIsGeneratingFix(true);
-    
+
     try {
       // Simulate AI processing (in production, this would call an AI API)
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const lines = currentCode.split('\n');
       const errorLine = lines[line - 1];
-      
+
       // Smart fix generation based on error patterns
       if (errorMessage.includes('is not defined') || errorMessage.includes('undefined')) {
         const match = errorMessage.match(/'([^']+)'/);
         const varName = match ? match[1] : 'variable';
-        
+
         // Add variable declaration
         if (language === 'javascript' || language === 'typescript') {
           lines.splice(line - 1, 0, `const ${varName} = null; // Auto-fixed: Added missing declaration`);
         } else if (language === 'python') {
           lines.splice(line - 1, 0, `${varName} = None  # Auto-fixed: Added missing declaration`);
         }
-      } 
+      }
       else if (errorMessage.includes('missing') && errorMessage.includes('import')) {
         // Add missing import
         const match = errorMessage.match(/'([^']+)'/);
         const moduleName = match ? match[1] : 'module';
-        
+
         if (language === 'javascript' || language === 'typescript') {
           lines.unshift(`import ${moduleName} from '${moduleName}'; // Auto-fixed: Added missing import`);
         } else if (language === 'python') {
@@ -91,7 +91,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         // Generic fix: Add a comment
         lines[line - 1] = errorLine + '  // TODO: Fix - ' + errorMessage;
       }
-      
+
       return lines.join('\n');
     } catch (error) {
       console.error('Error generating fix:', error);
@@ -103,11 +103,11 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     internalEditorRef.current = editor;
-    
+
     if (editorRef) {
       editorRef.current = editor;
     }
-    
+
     editor.onDidChangeCursorPosition((e: any) => {
       onCursorChange(e.position.lineNumber, e.position.column);
     });
@@ -117,13 +117,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     const monacoCommandListener = (e: any) => {
       const { action, value } = e.detail;
       editor.focus();
-      
-      switch(action) {
+
+      switch (action) {
         case 'revealLine':
           editor.revealLineInCenter(value);
           editor.setPosition({ lineNumber: value, column: 1 });
           break;
-        
+
         // Edit actions
         case 'undo':
           console.log('Undo triggered');
@@ -163,7 +163,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         case 'toggleBlockComment':
           editor.trigger('menu', 'editor.action.blockComment', {});
           break;
-        
+
         // Selection actions
         case 'selectAll':
           editor.trigger('menu', 'editor.action.selectAll', {});
@@ -198,7 +198,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         case 'addCursorsToLineEnds':
           editor.trigger('menu', 'editor.action.insertCursorAtEndOfEachLineSelected', {});
           break;
-        
+
         // Go actions
         case 'goBack':
           // Navigate back in history
@@ -213,7 +213,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           break;
       }
     };
-    
+
     window.addEventListener('monaco-cmd', monacoCommandListener);
 
     // Ensure initial Word Wrap matches storage/context
@@ -256,13 +256,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     const provider = monaco.languages.registerCodeActionProvider(language, {
       provideCodeActions: (model, range) => {
         const actions: any[] = [];
-        
+
         // Get diagnostics at current position
         const markers = monaco.editor.getModelMarkers({ resource: model.uri });
-        const relevantMarkers = markers.filter(m => 
+        const relevantMarkers = markers.filter(m =>
           m.startLineNumber === range.startLineNumber
         );
-        
+
         relevantMarkers.forEach(marker => {
           // Quick Fix action
           actions.push({
@@ -279,7 +279,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
               arguments: [marker.message, marker.startLineNumber]
             }
           });
-          
+
           // Auto-fix with AI action
           actions.push({
             title: `🤖 Auto-fix with AI`,
@@ -293,10 +293,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             }
           });
         });
-        
+
         return {
           actions,
-          dispose: () => {}
+          dispose: () => { }
         };
       }
     });
@@ -311,7 +311,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       run: async (ed: any, ...args: any[]) => {
         const [errorMessage, line] = args;
         const currentCode = ed.getValue();
-        
+
         const fixedCode = await generateAIFix(errorMessage, line, currentCode);
         if (fixedCode) {
           ed.setValue(fixedCode);
@@ -326,7 +326,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     if (model) {
       const handleDiagnosticsChange = () => {
         const diagnostics = monaco.editor.getModelMarkers({ resource: model.uri });
-        
+
         // Always update problems, even if empty (to clear solved errors)
         if (onProblemsDetected) {
           const problems = diagnostics.map(d => ({
@@ -340,10 +340,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           onProblemsDetected(problems);
         }
       };
-      
+
       // Check diagnostics on mount
       setTimeout(handleDiagnosticsChange, 100);
-      
+
       // Listen for marker changes (errors/warnings)
       const markerDisposable = monaco.editor.onDidChangeMarkers((uris) => {
         // Only update if it's our model
@@ -351,13 +351,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           handleDiagnosticsChange();
         }
       });
-      
+
       // Listen for content changes to re-validate
       const contentDisposable = model.onDidChangeContent(() => {
         // Debounce validation
         setTimeout(handleDiagnosticsChange, 300);
       });
-      
+
       return () => {
         markerDisposable.dispose();
         contentDisposable.dispose();
@@ -374,31 +374,43 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       onRun();
     });
-    
+
     // Edit menu shortcuts
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
       editor.trigger('keyboard', 'undo', {});
     });
-    
+
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {
       editor.trigger('keyboard', 'redo', {});
     });
-    
+
     // Note: Cut (Ctrl+X), Copy (Ctrl+C), Paste (Ctrl+V) are handled natively by Monaco
     // We don't override them to ensure clipboard works properly
-    
+
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
       editor.trigger('keyboard', 'actions.find', {});
     });
-    
+
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
       editor.trigger('keyboard', 'editor.action.startFindReplaceAction', {});
     });
-    
+
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
       editor.trigger('keyboard', 'editor.action.commentLine', {});
     });
-    
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => {
+      editorStore.toggleSidebar();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Backquote, () => {
+      editorStore.toggleTerminal();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, metaKey: true }));
+    });
+
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyA, () => {
       editor.trigger('keyboard', 'editor.action.blockComment', {});
     });
@@ -406,7 +418,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     editor.onDidFocusEditorText(() => {
       onFocus();
     });
-    
+
     // Cleanup listener on unmount
     return () => {
       window.removeEventListener('monaco-cmd', monacoCommandListener);
@@ -414,9 +426,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
       height: '100%',
       width: '100%',
       overflow: 'hidden',

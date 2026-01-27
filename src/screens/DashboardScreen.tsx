@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer 
+import {
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer
 } from 'recharts';
 import authService from '../services/authService';
 import SimpleTitlebar from '../components/SimpleTitlebar';
-import '../styles/DashboardScreen.css'; 
+import '../styles/DashboardScreen.css';
 
 // Interface for type safety
 interface UserProfile {
@@ -17,7 +17,7 @@ interface UserProfile {
 const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  
+
   // 🟢 STATE: We only need 'user', I removed the conflicting 'userData'
   const [user, setUser] = useState<UserProfile | null>(null);
 
@@ -50,10 +50,10 @@ const DashboardScreen: React.FC = () => {
     try {
       const res = await authService.getProfile();
       if (res.success && res.user) {
-        setUser({ 
-          name: res.user.name, 
+        setUser({
+          name: res.user.name,
           email: res.user.email,
-          avatar: res.user.avatar 
+          avatar: res.user.avatar
         });
       }
     } catch (e) {
@@ -80,153 +80,154 @@ const DashboardScreen: React.FC = () => {
 
   const handleLogout = async () => {
     await authService.logout();
-    window.location.href = '/'; 
+    window.location.href = '/';
   };
 
   if (loading) return <div className="loading-screen">CONNECTING...</div>;
 
   return (
     <>
-      <SimpleTitlebar />
-      <div className="dashboard-wrapper" style={{ paddingTop: '35px' }}>
-      
-      {/* --- SIDEBAR --- */}
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="logo-icon"><i className="fa-solid fa-bolt"></i></div>
-          <h2>LUMO<span>FLOW</span></h2>
-        </div>
+      <div className="dashboard-wrapper">
 
-        <nav>
-          <button className="nav-item active"><i className="fa-solid fa-chart-line"></i> Dashboard</button>
-          <button className="nav-item"><i className="fa-solid fa-gamepad"></i> Arcade</button>
-          <button className="nav-item" onClick={() => navigate('/editor')}>
-            <i className="fa-solid fa-terminal"></i> Code Editor
-          </button>
-          <button className="nav-item"><i className="fa-solid fa-eye"></i> Visuals</button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item" onClick={() => {
-            sessionStorage.setItem('settingsReferrer', '/dashboard');
-            navigate('/settings');
-          }}>
-            <i className="fa-solid fa-gear"></i> Settings
-          </button>
-          <button className="nav-item logout" onClick={handleLogout}>
-            <i className="fa-solid fa-right-from-bracket"></i> Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* --- MAIN CONTENT --- */}
-      <main className="main-content">
-        
-        {/* HEADER */}
-        <header className="dashboard-header">
-          <div className="header-text">
-            <h1>Hello, <span style={{color:'white'}}>{user?.name || "User"}</span></h1>
-            <p>Your neural network is expanding. Keep flowing.</p>
+        {/* --- SIDEBAR --- */}
+        <aside className="sidebar">
+          <div className="sidebar-brand">
+            <div className="logo-icon"><i className="fa-solid fa-bolt"></i></div>
+            <h2>LUMO<span>FLOW</span></h2>
           </div>
-          
-          <div className="dashboard-right-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div className="level-badge">{stats.level}</div>
-            
-            <div className="dashboard-avatar-container">
-              {/* 🟢 FIX: Uses 'user.avatar' instead of 'userData' (which was undefined) */}
-              <img 
-                src={user?.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'} 
-                alt="Profile" 
-                className="dash-avatar-img" 
-              />
+
+          <nav>
+            <button className="nav-item active"><i className="fa-solid fa-chart-line"></i> Dashboard</button>
+            <button className="nav-item" onClick={() => navigate('/games')}>
+              <i className="fa-solid fa-gamepad"></i> Arcade
+            </button>
+            <button className="nav-item" onClick={() => navigate('/editor')}>
+              <i className="fa-solid fa-terminal"></i> Code Editor
+            </button>
+            <button className="nav-item"><i className="fa-solid fa-eye"></i> Visuals</button>
+          </nav>
+
+          <div className="sidebar-footer">
+            <button className="nav-item" onClick={() => {
+              sessionStorage.setItem('settingsReferrer', '/dashboard');
+              navigate('/settings');
+            }}>
+              <i className="fa-solid fa-gear"></i> Settings
+            </button>
+            <button className="nav-item logout" onClick={handleLogout}>
+              <i className="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+          </div>
+        </aside>
+
+        {/* --- MAIN CONTENT --- */}
+        <main className="main-content">
+
+          {/* HEADER */}
+          <header className="dashboard-header">
+            <div className="header-text">
+              <h1>Hello, <span style={{ color: 'white' }}>{user?.name || "User"}</span></h1>
+              <p>Your neural network is expanding. Keep flowing.</p>
             </div>
-          </div>
-        </header>
 
-        {/* STATS ROW */}
-        <section className="stats-row">
-          <div className="stat-card">
-            <div className="stat-icon cyan"><i className="fa-solid fa-code"></i></div>
-            <h3>{stats.lines}</h3>
-            <p>LINES WRITTEN</p>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon pink"><i className="fa-solid fa-bug-slash"></i></div>
-            <h3>{stats.bugs}</h3>
-            <p>BUGS SQUASHED</p>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon purple"><i className="fa-solid fa-eye"></i></div>
-            <h3>{stats.concepts}</h3>
-            <p>CONCEPTS VISUALIZED</p>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon green"><i className="fa-solid fa-trophy"></i></div>
-            <h3>{stats.score}</h3>
-            <p>ARCADE SCORE</p>
-          </div>
-        </section>
+            <div className="dashboard-right-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div className="level-badge">{stats.level}</div>
 
-        {/* DASHBOARD GRID */}
-        <section className="dashboard-grid">
-          
-          {/* CHART PANEL */}
-          <div className="dashboard-panel">
-            <div className="panel-header">
-              <h3>SKILL MATRIX</h3>
-              <span className="live-tag">Live Analysis</span>
+              <div className="dashboard-avatar-container">
+                {/* 🟢 FIX: Uses 'user.avatar' instead of 'userData' (which was undefined) */}
+                <img
+                  src={user?.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'}
+                  alt="Profile"
+                  className="dash-avatar-img"
+                />
+              </div>
             </div>
-            
-            {/* Added fixed height to prevent Recharts warning */}
-            <div className="chart-container" style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={skillData}>
-                  <PolarGrid stroke="#222" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#888', fontSize: 12, fontWeight:'bold' }} />
-                  <Radar
-                    name="Skills"
-                    dataKey="A"
-                    stroke="#bc13fe"
-                    strokeWidth={3}
-                    fill="#bc13fe"
-                    fillOpacity={0.2}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="focus-area" style={{marginTop: '10px', fontSize:'0.9rem', color:'#888'}}>
-              Focus Area: <span style={{color: '#bc13fe'}}>Debugging Efficiency</span>
-            </div>
-          </div>
+          </header>
 
-          {/* RECENT FLOW LIST */}
-          <div className="dashboard-panel">
-            <div className="panel-header">
-              <h3>RECENT FLOW</h3>
-              <i className="fa-solid fa-clock-rotate-left" style={{color:'#666'}}></i>
+          {/* STATS ROW */}
+          <section className="stats-row">
+            <div className="stat-card">
+              <div className="stat-icon cyan"><i className="fa-solid fa-code"></i></div>
+              <h3>{stats.lines}</h3>
+              <p>LINES WRITTEN</p>
             </div>
-            <div className="activity-list">
-              {recentActivity.map((item) => (
-                <div key={item.id} className="activity-item">
-                  <div 
-                    className="activity-icon" 
-                    style={{ color: item.color, borderColor: item.color }}
-                  >
-                    <i className={`fa-solid ${item.icon}`}></i>
+            <div className="stat-card">
+              <div className="stat-icon pink"><i className="fa-solid fa-bug-slash"></i></div>
+              <h3>{stats.bugs}</h3>
+              <p>BUGS SQUASHED</p>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon purple"><i className="fa-solid fa-eye"></i></div>
+              <h3>{stats.concepts}</h3>
+              <p>CONCEPTS VISUALIZED</p>
+            </div>
+            <div className="stat-card" onClick={() => navigate('/games')} style={{ cursor: 'pointer' }}>
+              <div className="stat-icon green"><i className="fa-solid fa-trophy"></i></div>
+              <h3>{stats.score}</h3>
+              <p>ARCADE SCORE</p>
+            </div>
+          </section>
+
+          {/* DASHBOARD GRID */}
+          <section className="dashboard-grid">
+
+            {/* CHART PANEL */}
+            <div className="dashboard-panel">
+              <div className="panel-header">
+                <h3>SKILL MATRIX</h3>
+                <span className="live-tag">Live Analysis</span>
+              </div>
+
+              {/* Added fixed height to prevent Recharts warning */}
+              <div className="chart-container" style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={skillData}>
+                    <PolarGrid stroke="#222" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#888', fontSize: 12, fontWeight: 'bold' }} />
+                    <Radar
+                      name="Skills"
+                      dataKey="A"
+                      stroke="#bc13fe"
+                      strokeWidth={3}
+                      fill="#bc13fe"
+                      fillOpacity={0.2}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="focus-area" style={{ marginTop: '10px', fontSize: '0.9rem', color: '#888' }}>
+                Focus Area: <span style={{ color: '#bc13fe' }}>Debugging Efficiency</span>
+              </div>
+            </div>
+
+            {/* RECENT FLOW LIST */}
+            <div className="dashboard-panel">
+              <div className="panel-header">
+                <h3>RECENT FLOW</h3>
+                <i className="fa-solid fa-clock-rotate-left" style={{ color: '#666' }}></i>
+              </div>
+              <div className="activity-list">
+                {recentActivity.map((item) => (
+                  <div key={item.id} className="activity-item">
+                    <div
+                      className="activity-icon"
+                      style={{ color: item.color, borderColor: item.color }}
+                    >
+                      <i className={`fa-solid ${item.icon}`}></i>
+                    </div>
+                    <div className="activity-info">
+                      <h4>{item.title}</h4>
+                      <p>{item.type}</p>
+                    </div>
+                    <div className="xp-badge">+{item.xp} XP</div>
                   </div>
-                  <div className="activity-info">
-                    <h4>{item.title}</h4>
-                    <p>{item.type}</p>
-                  </div>
-                  <div className="xp-badge">+{item.xp} XP</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        
-        </section>
-      </main>
-    </div>
+
+          </section>
+        </main>
+      </div>
     </>
   );
 };
