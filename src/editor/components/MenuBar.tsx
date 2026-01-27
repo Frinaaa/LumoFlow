@@ -11,6 +11,8 @@ interface MenuBarProps {
   onSaveAll: () => void;
   onCloseEditor: () => void;
   onCloseFolder: () => void;
+  onNewWindow: () => void;
+  onCloseWindow: () => void;
   autoSave: boolean;
   onToggleAutoSave: () => void;
 }
@@ -24,6 +26,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onSaveAll,
   onCloseEditor,
   onCloseFolder,
+  onNewWindow,
+  onCloseWindow,
   autoSave,
   onToggleAutoSave,
 }) => {
@@ -52,6 +56,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
         {openMenu === 'file' && (
           <div className="menu-dropdown">
             <div className="menu-option" onClick={() => handleMenuClick(onNewFile)}><span>New Text File</span><span className="shortcut">Ctrl+N</span></div>
+            <div className="menu-option" onClick={() => handleMenuClick(onNewWindow)}><span>New Window</span><span className="shortcut">Ctrl+Shift+N</span></div>
+            <hr />
             <div className="menu-option" onClick={() => handleMenuClick(onOpenFile)}><span>Open File...</span><span className="shortcut">Ctrl+O</span></div>
             <div className="menu-option" onClick={() => handleMenuClick(onOpenFolder)}><span>Open Folder...</span><span className="shortcut">Ctrl+K Ctrl+O</span></div>
             <hr />
@@ -63,6 +69,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
             <hr />
             <div className="menu-option" onClick={() => handleMenuClick(onCloseEditor)}><span>Close Editor</span><span className="shortcut">Ctrl+W</span></div>
             <div className="menu-option" onClick={() => handleMenuClick(onCloseFolder)}><span>Close Folder</span><span className="shortcut">Ctrl+K F</span></div>
+            <hr />
+            <div className="menu-option" onClick={() => handleMenuClick(onCloseWindow)}><span>Exit</span><span className="shortcut">Alt+F4</span></div>
           </div>
         )}
       </div>
@@ -110,9 +118,21 @@ const MenuBar: React.FC<MenuBarProps> = ({
             <div className="menu-option" onClick={() => { editorStore.toggleSidebar(); setOpenMenu(null); }}><span>Appearance: Toggle Primary Sidebar</span><span className="shortcut">Ctrl+B</span></div>
             <div className="menu-option" onClick={() => { editorStore.toggleTerminal(); setOpenMenu(null); }}><span>Appearance: Toggle Panel</span><span className="shortcut">Ctrl+`</span></div>
             <hr />
-            <div className="menu-option" onClick={() => { editorStore.setActiveSidebar('Explorer'); setOpenMenu(null); }}><span>Explorer</span><span className="shortcut">Ctrl+Shift+E</span></div>
-            <div className="menu-option" onClick={() => { editorStore.setActiveSidebar('Search'); setOpenMenu(null); }}><span>Search</span><span className="shortcut">Ctrl+Shift+F</span></div>
-            <div className="menu-option" onClick={() => { editorStore.setActiveSidebar('Git'); setOpenMenu(null); }}><span>Source Control</span><span className="shortcut">Ctrl+Shift+G</span></div>
+            <div className="menu-option" onClick={() => {
+              editorStore.setActiveSidebar('Explorer');
+              if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+              setOpenMenu(null);
+            }}><span>Explorer</span><span className="shortcut">Ctrl+Shift+E</span></div>
+            <div className="menu-option" onClick={() => {
+              editorStore.setActiveSidebar('Search');
+              if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+              setOpenMenu(null);
+            }}><span>Search</span><span className="shortcut">Ctrl+Shift+F</span></div>
+            <div className="menu-option" onClick={() => {
+              editorStore.setActiveSidebar('Git');
+              if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+              setOpenMenu(null);
+            }}><span>Source Control</span><span className="shortcut">Ctrl+Shift+G</span></div>
           </div>
         )}
       </div>

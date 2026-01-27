@@ -450,6 +450,7 @@ app.on('ready', () => {
     ipcMain.handle('files:search', async (event, { query, rootPath }) => {
       const results = [];
       const ignoreDirs = new Set(['node_modules', '.git', 'dist', 'build', '.next', '.venv', '__pycache__']);
+      const lowerQuery = query.toLowerCase();
 
       function searchDir(dir) {
         try {
@@ -461,23 +462,39 @@ app.on('ready', () => {
 
             const fullPath = path.join(dir, item);
             const stat = fs.statSync(fullPath);
+            const isFolder = stat.isDirectory();
 
-            if (stat.isDirectory()) {
+            // 1. Check if the name matches (File or Folder)
+            if (item.toLowerCase().includes(lowerQuery)) {
+              results.push({
+                filePath: fullPath,
+                line: 0, // Special line for name match
+                preview: isFolder ? `📁 Folder: ${item}` : `📄 File: ${item}`,
+                isNameMatch: true
+              });
+            }
+
+            if (isFolder) {
               searchDir(fullPath);
             } else {
+              // 2. Search inside file content
               try {
-                const content = fs.readFileSync(fullPath, 'utf-8');
-                const lines = content.split('\n');
+                // Only search content if query is at least 2 chars to avoid massive results
+                if (lowerQuery.length >= 2) {
+                  const content = fs.readFileSync(fullPath, 'utf-8');
+                  const lines = content.split('\n');
 
-                lines.forEach((line, index) => {
-                  if (line.toLowerCase().includes(query.toLowerCase())) {
-                    results.push({
-                      filePath: fullPath,
-                      line: index + 1,
-                      preview: line.trim().substring(0, 100)
-                    });
-                  }
-                });
+                  lines.forEach((line, index) => {
+                    if (line.toLowerCase().includes(lowerQuery)) {
+                      results.push({
+                        filePath: fullPath,
+                        line: index + 1,
+                        preview: line.trim().substring(0, 100),
+                        isNameMatch: false
+                      });
+                    }
+                  });
+                }
               } catch (e) {
                 // Skip binary files
               }
@@ -497,7 +514,12 @@ app.on('ready', () => {
         }
       }
 
-      return results;
+      // Sort: Name matches first, then content matches
+      return results.sort((a, b) => {
+        if (a.isNameMatch && !b.isNameMatch) return -1;
+        if (!a.isNameMatch && b.isNameMatch) return 1;
+        return 0;
+      });
     });
     console.log('✅ Registered: files:search');
 
@@ -578,6 +600,14 @@ app.on('ready', () => {
         });
       });
     });
+    ipcMain.handle('files:getWorkspace', () => {
+      return {
+        path: projectDir,
+        name: path.basename(projectDir)
+      };
+    });
+    console.log('✅ Registered: files:getWorkspace');
+
     // Window Controls - Use BrowserWindow.getFocusedWindow() to get current window
     ipcMain.handle('window:minimize', (event) => {
       console.log('🔵 window:minimize handler called');

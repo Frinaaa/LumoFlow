@@ -237,6 +237,50 @@ export const useFileOperations = () => {
     }
   };
 
+  const openFileDialog = async (): Promise<boolean> => {
+    try {
+      const result = await fileSystemApi.openFileDialog();
+      if (result && !result.canceled && result.filePath) {
+        return await openFile(result.filePath);
+      }
+      return false;
+    } catch (error: any) {
+      editorStore.appendOutputData(`❌ Error: ${error.message}\n`);
+      return false;
+    }
+  };
+
+  const saveFileAs = async (tabId: string): Promise<boolean> => {
+    const tab = editorStore.tabs.find(t => t.id === tabId);
+    if (!tab) return false;
+
+    try {
+      const result = await fileSystemApi.saveFileAs(tab.content);
+      if (result && !result.canceled && result.filePath) {
+        editorStore.appendOutputData(`✅ Saved As: ${result.filePath}\n`);
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      editorStore.appendOutputData(`❌ Error saving as: ${error.message}\n`);
+      return false;
+    }
+  };
+
+  const saveAll = async (): Promise<void> => {
+    const dirtyTabs = editorStore.tabs.filter(t => t.isDirty);
+    if (dirtyTabs.length === 0) {
+      editorStore.appendOutputData(`ℹ️ No unsaved changes.\n`);
+      return;
+    }
+
+    editorStore.appendOutputData(`💾 Saving all files (${dirtyTabs.length})...\n`);
+    for (const tab of dirtyTabs) {
+      await saveFile(tab.id);
+    }
+    editorStore.appendOutputData(`✅ All files saved.\n`);
+  };
+
   return {
     openFile,
     saveFile,
@@ -247,5 +291,8 @@ export const useFileOperations = () => {
     refreshFiles,
     openFolder,
     runCode,
+    openFileDialog,
+    saveFileAs,
+    saveAll,
   };
 };

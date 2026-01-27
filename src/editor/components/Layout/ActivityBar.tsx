@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEditorStore } from '../../stores/editorStore';
 
 interface ActivityBarProps {
   activeSidebar: string;
@@ -8,6 +9,7 @@ interface ActivityBarProps {
 
 const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChange, onNavigate }) => {
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
+  const editorStore = useEditorStore();
 
   const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,9 +36,9 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
 
   return (
     <aside className="activity-bar">
-      <button 
+      <button
         type="button"
-        className="activity-icon home-icon" 
+        className="activity-icon home-icon"
         onClick={handleDashboardClick}
         title="Dashboard"
         onMouseEnter={() => setHoveredIcon('home')}
@@ -48,10 +50,13 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         <i className="fa-solid fa-house"></i>
       </button>
 
-      <button 
+      <button
         type="button"
-        className={`activity-icon ${activeSidebar === 'Explorer' ? 'active' : ''}`} 
-        onClick={() => onSidebarChange('Explorer')} 
+        className={`activity-icon ${activeSidebar === 'Explorer' ? 'active' : ''}`}
+        onClick={() => {
+          onSidebarChange('Explorer');
+          if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+        }}
         title="Explorer"
         onMouseEnter={() => setHoveredIcon('explorer')}
         onMouseLeave={() => setHoveredIcon(null)}
@@ -62,10 +67,13 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         <i className="fa-regular fa-copy"></i>
       </button>
 
-      <button 
+      <button
         type="button"
-        className={`activity-icon ${activeSidebar === 'Search' ? 'active' : ''}`} 
-        onClick={() => onSidebarChange('Search')} 
+        className={`activity-icon ${activeSidebar === 'Search' ? 'active' : ''}`}
+        onClick={() => {
+          onSidebarChange('Search');
+          if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+        }}
         title="Search"
         onMouseEnter={() => setHoveredIcon('search')}
         onMouseLeave={() => setHoveredIcon(null)}
@@ -76,10 +84,13 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         <i className="fa-solid fa-magnifying-glass"></i>
       </button>
 
-      <button 
+      <button
         type="button"
-        className={`activity-icon ${activeSidebar === 'Github' ? 'active' : ''}`} 
-        onClick={() => onSidebarChange('Github')} 
+        className={`activity-icon ${activeSidebar === 'Github' ? 'active' : ''}`}
+        onClick={() => {
+          onSidebarChange('Git'); // Consistency with editorStore
+          if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+        }}
         title="Source Control"
         onMouseEnter={() => setHoveredIcon('github')}
         onMouseLeave={() => setHoveredIcon(null)}
@@ -92,9 +103,9 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
 
       <div style={{ flex: 1 }}></div>
 
-      <button 
+      <button
         type="button"
-        className="activity-icon settings-icon" 
+        className="activity-icon settings-icon"
         onClick={handleSettingsClick}
         title="Settings"
         onMouseEnter={() => setHoveredIcon('settings')}

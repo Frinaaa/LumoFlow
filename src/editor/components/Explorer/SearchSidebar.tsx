@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useFileStore } from '../../stores/fileStore';
+import { useEditorStore } from '../../stores/editorStore';
 import { useFileOperations } from '../../hooks/useFileOperations';
 
 interface SearchResult {
   filePath: string;
   line: number;
   preview: string;
+  isNameMatch?: boolean;
 }
 
 export const SearchSidebar: React.FC = () => {
@@ -15,11 +17,12 @@ export const SearchSidebar: React.FC = () => {
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
   const fileStore = useFileStore();
+  const editorStore = useEditorStore();
   const fileOps = useFileOperations();
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || !fileStore.workspacePath) return;
+    if (!query.trim()) return;
 
     setLoading(true);
     try {
@@ -30,7 +33,9 @@ export const SearchSidebar: React.FC = () => {
       }
       const res = await window.api.searchFiles({ query, rootPath: fileStore.workspacePath });
       setResults(res || []);
-      setExpandedFiles(new Set());
+      // Auto-expand all files that have matches
+      const allFilePaths = (res || []).map((r: any) => r.filePath);
+      setExpandedFiles(new Set(allFilePaths));
     } catch (error) {
       console.error('Search failed:', error);
       setResults([]);
@@ -100,7 +105,20 @@ export const SearchSidebar: React.FC = () => {
       >
         <input
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => {
+            const val = e.target.value;
+            setQuery(val);
+            if (val.trim()) {
+              window.api.searchFiles({ query: val, rootPath: fileStore.workspacePath || '' })
+                .then((res: any) => {
+                  setResults(res || []);
+                  const allFilePaths = (res || []).map((r: any) => r.filePath);
+                  setExpandedFiles(new Set(allFilePaths));
+                });
+            } else {
+              setResults([]);
+            }
+          }}
           placeholder="Search files..."
           style={{
             flex: 1,
@@ -232,12 +250,20 @@ export const SearchSidebar: React.FC = () => {
                     fileResults.map((result, idx) => (
                       <div
                         key={idx}
-                        onClick={() => fileOps.openFile(result.filePath)}
+                        onClick={() => {
+                          if (result.isNameMatch && result.preview.includes('Folder:')) {
+                            // Folders are handled by revealing in explorer (not yet implemented fully, but we avoid error)
+                            console.log('Folder match clicked:', result.filePath);
+                            editorStore.setActiveSidebar('Explorer');
+                          } else {
+                            fileOps.openFile(result.filePath);
+                          }
+                        }}
                         style={{
-                          padding: '4px 12px 4px 32px',
+                          padding: '6px 12px 6px 32px',
                           cursor: 'pointer',
                           fontSize: '11px',
-                          background: 'transparent',
+                          background: result.isNameMatch ? 'rgba(0, 242, 255, 0.05)' : 'transparent',
                           borderBottom: '1px solid #3c3c3c',
                           transition: 'background 0.1s',
                           display: 'flex',
@@ -248,10 +274,15 @@ export const SearchSidebar: React.FC = () => {
                           e.currentTarget.style.background = 'rgba(0, 242, 255, 0.1)';
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.background = result.isNameMatch ? 'rgba(0, 242, 255, 0.05)' : 'transparent';
                         }}
                       >
-                        <span style={{ color: '#888' }}>Line {result.line}</span>
+                        <span style={{
+                          color: result.isNameMatch ? '#00f2ff' : '#888',
+                          fontWeight: result.isNameMatch ? '600' : 'normal'
+                        }}>
+                          {result.isNameMatch ? 'Exact Name Match' : `Line ${result.line}`}
+                        </span>
                         <span
                           style={{
                             color: '#ccc',
@@ -259,6 +290,7 @@ export const SearchSidebar: React.FC = () => {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             fontFamily: 'monospace',
+                            fontSize: result.isNameMatch ? '12px' : '11px'
                           }}
                         >
                           {result.preview}

@@ -21,15 +21,26 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         await fileOps.createFile('untitled.js');
         break;
       case 'openFile':
-        // This will be handled by the file dialog in EditorLayout
+        const fileResult = await fileOps.openFileDialog();
         break;
       case 'openFolder':
-        // This will be handled by the folder dialog in EditorLayout
+        await fileOps.openFolder();
         break;
-      case 'saveAs':
+      case 'save':
         if (editorStore.activeTabId) {
           await fileOps.saveFile(editorStore.activeTabId);
         }
+        break;
+      case 'saveAs':
+        if (editorStore.activeTabId) {
+          const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
+          if (activeTab) {
+            await fileOps.saveFileAs(activeTab.id);
+          }
+        }
+        break;
+      case 'saveAll':
+        await fileOps.saveAll();
         break;
       case 'toggleAutoSave':
         editorStore.toggleAutoSave();
@@ -41,6 +52,16 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         break;
       case 'closeFolder':
         editorStore.closeAllTabs();
+        break;
+      case 'newWindow':
+        if ((window as any).api?.newWindow) {
+          (window as any).api.newWindow();
+        }
+        break;
+      case 'closeWindow':
+        if ((window as any).api?.closeWindow) {
+          (window as any).api.closeWindow();
+        }
         break;
       default:
         break;

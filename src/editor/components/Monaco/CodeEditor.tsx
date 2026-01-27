@@ -202,15 +202,12 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
         // Go actions
         case 'goBack':
-          // Navigate back in history
-          const model = editor.getModel();
-          if (model) {
-            const position = editor.getPosition();
-            if (position && position.lineNumber > 1) {
-              editor.setPosition({ lineNumber: position.lineNumber - 1, column: 1 });
-              editor.revealLineInCenter(position.lineNumber - 1);
-            }
-          }
+          // Simple navigation back
+          editor.trigger('menu', 'cursorUndo', {});
+          break;
+        case 'goForward':
+          // Simple navigation forward
+          editor.trigger('menu', 'cursorRedo', {});
           break;
       }
     };

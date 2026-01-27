@@ -39,8 +39,14 @@ export const EditorLayout: React.FC = () => {
   // Initialize data on mount
   useEffect(() => {
     const init = async () => {
-      // Load files
+      // Load files and sync workspace
       fileOps.refreshFiles();
+      if ((window as any).api?.getWorkspace) {
+        const workspace = await (window as any).api.getWorkspace();
+        if (workspace.path) {
+          fileStore.setWorkspace(workspace.path, workspace.name);
+        }
+      }
 
       // Load git status
       try {
@@ -193,7 +199,14 @@ export const EditorLayout: React.FC = () => {
         >
           <i
             className={`fa-solid fa-copy activity-icon ${editorStore.activeSidebar === 'Explorer' ? 'active' : ''}`}
-            onClick={() => editorStore.setActiveSidebar('Explorer')}
+            onClick={() => {
+              if (editorStore.activeSidebar === 'Explorer' && editorStore.sidebarVisible) {
+                editorStore.toggleSidebar();
+              } else {
+                editorStore.setActiveSidebar('Explorer');
+                if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+              }
+            }}
             style={{
               cursor: 'pointer',
               fontSize: '20px',
@@ -204,7 +217,14 @@ export const EditorLayout: React.FC = () => {
           />
           <i
             className={`fa-solid fa-magnifying-glass activity-icon ${editorStore.activeSidebar === 'Search' ? 'active' : ''}`}
-            onClick={() => editorStore.setActiveSidebar('Search')}
+            onClick={() => {
+              if (editorStore.activeSidebar === 'Search' && editorStore.sidebarVisible) {
+                editorStore.toggleSidebar();
+              } else {
+                editorStore.setActiveSidebar('Search');
+                if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+              }
+            }}
             style={{
               cursor: 'pointer',
               fontSize: '20px',
@@ -215,7 +235,14 @@ export const EditorLayout: React.FC = () => {
           />
           <i
             className={`fa-solid fa-code-branch activity-icon ${editorStore.activeSidebar === 'Git' ? 'active' : ''}`}
-            onClick={() => editorStore.setActiveSidebar('Git')}
+            onClick={() => {
+              if (editorStore.activeSidebar === 'Git' && editorStore.sidebarVisible) {
+                editorStore.toggleSidebar();
+              } else {
+                editorStore.setActiveSidebar('Git');
+                if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+              }
+            }}
             style={{
               cursor: 'pointer',
               fontSize: '20px',
