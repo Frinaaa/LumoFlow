@@ -166,7 +166,7 @@ const DashboardScreen: React.FC = () => {
               <h3>{stats.concepts}</h3>
               <p>CONCEPTS VISUALIZED</p>
             </div>
-            <div className="stat-card" onClick={() => navigate('/games')} style={{ cursor: 'pointer' }}>
+            <div className="stat-card">
               <div className="stat-icon green"><i className="fa-solid fa-trophy"></i></div>
               <h3>{stats.score}</h3>
               <p>ARCADE SCORE</p>

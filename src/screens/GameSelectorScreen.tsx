@@ -112,7 +112,7 @@ const GameSelectorScreen: React.FC = () => {
     <div className="game-selector-wrapper" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="spotlight"></div>
 
-      <button className="gs-back-btn" onClick={() => navigate('/editor')} title="Back to Editor">
+      <button className="gs-back-btn" onClick={() => navigate(-1)} title="Back">
         <i className="fa-solid fa-arrow-left"></i>
       </button>
 

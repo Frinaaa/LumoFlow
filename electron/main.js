@@ -1116,6 +1116,19 @@ app.on('ready', () => {
       };
     });
     console.log('✅ Registered: system:getUserDirectories');
+
+    // Shell Handler - Open External URLs
+    ipcMain.handle('shell:openExternal', async (event, url) => {
+      try {
+        await shell.openExternal(url);
+        return { success: true };
+      } catch (error) {
+        console.error('Error opening external URL:', error);
+        return { success: false, error: error.message };
+      }
+    });
+    console.log('✅ Registered: shell:openExternal');
+
     console.log('✅ Registered: dialog:saveAs');
 
     console.log('✅ All IPC handlers registered successfully!');
