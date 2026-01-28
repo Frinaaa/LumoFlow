@@ -51,3 +51,10 @@ export type Theme = 'dark' | 'light';
 export type WordWrap = 'on' | 'off';
 export type SidebarView = 'Explorer' | 'Search' | 'Git' | 'NPM' | 'Extensions';
 export type BottomPanelTab = 'Terminal' | 'Output' | 'Debug' | 'Problems';
+
+export interface TerminalSession {
+  id: string;
+  name: string;
+  type: 'powershell' | 'cmd' | 'node' | 'bash';
+  content: string;
+}

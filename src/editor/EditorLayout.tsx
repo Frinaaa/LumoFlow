@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from './stores/editorStore';
 import { useFileStore } from './stores/fileStore';
@@ -33,6 +33,7 @@ export const EditorLayout: React.FC = () => {
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
+  const errorStates = useRef<Record<string, boolean>>({});
 
   const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
 
@@ -97,6 +98,29 @@ export const EditorLayout: React.FC = () => {
       };
     }
   }, [isResizingSidebar, isResizingTerminal]);
+
+  // Auto-run when static errors are resolved
+  useEffect(() => {
+    if (!activeTab) return;
+
+    // Check for static errors specifically for the current file
+    const currentErrors = editorStore.staticProblems.filter(p => p.source === activeTab.fileName && p.type === 'error');
+    const hasErrors = currentErrors.length > 0;
+
+    // Check previous state for THIS tab
+    const hadErrors = errorStates.current[activeTab.id] || false;
+
+    // If we had errors before, and now we don't -> Run Code
+    if (hadErrors && !hasErrors) {
+      // Small debounce to ensure file is saved/ready? 
+      // runCode handles saving if needed? No, runCode runs content.
+      // We'll trigger it immediately as requested.
+      fileOps.runCode(activeTab.id);
+    }
+
+    // Update state map
+    errorStates.current[activeTab.id] = hasErrors;
+  }, [activeTab?.fileName, activeTab?.id, editorStore.staticProblems, fileOps]);
 
   useEffect(() => {
     const handleOpenFile = (e: any) => {
@@ -193,10 +217,22 @@ export const EditorLayout: React.FC = () => {
             flexDirection: 'column',
             alignItems: 'center',
             paddingTop: '10px',
+            paddingBottom: '10px',
             gap: '10px',
             borderRight: '1px solid #1e1e1e',
           }}
         >
+          <i
+            className="fa-solid fa-house activity-icon"
+            onClick={() => navigate('/dashboard')}
+            style={{
+              cursor: 'pointer',
+              fontSize: '20px',
+              color: '#888',
+              transition: 'color 0.2s',
+            }}
+            title="Dashboard"
+          />
           <i
             className={`fa-solid fa-copy activity-icon ${editorStore.activeSidebar === 'Explorer' ? 'active' : ''}`}
             onClick={() => {
@@ -250,6 +286,18 @@ export const EditorLayout: React.FC = () => {
               transition: 'color 0.2s',
             }}
             title="Git"
+          />
+          <i
+            className="fa-solid fa-gear activity-icon"
+            onClick={() => navigate('/settings')}
+            style={{
+              marginTop: 'auto',
+              cursor: 'pointer',
+              fontSize: '20px',
+              color: '#888',
+              transition: 'color 0.2s',
+            }}
+            title="Settings"
           />
         </div>
 
@@ -391,6 +439,7 @@ export const EditorLayout: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   height: '100%',
+                  width: '100%',
                   color: '#888',
                   gap: '16px',
                 }}

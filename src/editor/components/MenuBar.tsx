@@ -15,6 +15,7 @@ interface MenuBarProps {
   onCloseWindow: () => void;
   autoSave: boolean;
   onToggleAutoSave: () => void;
+  onRun?: () => void;
 }
 
 const MenuBar: React.FC<MenuBarProps> = ({
@@ -30,6 +31,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
   onCloseWindow,
   autoSave,
   onToggleAutoSave,
+  onRun,
 }) => {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const editorStore = useEditorStore();
@@ -146,6 +148,25 @@ const MenuBar: React.FC<MenuBarProps> = ({
             <div className="menu-option" onClick={() => dispatchMonacoCmd('goForward')}><span>Forward</span><span className="shortcut">Alt+Right</span></div>
             <hr />
             <div className="menu-option" onClick={() => { window.dispatchEvent(new CustomEvent('quick-open-toggle')); setOpenMenu(null); }}><span>Go to File...</span><span className="shortcut">Ctrl+P</span></div>
+          </div>
+        )}
+      </div>
+
+      {/* RUN */}
+      <div className={`menu-item ${openMenu === 'run' ? 'active' : ''}`}>
+        <button className="menu-trigger" onMouseEnter={() => openMenu && setOpenMenu('run')} onClick={() => toggleMenu('run')}>Run</button>
+        {openMenu === 'run' && (
+          <div className="menu-dropdown">
+            <div className="menu-option" onClick={() => { onRun?.(); setOpenMenu(null); }}><span>Start Debugging</span><span className="shortcut">F5</span></div>
+            <div className="menu-option" onClick={() => { onRun?.(); setOpenMenu(null); }}><span>Run Without Debugging</span><span className="shortcut">Ctrl+F5</span></div>
+            <div className="menu-option" onClick={() => setOpenMenu(null)} style={{ opacity: 0.5 }}><span>Stop Debugging</span><span className="shortcut">Shift+F5</span></div>
+            <div className="menu-option" onClick={() => { onRun?.(); setOpenMenu(null); }}><span>Restart Debugging</span><span className="shortcut">Ctrl+Shift+F5</span></div>
+            <hr />
+            <div className="menu-option" onClick={() => setOpenMenu(null)}><span>Open Configurations</span></div>
+            <div className="menu-option" onClick={() => setOpenMenu(null)}><span>Add Configuration...</span></div>
+            <hr />
+            <div className="menu-option" onClick={() => dispatchMonacoCmd('toggleBreakpoint')}><span>Toggle Breakpoint</span><span className="shortcut">F9</span></div>
+            <div className="menu-option" onClick={() => setOpenMenu(null)} style={{ opacity: 0.5 }}><span>New Breakpoint</span></div>
           </div>
         )}
       </div>

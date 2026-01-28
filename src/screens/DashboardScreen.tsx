@@ -16,10 +16,15 @@ interface UserProfile {
 
 const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  // 🟢 OPTIMIZED: Check cache immediately to skip loading screen
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem('user_info');
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
 
-  // 🟢 STATE: We only need 'user', I removed the conflicting 'userData'
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(!user);
 
   // MOCK DATA FOR VISUALS
   const [stats] = useState({

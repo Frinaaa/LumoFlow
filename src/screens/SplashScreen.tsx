@@ -28,7 +28,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
 
         return newProgress;
       });
-    }, 30);
+    }, 10);
 
     return () => clearInterval(interval);
   }, []);

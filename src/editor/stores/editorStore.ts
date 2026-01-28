@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { EditorTab, Problem, Theme, WordWrap, SidebarView, BottomPanelTab } from '../types';
+import { EditorTab, Problem, Theme, WordWrap, SidebarView, BottomPanelTab, TerminalSession } from '../types';
 
 /**
  * Editor UI State Store
@@ -29,7 +29,8 @@ interface EditorState {
   autoSaveDelay: number;
 
   // Output
-  terminalOutput: string;
+  terminalSessions: TerminalSession[];
+  activeTerminalSessionId: string | null;
   outputData: string;
   debugData: string;
   problems: Problem[];
@@ -62,6 +63,12 @@ interface EditorState {
   toggleWordWrap: () => void;
   toggleAutoSave: () => void;
 
+  // Terminal Actions
+  createTerminalSession: (name?: string, type?: 'powershell' | 'cmd' | 'node' | 'bash') => void;
+  removeTerminalSession: (id: string) => void;
+  setActiveTerminalSession: (id: string) => void;
+  splitTerminal: () => void; // For "Split Terminal" request
+
   // Output Actions
   appendTerminalOutput: (output: string) => void;
   clearTerminalOutput: () => void;
@@ -93,7 +100,9 @@ export const useEditorStore = create<EditorState>()(
       wordWrap: 'off',
       autoSave: false,
       autoSaveDelay: 5000,
-      terminalOutput: '',
+
+      terminalSessions: [{ id: 'default', name: 'PowerShell', type: 'powershell', content: '' }],
+      activeTerminalSessionId: 'default',
       outputData: '',
       debugData: '',
       problems: [],
@@ -202,8 +211,67 @@ export const useEditorStore = create<EditorState>()(
       toggleAutoSave: () => set(state => ({ autoSave: !state.autoSave })),
 
       // Output Actions
-      appendTerminalOutput: (output) => set(state => ({ terminalOutput: state.terminalOutput + output })),
-      clearTerminalOutput: () => set({ terminalOutput: '' }),
+      // Terminal Actions
+      createTerminalSession: (name = 'Terminal', type = 'powershell') => {
+        const newSession: TerminalSession = {
+          id: Date.now().toString(),
+          name,
+          type,
+          content: 'PS C:\\LumoFlow> '
+        };
+        set(state => ({
+          terminalSessions: [...state.terminalSessions, newSession],
+          activeTerminalSessionId: newSession.id
+        }));
+      },
+
+      removeTerminalSession: (id) => {
+        set(state => {
+          const sessions = state.terminalSessions.filter(s => s.id !== id);
+          // If we removed the active one, switch to another
+          let activeId = state.activeTerminalSessionId;
+          if (id === activeId) {
+            activeId = sessions.length > 0 ? sessions[sessions.length - 1].id : null;
+          }
+          if (sessions.length === 0) {
+            // Always keep at least one? Or allow empty?
+            // VS Code allows empty then shows a "create" button.
+            // For simplicity, let's keep one if user deletes the last one, or just allow empty.
+            // Let's allow empty for now, UI should handle it.
+          }
+          return { terminalSessions: sessions, activeTerminalSessionId: activeId };
+        });
+      },
+
+      setActiveTerminalSession: (id) => set({ activeTerminalSessionId: id }),
+
+      splitTerminal: () => {
+        // Functional "Split": just create a new one for now, as splitting view is complex.
+        // We will name it "Split" to differentiate if desired, or just "Terminal".
+        get().createTerminalSession('Split Terminal', 'powershell');
+      },
+
+      // Output Actions
+      appendTerminalOutput: (output) => set(state => {
+        const { terminalSessions, activeTerminalSessionId } = state;
+        if (!activeTerminalSessionId) return {};
+
+        return {
+          terminalSessions: terminalSessions.map(s =>
+            s.id === activeTerminalSessionId ? { ...s, content: s.content + output } : s
+          )
+        };
+      }),
+
+      clearTerminalOutput: () => set(state => {
+        const { terminalSessions, activeTerminalSessionId } = state;
+        if (!activeTerminalSessionId) return {};
+        return {
+          terminalSessions: terminalSessions.map(s =>
+            s.id === activeTerminalSessionId ? { ...s, content: '' } : s
+          )
+        };
+      }),
       appendOutputData: (output) => set(state => ({ outputData: state.outputData + output })),
       clearOutputData: () => set({ outputData: '' }),
       appendDebugData: (output) => set(state => ({ debugData: state.debugData + output })),

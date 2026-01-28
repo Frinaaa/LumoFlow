@@ -83,6 +83,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
             onCloseWindow={() => editorState.onMenuAction?.('closeWindow')}
             autoSave={editorState.autoSave}
             onToggleAutoSave={() => editorState.onMenuAction?.('toggleAutoSave')}
+            onRun={editorState.onRun}
           />
         </div>
       </div>

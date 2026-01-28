@@ -158,10 +158,11 @@ export const useFileOperations = () => {
     if (!tab) return false;
 
     try {
-      // 1. Check for immediate editor-detected errors
-      const currentFileProblems = editorStore.problems.filter(p => p.source === tab.fileName && p.type === 'error');
+      // 1. Check for immediate editor-detected errors (Static only)
+      const currentFileProblems = editorStore.staticProblems.filter(p => p.source === tab.fileName && p.type === 'error');
       if (currentFileProblems.length > 0) {
         editorStore.setActiveBottomTab('Problems');
+        editorStore.clearOutputData(); // Clear previous spam
         editorStore.appendOutputData(`❌ Cannot run: ${currentFileProblems.length} errors detected in ${tab.fileName}. Fix them first!\n`);
         if (!editorStore.terminalVisible) editorStore.toggleTerminal();
         return false;

@@ -15,14 +15,7 @@ const SettingsScreen: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Store the previous location
-  const previousPath = useRef<string>('/dashboard');
 
-  useEffect(() => {
-    // Get the referrer from session storage or default to dashboard
-    const referrer = sessionStorage.getItem('settingsReferrer') || '/dashboard';
-    previousPath.current = referrer;
-  }, []);
 
   // --- FORM STATE ---
   const [formData, setFormData] = useState({
@@ -211,7 +204,7 @@ const SettingsScreen: React.FC = () => {
         setMessage('SYSTEM UPDATED. REDIRECTING...');
         // 1.5s delay to let user see success message before moving
         setTimeout(() => {
-          navigate(previousPath.current);
+          navigate(-1);
         }, 1500);
       } else {
         console.error("Update failed:", res.msg);
@@ -235,7 +228,7 @@ const SettingsScreen: React.FC = () => {
         <div className="settings-brand">
           <i className="fa-solid fa-bolt"></i> LUMO<span>FLOW</span>
         </div>
-        <button className="back-btn" onClick={() => navigate(previousPath.current)}>
+        <button className="back-btn" onClick={() => navigate(-1)}>
           <i className="fa-solid fa-arrow-left"></i> Back
         </button>
       </header>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFileStore } from '../../stores/fileStore';
 import { useEditorStore } from '../../stores/editorStore';
+import { useGitStore } from '../../stores/gitStore';
 import { useFileOperations } from '../../hooks/useFileOperations';
 import { buildFolderTree, getFileIcon } from '../../../utils/utils';
 import { FileTreeItem } from './FileTreeItem';
@@ -9,10 +10,62 @@ import '../../styles/Explorer.css';
 export const FileExplorerSidebar = () => {
   const fileStore = useFileStore();
   const editorStore = useEditorStore();
+  const gitStore = useGitStore(); // Assuming gitStore is available
   const { files, workspaceName, collapseAllFolders } = fileStore;
   const { refreshFiles } = useFileOperations();
   const [isSectionExpanded, setIsSectionExpanded] = useState(true);
   const [isOpenEditorsExpanded, setIsOpenEditorsExpanded] = useState(true);
+  const [isOutlineExpanded, setIsOutlineExpanded] = useState(true);
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(true);
+
+  const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
+
+  // --- PARSE OUTLINE ---
+  const outlineData = React.useMemo(() => {
+    if (!activeTab) return [];
+
+    // Simple regex-based parsing
+    const lines = activeTab.content.split('\n');
+    const symbols: { name: string; kind: string; line: number; icon: string }[] = [];
+
+    lines.forEach((text, i) => {
+      const lineNum = i + 1;
+      const t = text.trim();
+
+      // Classes
+      if (t.match(/^export\s+class\s+(\w+)/) || t.match(/^class\s+(\w+)/)) {
+        symbols.push({ name: RegExp.$1, kind: 'class', line: lineNum, icon: 'fa-cube' });
+      }
+      // Interfaces
+      else if (t.match(/^export\s+interface\s+(\w+)/) || t.match(/^interface\s+(\w+)/)) {
+        symbols.push({ name: RegExp.$1, kind: 'interface', line: lineNum, icon: 'fa-plug' });
+      }
+      // Functions (function tag)
+      else if (t.match(/^export\s+function\s+(\w+)/) || t.match(/^function\s+(\w+)/)) {
+        symbols.push({ name: RegExp.$1, kind: 'function', line: lineNum, icon: 'fa-cube' });
+      }
+      // React Components / Arrow Functions (const X = ...)
+      else if (t.match(/^export\s+const\s+(\w+)\s*:\s*React\.FC/) || t.match(/^const\s+(\w+)\s*:\s*React\.FC/)) {
+        symbols.push({ name: RegExp.$1, kind: 'component', line: lineNum, icon: 'fa-brands fa-react' });
+      }
+      // Variables containing function definitions
+      else if (t.match(/^const\s+(\w+)\s*=\s*(\(|async)/) || t.match(/^export\s+const\s+(\w+)\s*=\s*(\(|async)/)) {
+        symbols.push({ name: RegExp.$1, kind: 'function', line: lineNum, icon: 'fa-cube' });
+      }
+      // CSS Rules (basic)
+      else if (activeTab.fileName.endsWith('.css') && t.match(/^([.#][\w-]+)\s*\{/)) {
+        symbols.push({ name: RegExp.$1, kind: 'class', line: lineNum, icon: 'fa-hashtag' });
+      }
+    });
+
+    return symbols;
+  }, [activeTab?.content, activeTab?.fileName]);
+
+  const handleNavigate = (line: number) => {
+    window.dispatchEvent(new CustomEvent('monaco-cmd', {
+      detail: { action: 'revealLine', value: line }
+    }));
+  };
 
   // Transform flat list to tree structure
   const tree = React.useMemo(() => {
@@ -94,8 +147,8 @@ export const FileExplorerSidebar = () => {
         )}
       </div>
 
-      {/* Workspace Section */}
-      <div className="vs-explorer-section" style={{ borderTop: '1px solid #1e1e1e' }}>
+      {/* Workspace Section - Grows to push others down */}
+      <div className="vs-explorer-section" style={{ borderTop: '1px solid #1e1e1e', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div
           className="vs-explorer-section-header"
           onClick={() => setIsSectionExpanded(!isSectionExpanded)}
@@ -113,7 +166,7 @@ export const FileExplorerSidebar = () => {
         </div>
 
         {isSectionExpanded && (
-          <div className="vs-explorer-tree" style={{ padding: '4px 0' }}>
+          <div className="vs-explorer-tree" style={{ padding: '4px 0', flex: 1, overflowY: 'auto' }}>
             {/* In-place creation at root */}
             {fileStore.isCreatingFile && !fileStore.creatingInFolder && (
               <NewItemInput type="file" depth={1} />
@@ -131,6 +184,100 @@ export const FileExplorerSidebar = () => {
               tree.map(node => (
                 <FileTreeItem key={node.path} node={node} depth={1} />
               ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* OUTLINE SECTION */}
+      <div className="vs-explorer-section" style={{ borderTop: '1px solid #1e1e1e' }}>
+        <div className="vs-explorer-section-header" onClick={() => setIsOutlineExpanded(!isOutlineExpanded)}>
+          <i className={`fa-solid ${isOutlineExpanded ? 'fa-chevron-down' : 'fa-chevron-right'}`}></i>
+          <span>OUTLINE</span>
+        </div>
+        {isOutlineExpanded && (
+          <div style={{ padding: '0', maxHeight: '200px', overflowY: 'auto' }}>
+            {!activeTab ? (
+              <div style={{ padding: '10px 20px', color: '#666', fontSize: '11px', fontStyle: 'italic' }}>
+                No active editor
+              </div>
+            ) : outlineData.length === 0 ? (
+              <div style={{ padding: '10px 20px', color: '#666', fontSize: '11px', fontStyle: 'italic' }}>
+                No symbols found
+              </div>
+            ) : (
+              <div className="outline-list">
+                {outlineData.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="file-item"
+                    style={{ paddingLeft: '20px', fontSize: '12px' }}
+                    onClick={() => handleNavigate(item.line)}
+                  >
+                    <i className={`fa-solid ${item.icon}`} style={{ fontSize: '10px', width: '16px', color: item.kind === 'class' ? '#4ec9b0' : '#dcdcaa' }}></i>
+                    <span>{item.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* TIMELINE SECTION */}
+      <div className="vs-explorer-section" style={{ borderTop: '1px solid #1e1e1e' }}>
+        <div className="vs-explorer-section-header" onClick={() => setIsTimelineExpanded(!isTimelineExpanded)}>
+          <i className={`fa-solid ${isTimelineExpanded ? 'fa-chevron-down' : 'fa-chevron-right'}`}></i>
+          <span>TIMELINE</span>
+        </div>
+        {isTimelineExpanded && (
+          <div style={{ padding: '10px 0', maxHeight: '200px', overflowY: 'auto' }}>
+            {!activeTab ? (
+              <div style={{ padding: '0 20px', color: '#888', fontSize: '11px' }}>No active file</div>
+            ) : (
+              <div className="timeline-list" style={{ paddingLeft: '10px' }}>
+                {/* Current State */}
+                <div className="timeline-item" style={{ display: 'flex', gap: '10px', marginBottom: '15px', position: 'relative' }}>
+                  {/* Timeline Line */}
+                  <div style={{ position: 'absolute', left: '7px', top: '16px', bottom: '-20px', width: '1px', background: '#333' }}></div>
+
+                  <div className="timeline-dot" style={{
+                    width: '14px', height: '14px', borderRadius: '50%',
+                    background: activeTab.isDirty ? '#e2c08d' : '#73c991',
+                    border: '2px solid #252526', zIndex: 1
+                  }}></div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '12px', color: '#fff', fontWeight: '500' }}>Current State</span>
+                    <span style={{ fontSize: '11px', color: activeTab.isDirty ? '#e2c08d' : '#888' }}>
+                      {activeTab.isDirty ? 'Unsaved changes' : 'Saved locally'}
+                    </span>
+                    <span style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>Just now</span>
+                  </div>
+                </div>
+
+                {/* Git / History State */}
+                {gitStore.isRepo && gitStore.changes.some(c => c.file.includes(activeTab.fileName)) ? (
+                  <div className="timeline-item" style={{ display: 'flex', gap: '10px', marginBottom: '15px', position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '7px', top: '16px', bottom: '-20px', width: '1px', background: '#333' }}></div>
+                    <div className="timeline-dot" style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#ff0055', border: '2px solid #252526', zIndex: 1 }}></div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '12px', color: '#ccc' }}>Working Tree</span>
+                      <span style={{ fontSize: '11px', color: '#888' }}>Modified</span>
+                      <span style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>Pending Commit</span>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Baseline */}
+                <div className="timeline-item" style={{ display: 'flex', gap: '10px', position: 'relative' }}>
+                  <div className="timeline-dot" style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#444', border: '2px solid #252526', zIndex: 1 }}></div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '12px', color: '#888' }}>File Created</span>
+                    <span style={{ fontSize: '11px', color: '#555' }}>Original Version</span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}

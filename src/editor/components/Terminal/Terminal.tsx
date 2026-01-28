@@ -45,7 +45,7 @@ const Terminal: React.FC<TerminalProps> = ({
   // --- STATE MANAGEMENT ---
   const editorStore = useEditorStore();
   const [commandInput, setCommandInput] = useState('');
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll
@@ -53,11 +53,15 @@ const Terminal: React.FC<TerminalProps> = ({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [editorStore.terminalOutput, outputData, debugData, activeTab]);
+  }, [editorStore.terminalSessions, outputData, debugData, activeTab, editorStore.activeTerminalSessionId]);
+
+  const activeSession = editorStore.terminalSessions.find(s => s.id === editorStore.activeTerminalSessionId);
 
   const handleCommandSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (commandInput.trim()) {
+      // In a real app, we'd send to the backend for the specific session ID
+      // For now, we simulate echoing to the active session
       editorStore.appendTerminalOutput(`PS C:\\LumoFlow> ${commandInput}\n`);
       onCommand(commandInput);
       setCommandInput('');
@@ -108,7 +112,76 @@ const Terminal: React.FC<TerminalProps> = ({
         <div style={{ flex: 1 }}></div>
 
         {/* TERMINAL TOOLBAR */}
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', color: '#969696' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#969696' }}>
+
+          {/* TERMINAL DROPDOWN & ACTIONS */}
+          {activeTab === 'Terminal' && (
+            <>
+              <div style={{ position: 'relative' }}>
+                <div
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer',
+                    padding: '2px 6px', borderRadius: '3px', background: isDropdownOpen ? '#3c3c3c' : 'transparent'
+                  }}
+                  title="Switch Terminal"
+                >
+                  <i className="fa-solid fa-terminal" style={{ fontSize: '12px' }}></i>
+                  <span style={{ fontSize: '12px' }}>{activeSession?.name || 'Terminal'}</span>
+                  <i className="fa-solid fa-chevron-down" style={{ fontSize: '10px' }}></i>
+                </div>
+
+                {/* DROPDOWN MENU */}
+                {isDropdownOpen && (
+                  <div style={{
+                    position: 'absolute', top: '100%', right: 0, marginTop: '5px',
+                    background: '#252526', border: '1px solid #454545', borderRadius: '4px',
+                    width: '200px', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                  }}>
+                    <div style={menuHeaderStyle}>OPEN TERMINALS</div>
+                    {editorStore.terminalSessions.map(session => (
+                      <div
+                        key={session.id}
+                        onClick={() => { editorStore.setActiveTerminalSession(session.id); setIsDropdownOpen(false); }}
+                        style={{
+                          ...menuItemStyle,
+                          background: session.id === editorStore.activeTerminalSessionId ? '#37373d' : 'transparent',
+                          color: session.id === editorStore.activeTerminalSessionId ? 'white' : '#ccc'
+                        }}
+                      >
+                        <span>
+                          <i className="fa-solid fa-terminal" style={{ marginRight: '8px', fontSize: '10px' }}></i>
+                          {session.name}
+                        </span>
+                        {session.id === editorStore.activeTerminalSessionId && <i className="fa-solid fa-check"></i>}
+                      </div>
+                    ))}
+
+                    <div style={{ height: '1px', background: '#454545', margin: '4px 0' }}></div>
+
+                    <div style={menuItemStyle} onClick={() => { editorStore.createTerminalSession('PowerShell', 'powershell'); setIsDropdownOpen(false); }}>
+                      <span><i className="fa-solid fa-plus" style={{ marginRight: '8px', fontSize: '10px' }}></i>New Terminal</span>
+                    </div>
+                    <div style={menuItemStyle} onClick={() => { editorStore.splitTerminal(); setIsDropdownOpen(false); }}>
+                      <span><i className="fa-solid fa-table-columns" style={{ marginRight: '8px', fontSize: '10px' }}></i>Split Terminal</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ width: '1px', height: '14px', background: '#454545', margin: '0 5px' }}></div>
+
+              <i className="fa-solid fa-plus" onClick={() => editorStore.createTerminalSession('PowerShell', 'powershell')} style={{ cursor: 'pointer', fontSize: '14px' }} title="New Terminal"></i>
+              <i className="fa-solid fa-trash-can"
+                onClick={() => activeSession && editorStore.removeTerminalSession(activeSession.id)}
+                style={{ cursor: 'pointer', fontSize: '14px' }}
+                title="Kill Terminal"
+              ></i>
+
+              <div style={{ width: '1px', height: '14px', background: '#454545', margin: '0 5px' }}></div>
+            </>
+          )}
+
           <i className="fa-solid fa-ban" onClick={handleClear} style={{ cursor: 'pointer', fontSize: '14px' }} title="Clear Output"></i>
           <i className="fa-solid fa-chevron-up" onClick={onMaximize} style={{ cursor: 'pointer', fontSize: '14px' }} title="Toggle Maximize"></i>
           <i className="fa-solid fa-xmark" onClick={onClose} style={{ cursor: 'pointer', fontSize: '16px' }} title="Close Panel"></i>
@@ -147,9 +220,9 @@ const Terminal: React.FC<TerminalProps> = ({
 
         {activeTab === 'Debug Console' && <pre style={{ color: '#ce9178', whiteSpace: 'pre-wrap', margin: 0 }}>{debugData || 'No debug data'}</pre>}
 
-        {activeTab === 'Terminal' && (
+        {activeTab === 'Terminal' && activeSession && (
           <div style={{ color: '#cccccc' }}>
-            <div style={{ whiteSpace: 'pre-wrap' }}>{editorStore.terminalOutput}</div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{activeSession.content}</div>
             <form onSubmit={handleCommandSubmit} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: '#4ec9b0', fontWeight: 'bold' }}>PS C:\LumoFlow{'>'}</span>
               <input
@@ -166,6 +239,20 @@ const Terminal: React.FC<TerminalProps> = ({
                 }}
               />
             </form>
+          </div>
+        )}
+        {activeTab === 'Terminal' && !activeSession && (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+            <p>No active terminal session</p>
+            <button
+              onClick={() => editorStore.createTerminalSession()}
+              style={{
+                background: '#0e639c', color: 'white', border: 'none', padding: '6px 12px',
+                cursor: 'pointer', marginTop: '10px', borderRadius: '2px'
+              }}
+            >
+              Create New Terminal
+            </button>
           </div>
         )}
       </div>
