@@ -101,6 +101,7 @@ export const SearchSidebar: React.FC = () => {
           borderBottom: '1px solid #3c3c3c',
           display: 'flex',
           gap: '8px',
+          minWidth: 0,
         }}
       >
         <input
@@ -122,6 +123,7 @@ export const SearchSidebar: React.FC = () => {
           placeholder="Search files..."
           style={{
             flex: 1,
+            minWidth: 0,
             background: '#3c3c3c',
             border: '1px solid #555',
             borderRadius: '3px',
@@ -143,6 +145,7 @@ export const SearchSidebar: React.FC = () => {
             cursor: 'pointer',
             fontSize: '12px',
             opacity: loading ? 0.6 : 1,
+            flexShrink: 0,
           }}
         >
           <i className="fa-solid fa-magnifying-glass" />

@@ -103,7 +103,7 @@ const DashboardScreen: React.FC = () => {
 
           <nav>
             <button className="nav-item active"><i className="fa-solid fa-chart-line"></i> Dashboard</button>
-            <button className="nav-item" onClick={() => navigate('/games')}>
+            <button className="nav-item" onClick={() => navigate('/games', { state: { from: '/dashboard' } })}>
               <i className="fa-solid fa-gamepad"></i> Arcade
             </button>
             <button className="nav-item" onClick={() => navigate('/editor')}>

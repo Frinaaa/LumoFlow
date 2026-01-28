@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/GameSelectorScreen.css';
 
 const games = [
@@ -12,8 +12,15 @@ const games = [
 
 const GameSelectorScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentIndex, setCurrentIndex] = useState(1); // Default to Logic Puzzle (Index 1)
   const touchStartX = useRef(0);
+
+  // Determine where to go back to
+  const getBackPath = () => {
+    const referrer = location.state?.from || '/dashboard';
+    return referrer;
+  };
 
   const nextCard = () => {
     if (currentIndex < games.length - 1) setCurrentIndex(prev => prev + 1);
@@ -112,7 +119,7 @@ const GameSelectorScreen: React.FC = () => {
     <div className="game-selector-wrapper" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="spotlight"></div>
 
-      <button className="gs-back-btn" onClick={() => navigate(-1)} title="Back">
+      <button className="gs-back-btn" onClick={() => navigate(getBackPath())} title="Back">
         <i className="fa-solid fa-arrow-left"></i>
       </button>
 

@@ -22,7 +22,7 @@ const GamesTab: React.FC = () => {
           alignItems: 'center',
           gap: '8px'
         }}
-        onClick={() => navigate('/games')}
+        onClick={() => navigate('/games', { state: { from: '/editor' } })}
       >
         <i className="fa-solid fa-gamepad"></i>
         Enter Arcade
