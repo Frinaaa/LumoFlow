@@ -16,7 +16,7 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/electron/**',
   ],
-  setupFilesAfterEnv: [],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   globals: {
     'ts-jest': {
       tsconfig: {
