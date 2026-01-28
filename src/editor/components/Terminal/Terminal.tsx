@@ -230,7 +230,7 @@ const Terminal: React.FC<TerminalProps> = ({
           <div style={{ color: '#cccccc' }}>
             <div style={{ whiteSpace: 'pre-wrap' }}>{activeSession.content}</div>
             <form onSubmit={handleCommandSubmit} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#4ec9b0', fontWeight: 'bold' }}>PS C:\LumoFlow{'>'}</span>
+              <span style={{ color: '#00f2ff', fontWeight: 'bold' }}>PS C:\LumoFlow{'>'}</span>
               <input
                 id="terminal-input"
                 autoFocus

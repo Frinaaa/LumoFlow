@@ -238,7 +238,7 @@ const VisualizeTab: React.FC<VisualizeTabProps> = ({ analysisData, currentStep, 
               disabled={currentStep === 0}
               style={{
                 padding: '6px 12px',
-                background: currentStep === 0 ? '#333' : '#0969da',
+                background: currentStep === 0 ? '#333' : '#bc13fe',
                 border: 'none',
                 borderRadius: '4px',
                 color: 'white',
@@ -253,7 +253,7 @@ const VisualizeTab: React.FC<VisualizeTabProps> = ({ analysisData, currentStep, 
               onClick={() => setAutoPlay(!autoPlay)}
               style={{
                 padding: '6px 12px',
-                background: autoPlay ? '#bc13fe' : '#238636',
+                background: autoPlay ? '#00f2ff' : '#bc13fe',
                 border: 'none',
                 borderRadius: '4px',
                 color: 'white',
@@ -269,7 +269,7 @@ const VisualizeTab: React.FC<VisualizeTabProps> = ({ analysisData, currentStep, 
               disabled={currentStep === analysisData.explanation.length - 1}
               style={{
                 padding: '6px 12px',
-                background: currentStep === analysisData.explanation.length - 1 ? '#333' : '#0969da',
+                background: currentStep === analysisData.explanation.length - 1 ? '#333' : '#bc13fe',
                 border: 'none',
                 borderRadius: '4px',
                 color: 'white',

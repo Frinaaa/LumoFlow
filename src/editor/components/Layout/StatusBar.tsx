@@ -28,7 +28,7 @@ export const StatusBar = () => {
   return (
     <div className="vs-status-bar" style={{
       height: '22px',
-      background: errorCount > 0 ? '#cc3333' : '#7b1fa2',
+      background: errorCount > 0 ? '#cc3333' : '#bc13fe',
       color: 'white',
       display: 'flex',
       alignItems: 'center',
@@ -38,18 +38,20 @@ export const StatusBar = () => {
       borderTop: '1px solid #333',
       transition: 'background 0.3s ease',
       cursor: 'default',
-      userSelect: 'none'
+      userSelect: 'none',
+      minWidth: 0,
+      overflow: 'hidden'
     }}>
       {/* LEFT SECTION */}
-      <div style={{ display: 'flex', height: '100%', alignItems: 'center' }}>
+      <div style={{ display: 'flex', height: '100%', alignItems: 'center', minWidth: 0, flex: 1 }}>
         <div
           className="status-item remote"
-          style={{ padding: '0 12px', height: '100%', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)' }}
+          style={{ padding: '0 12px', height: '100%', display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}
         >
           <i className="fa-solid fa-code-remote"></i>
         </div>
 
-        <div className="status-item" style={{ ...statusItemStyle, padding: '0 12px', fontWeight: '500', opacity: 0.9 }}>
+        <div className="status-item" style={{ ...statusItemStyle, padding: '0 12px', fontWeight: '500', opacity: 0.9, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {workspaceName || 'NO FOLDER OPENED'}
         </div>
 
@@ -57,7 +59,7 @@ export const StatusBar = () => {
           <div
             className="status-item clickable"
             onClick={handleGitClick}
-            style={statusItemStyle}
+            style={{ ...statusItemStyle, flexShrink: 0 }}
             title={`${branch}*`}
           >
             <i className="fa-solid fa-code-branch" style={{ marginRight: '4px' }}></i>
@@ -68,7 +70,7 @@ export const StatusBar = () => {
         <div
           className="status-item clickable"
           onClick={handleProblemsClick}
-          style={statusItemStyle}
+          style={{ ...statusItemStyle, flexShrink: 0 }}
           title={`${errorCount} errors, ${warningCount} warnings`}
         >
           <i className="fa-regular fa-circle-xmark" style={{ marginRight: '4px' }}></i>
@@ -79,20 +81,20 @@ export const StatusBar = () => {
       </div>
 
       {/* RIGHT SECTION */}
-      <div style={{ display: 'flex', height: '100%', alignItems: 'center' }}>
-        <div className="status-item" style={statusItemStyle}>
+      <div style={{ display: 'flex', height: '100%', alignItems: 'center', flexShrink: 0, gap: 0 }}>
+        <div className="status-item" style={{ ...statusItemStyle, flexShrink: 0 }}>
           Ln {cursorPosition.line}, Col {cursorPosition.column}
         </div>
-        <div className="status-item" style={statusItemStyle}>
+        <div className="status-item" style={{ ...statusItemStyle, flexShrink: 0 }}>
           Spaces: 2
         </div>
-        <div className="status-item" style={statusItemStyle}>
+        <div className="status-item" style={{ ...statusItemStyle, flexShrink: 0 }}>
           UTF-8
         </div>
-        <div className="status-item clickable" style={statusItemStyle} onClick={() => { }}>
+        <div className="status-item clickable" style={{ ...statusItemStyle, flexShrink: 0 }} onClick={() => { }}>
           {activeTab?.language.toUpperCase() || 'PLAIN TEXT'}
         </div>
-        <div className="status-item clickable" style={{ ...statusItemStyle, padding: '0 12px' }}>
+        <div className="status-item clickable" style={{ ...statusItemStyle, padding: '0 12px', flexShrink: 0 }}>
           <i className="fa-regular fa-bell"></i>
         </div>
       </div>
@@ -103,12 +105,18 @@ export const StatusBar = () => {
           height: 100%;
           display: flex;
           align-items: center;
-          transition: background 0.1s;
           white-space: nowrap;
+          gap: 4px;
+          color: white;
+          min-width: 0;
         }
-        .status-item.clickable:hover {
-          background: rgba(255, 255, 255, 0.2);
-          cursor: pointer;
+        .status-item i {
+          color: white;
+          transition: color 0.1s;
+          flex-shrink: 0;
+        }
+        .status-item.clickable:active i {
+          color: #00f2ff;
         }
       `}</style>
     </div>

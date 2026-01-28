@@ -137,7 +137,7 @@ export const SearchSidebar: React.FC = () => {
           type="submit"
           disabled={loading}
           style={{
-            background: '#0e639c',
+            background: '#bc13fe',
             border: 'none',
             borderRadius: '3px',
             color: '#fff',
