@@ -4,6 +4,7 @@ import '../styles/MenuBar.css';
 
 interface MenuBarProps {
   onNewFile: () => void;
+  onNewFolder?: () => void;
   onOpenFile: () => void;
   onOpenFolder: () => void;
   onSave: () => void;
@@ -20,6 +21,7 @@ interface MenuBarProps {
 
 const MenuBar: React.FC<MenuBarProps> = ({
   onNewFile,
+  onNewFolder,
   onOpenFile,
   onOpenFolder,
   onSave,
@@ -58,6 +60,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
         {openMenu === 'file' && (
           <div className="menu-dropdown">
             <div className="menu-option" onClick={() => handleMenuClick(onNewFile)}><span>New Text File</span><span className="shortcut">Ctrl+N</span></div>
+            <div className="menu-option" onClick={() => handleMenuClick(onNewFolder || (() => { }))}><span>New Folder...</span><span className="shortcut">Ctrl+Alt+N</span></div>
             <div className="menu-option" onClick={() => handleMenuClick(onNewWindow)}><span>New Window</span><span className="shortcut">Ctrl+Shift+N</span></div>
             <hr />
             <div className="menu-option" onClick={() => handleMenuClick(onOpenFile)}><span>Open File...</span><span className="shortcut">Ctrl+O</span></div>

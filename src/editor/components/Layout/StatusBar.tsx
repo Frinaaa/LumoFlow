@@ -1,9 +1,11 @@
 import React from 'react';
 import { useGitStore } from '../../stores/gitStore';
 import { useEditorStore } from '../../stores/editorStore';
+import { useFileStore } from '../../stores/fileStore';
 
 export const StatusBar = () => {
   const { branch, isRepo } = useGitStore();
+  const { workspaceName } = useFileStore();
   const editorStore = useEditorStore();
   const { activeTabId, tabs, problems, setActiveBottomTab, toggleTerminal, setActiveSidebar, toggleSidebar } = editorStore;
 
@@ -48,7 +50,7 @@ export const StatusBar = () => {
         </div>
 
         <div className="status-item" style={{ ...statusItemStyle, padding: '0 12px', fontWeight: '500', opacity: 0.9 }}>
-          {editorStore.workspaceStatus}
+          {workspaceName || 'NO FOLDER OPENED'}
         </div>
 
         {isRepo && (

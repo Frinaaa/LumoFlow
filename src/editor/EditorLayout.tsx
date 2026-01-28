@@ -137,9 +137,40 @@ export const EditorLayout: React.FC = () => {
     };
   }, []);
 
+  // Track chord state (e.g. for Ctrl+K sequences)
+  const [chordState, setChordState] = useState<string | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
+
+      // CHORD HANDLING (Ctrl+K ...)
+      if (chordState === 'ctrl+k') {
+        setChordState(null); // Reset after next key
+        if (e.key === 'o' && isMod) { // Ctrl+K, Ctrl+O -> Open Folder
+          e.preventDefault();
+          fileOps.openFolder();
+          return;
+        }
+        if (e.key === 'f') { // Ctrl+K, F -> Close Folder
+          e.preventDefault();
+          editorStore.closeAllTabs();
+          return;
+        }
+      }
+
+      // START CHORD
+      if (isMod && e.key === 'k') {
+        e.preventDefault();
+        setChordState('ctrl+k');
+        // Optional: Show status "Waiting for second key of chord..."
+        return;
+      }
+      // If we didn't match a chord second key, just continue normal processing but clear chord
+      if (chordState) setChordState(null);
+
+
+      // SINGLE SHORTCUTS
       if (isMod && e.shiftKey && e.key === 'p') {
         e.preventDefault();
         editorStore.toggleCommandPalette();
@@ -148,7 +179,11 @@ export const EditorLayout: React.FC = () => {
         setQuickOpenVisible(true);
       } else if (isMod && e.key === 's') {
         e.preventDefault();
-        if (activeTab) fileOps.saveFile(activeTab.id);
+        if (e.shiftKey) { // Ctrl+Shift+S -> Save As
+          if (activeTab) fileOps.saveFileAs(activeTab.id);
+        } else { // Ctrl+S -> Save
+          if (activeTab) fileOps.saveFile(activeTab.id);
+        }
       } else if (isMod && e.key === 'Enter') {
         e.preventDefault();
         if (activeTab) fileOps.runCode(activeTab.id);
@@ -169,11 +204,66 @@ export const EditorLayout: React.FC = () => {
         e.preventDefault();
         editorStore.setActiveSidebar('Git');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+      } else if (isMod && e.shiftKey && e.key === 'e') {
+        e.preventDefault();
+        editorStore.setActiveSidebar('Explorer');
+        if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+      } else if (isMod && e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        if ((window as any).api?.newWindow) (window as any).api.newWindow();
+      } else if (isMod && !e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        fileOps.createFile('untitled.txt'); // New Text File
+      } else if (isMod && e.key === 'o') {
+        e.preventDefault();
+        fileOps.openFileDialog();
+      } else if (e.altKey && e.key === 'F4') {
+        e.preventDefault();
+        if ((window as any).api?.closeWindow) (window as any).api.closeWindow();
+      } else if (e.key === 'F5') {
+        e.preventDefault();
+        if (activeTab) {
+          // Both F5 and Ctrl+F5 will run code for now
+          fileOps.runCode(activeTab.id);
+        }
+      } else if (isMod && e.altKey && (e.key === 'n' || e.code === 'KeyN')) { // Ctrl+Alt+N -> New Folder
+        e.preventDefault();
+        // Ensure sidebar is visible and set creating folder
+        if (editorStore.activeSidebar !== 'Explorer') editorStore.setActiveSidebar('Explorer');
+        if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+        fileStore.setCreatingInFolder(null);
+        fileStore.setIsCreatingFolder(true);
+      } else if (e.key === 'F9') {
+        // Toggle Breakpoint - send to monaco
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'toggleBreakpoint' } }));
+      }
+
+      // EDIT COMMANDS (Global fallback to editor)
+      if (isMod) {
+        if (e.key === 'z') { // Undo
+          // Don't prevent default if valid input is focused
+          if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'undo' } }));
+        } else if (e.key === 'y') { // Redo
+          if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'redo' } }));
+        } else if (e.key === 'f') { // Find (Shift+F handled above for Search sidebar, this is editor find)
+          if (!e.shiftKey) {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'find' } }));
+          }
+        } else if (e.key === 'h') { // Replace
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'replace' } }));
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab]);
+  }, [activeTab, chordState]);
 
   const handleTerminalCommand = async (cmd: string) => {
     editorStore.appendTerminalOutput(`$ ${cmd}\n`);

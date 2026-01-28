@@ -133,39 +133,45 @@ const Terminal: React.FC<TerminalProps> = ({
 
                 {/* DROPDOWN MENU */}
                 {isDropdownOpen && (
-                  <div style={{
-                    position: 'absolute', top: '100%', right: 0, marginTop: '5px',
-                    background: '#252526', border: '1px solid #454545', borderRadius: '4px',
-                    width: '200px', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-                  }}>
-                    <div style={menuHeaderStyle}>OPEN TERMINALS</div>
-                    {editorStore.terminalSessions.map(session => (
-                      <div
-                        key={session.id}
-                        onClick={() => { editorStore.setActiveTerminalSession(session.id); setIsDropdownOpen(false); }}
-                        style={{
-                          ...menuItemStyle,
-                          background: session.id === editorStore.activeTerminalSessionId ? '#37373d' : 'transparent',
-                          color: session.id === editorStore.activeTerminalSessionId ? 'white' : '#ccc'
-                        }}
-                      >
-                        <span>
-                          <i className="fa-solid fa-terminal" style={{ marginRight: '8px', fontSize: '10px' }}></i>
-                          {session.name}
-                        </span>
-                        {session.id === editorStore.activeTerminalSessionId && <i className="fa-solid fa-check"></i>}
+                  <>
+                    <div
+                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
+                      onClick={() => setIsDropdownOpen(false)}
+                    />
+                    <div style={{
+                      position: 'absolute', top: '100%', right: 0, marginTop: '5px',
+                      background: '#252526', border: '1px solid #454545', borderRadius: '4px',
+                      width: '200px', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    }}>
+                      <div style={menuHeaderStyle}>OPEN TERMINALS</div>
+                      {editorStore.terminalSessions.map(session => (
+                        <div
+                          key={session.id}
+                          onClick={() => { editorStore.setActiveTerminalSession(session.id); setIsDropdownOpen(false); }}
+                          style={{
+                            ...menuItemStyle,
+                            background: session.id === editorStore.activeTerminalSessionId ? '#37373d' : 'transparent',
+                            color: session.id === editorStore.activeTerminalSessionId ? 'white' : '#ccc'
+                          }}
+                        >
+                          <span>
+                            <i className="fa-solid fa-terminal" style={{ marginRight: '8px', fontSize: '10px' }}></i>
+                            {session.name}
+                          </span>
+                          {session.id === editorStore.activeTerminalSessionId && <i className="fa-solid fa-check"></i>}
+                        </div>
+                      ))}
+
+                      <div style={{ height: '1px', background: '#454545', margin: '4px 0' }}></div>
+
+                      <div style={menuItemStyle} onClick={() => { editorStore.createTerminalSession('PowerShell', 'powershell'); setIsDropdownOpen(false); }}>
+                        <span><i className="fa-solid fa-plus" style={{ marginRight: '8px', fontSize: '10px' }}></i>New Terminal</span>
                       </div>
-                    ))}
-
-                    <div style={{ height: '1px', background: '#454545', margin: '4px 0' }}></div>
-
-                    <div style={menuItemStyle} onClick={() => { editorStore.createTerminalSession('PowerShell', 'powershell'); setIsDropdownOpen(false); }}>
-                      <span><i className="fa-solid fa-plus" style={{ marginRight: '8px', fontSize: '10px' }}></i>New Terminal</span>
+                      <div style={menuItemStyle} onClick={() => { editorStore.splitTerminal(); setIsDropdownOpen(false); }}>
+                        <span><i className="fa-solid fa-table-columns" style={{ marginRight: '8px', fontSize: '10px' }}></i>Split Terminal</span>
+                      </div>
                     </div>
-                    <div style={menuItemStyle} onClick={() => { editorStore.splitTerminal(); setIsDropdownOpen(false); }}>
-                      <span><i className="fa-solid fa-table-columns" style={{ marginRight: '8px', fontSize: '10px' }}></i>Split Terminal</span>
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
 

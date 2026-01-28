@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import { useEditorStore } from '../editor/stores/editorStore';
+import { useFileStore } from '../editor/stores/fileStore';
 import { useFileOperations } from '../editor/hooks/useFileOperations';
 
 interface EditorContextType {
@@ -13,12 +14,20 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const editorStore = useEditorStore();
+  const fileStore = useFileStore();
   const fileOps = useFileOperations();
 
   const handleMenuAction = async (action: string) => {
     switch (action) {
       case 'newTextFile':
         await fileOps.createFile('untitled.js');
+        break;
+      case 'newFolder':
+        // Ensure sidebar is visible
+        if (editorStore.activeSidebar !== 'Explorer') editorStore.setActiveSidebar('Explorer');
+        if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+        fileStore.setCreatingInFolder(null); // Create at root
+        fileStore.setIsCreatingFolder(true);
         break;
       case 'openFile':
         const fileResult = await fileOps.openFileDialog();

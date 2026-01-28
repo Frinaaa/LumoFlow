@@ -72,6 +72,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
         <div className="titlebar-menu-wrapper">
           <MenuBar
             onNewFile={() => editorState.onMenuAction?.('newTextFile')}
+            onNewFolder={() => editorState.onMenuAction?.('newFolder')}
             onOpenFile={() => editorState.onMenuAction?.('openFile')}
             onOpenFolder={() => editorState.onMenuAction?.('openFolder')}
             onSave={() => editorState.onSave?.()}

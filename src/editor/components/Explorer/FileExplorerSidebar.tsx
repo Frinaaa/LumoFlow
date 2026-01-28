@@ -154,7 +154,7 @@ export const FileExplorerSidebar = () => {
           onClick={() => setIsSectionExpanded(!isSectionExpanded)}
         >
           <i className={`fa-solid ${isSectionExpanded ? 'fa-chevron-down' : 'fa-chevron-right'}`}></i>
-          <span style={{ textTransform: 'uppercase' }}>{workspaceName || (editorStore.workspaceStatus === 'Folder Opened' ? 'WORKSPACE' : 'NO FOLDER OPENED')}</span>
+          <span style={{ textTransform: 'uppercase' }}>{workspaceName || 'NO FOLDER OPENED'}</span>
           <div className="vs-explorer-toolbar" style={{ marginLeft: 'auto', opacity: 1 }}>
             <div className="explorer-tool-btn" onClick={handleCreateFile} title="New File">
               <i className="fa-solid fa-file-circle-plus"></i>

@@ -127,27 +127,24 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
         // Edit actions
         case 'undo':
-          console.log('Undo triggered');
-          editor.trigger('menu', 'undo', {});
+          editor.focus();
+          editor.trigger('keyboard', 'undo', {});
           break;
         case 'redo':
-          console.log('Redo triggered');
-          editor.trigger('menu', 'redo', {});
+          editor.focus();
+          editor.trigger('keyboard', 'redo', {});
           break;
         case 'cut':
-          console.log('Cut triggered from menu');
           editor.focus();
-          editor.trigger('menu', 'editor.action.clipboardCutAction', {});
+          editor.trigger('keyboard', 'editor.action.clipboardCutAction', {});
           break;
         case 'copy':
-          console.log('Copy triggered from menu');
           editor.focus();
-          editor.trigger('menu', 'editor.action.clipboardCopyAction', {});
+          editor.trigger('keyboard', 'editor.action.clipboardCopyAction', {});
           break;
         case 'paste':
-          console.log('Paste triggered from menu');
           editor.focus();
-          editor.trigger('menu', 'editor.action.clipboardPasteAction', {});
+          editor.trigger('keyboard', 'editor.action.clipboardPasteAction', {});
           break;
         case 'find':
           editor.trigger('menu', 'actions.find', {});
@@ -208,6 +205,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         case 'goForward':
           // Simple navigation forward
           editor.trigger('menu', 'cursorRedo', {});
+          break;
+        case 'toggleBreakpoint':
+          // Try standard debug action, or fallback to glyph margin logic if needed later
+          editor.trigger('menu', 'editor.debug.action.toggleBreakpoint', {});
           break;
       }
     };
