@@ -86,3 +86,30 @@ hr {
   border-top: 1px solid #454545;
   margin: 4px 0;
 }
+
+
+/* Find and Replace options with icons */
+.menu-option.find-option i,
+.menu-option.replace-option i {
+  margin-right: 8px;
+  font-size: 12px;
+}
+
+.menu-option.find-option i {
+  color: #00f2ff;
+}
+
+.menu-option.replace-option i {
+  color: #bc13fe;
+}
+
+.menu-option.find-option:hover i,
+.menu-option.replace-option:hover i {
+  color: #ffffff;
+}
+
+.menu-option.find-option span:first-child,
+.menu-option.replace-option span:first-child {
+  display: flex;
+  align-items: center;
+}

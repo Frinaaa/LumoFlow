@@ -390,6 +390,115 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       editor.trigger('keyboard', 'editor.action.startFindReplaceAction', {});
     });
 
+    // Escape key to close find widget
+    editor.addCommand(monaco.KeyCode.Escape, () => {
+      const findController = editor.getContribution('editor.contrib.findController');
+      if (findController && findController.getState()?.isRevealed) {
+        findController.closeFindWidget();
+      }
+    });
+
+    // Register custom close find widget action
+    editor.addAction({
+      id: 'editor.action.closeFindWidget',
+      label: 'Close Find Widget',
+      keybindings: [monaco.KeyCode.Escape],
+      run: (ed: any) => {
+        const findController = ed.getContribution('editor.contrib.findController');
+        if (findController) {
+          findController.closeFindWidget();
+        }
+      }
+    });
+
+    // Simple and direct approach to handle find widget close
+    const handleFindWidgetClose = () => {
+      // Wait for the widget to be rendered
+      setTimeout(() => {
+        const findWidget = document.querySelector('.monaco-editor .find-widget') as HTMLElement;
+        if (findWidget && !findWidget.hasAttribute('data-close-fixed')) {
+          findWidget.setAttribute('data-close-fixed', 'true');
+          
+          // Use event delegation on the entire find widget
+          findWidget.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            
+            // Check if clicked element is a close button
+            if (target.matches('.codicon-widget-close, .codicon-close') ||
+                target.closest('.codicon-widget-close, .codicon-close') ||
+                target.getAttribute('title') === 'Close' ||
+                target.getAttribute('aria-label') === 'Close') {
+              
+              console.log('Close button clicked - forcing widget close');
+              
+              // Prevent default Monaco behavior
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              
+              // Force close the widget
+              const findController = editor.getContribution('editor.contrib.findController');
+              if (findController) {
+                try {
+                  // Method 1: Use Monaco's API
+                  findController.closeFindWidget();
+                  
+                  // Method 2: Hide the widget directly
+                  findWidget.style.display = 'none';
+                  
+                  // Method 3: Remove from DOM temporarily
+                  setTimeout(() => {
+                    if (findWidget.style.display === 'none') {
+                      findWidget.style.display = '';
+                    }
+                  }, 50);
+                  
+                } catch (error) {
+                  console.error('Error closing find widget:', error);
+                  // Fallback: just hide it
+                  findWidget.style.display = 'none';
+                }
+              }
+            }
+          }, true); // Use capture phase
+        }
+      }, 300);
+    };
+
+    // Hook into Monaco's find actions
+    const originalAddAction = editor.addAction;
+    editor.addAction = function(descriptor: any) {
+      const result = originalAddAction.call(this, descriptor);
+      if (descriptor.id && descriptor.id.includes('find')) {
+        handleFindWidgetClose();
+      }
+      return result;
+    };
+
+    // Listen for keyboard shortcuts that open find
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+      editor.trigger('keyboard', 'actions.find', {});
+      handleFindWidgetClose();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
+      editor.trigger('keyboard', 'editor.action.startFindReplaceAction', {});
+      handleFindWidgetClose();
+    });
+
+    // Also handle menu-triggered find
+    const menuCommandListener = (e: any) => {
+      const { action } = e.detail;
+      if (action === 'find' || action === 'replace') {
+        handleFindWidgetClose();
+      }
+    };
+    
+    window.addEventListener('monaco-cmd', menuCommandListener);
+
+    // Initial setup
+    handleFindWidgetClose();
+
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
       editor.trigger('keyboard', 'editor.action.commentLine', {});
     });
@@ -417,6 +526,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     // Cleanup listener on unmount
     return () => {
       window.removeEventListener('monaco-cmd', monacoCommandListener);
+      window.removeEventListener('monaco-cmd', menuCommandListener);
     };
   };
 

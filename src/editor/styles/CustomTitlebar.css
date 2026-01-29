@@ -182,3 +182,47 @@
   background-color: #e81123;
   color: white;
 }
+
+
+/* Monaco Find Widget Positioning - Move below breadcrumb */
+.monaco-editor .find-widget {
+  top: 50px !important;
+  z-index: 100 !important;
+  pointer-events: auto !important;
+  position: absolute !important;
+}
+
+/* Ensure all find widget buttons are clickable */
+.monaco-editor .find-widget .button,
+.monaco-editor .find-widget .codicon,
+.monaco-editor .find-widget input,
+.monaco-editor .find-widget .monaco-action-bar {
+  pointer-events: auto !important;
+}
+
+/* Ensure close button works - target all possible close button selectors */
+.monaco-editor .find-widget .codicon-widget-close,
+.monaco-editor .find-widget .codicon-close,
+.monaco-editor .find-widget [title="Close"],
+.monaco-editor .find-widget [aria-label="Close"] {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.monaco-editor .find-widget .codicon-widget-close:hover,
+.monaco-editor .find-widget .codicon-close:hover,
+.monaco-editor .find-widget [title="Close"]:hover,
+.monaco-editor .find-widget [aria-label="Close"]:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Ensure breadcrumb doesn't cover find widget */
+.monaco-editor .breadcrumbs-control {
+  z-index: 50 !important;
+}

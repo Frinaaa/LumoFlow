@@ -104,35 +104,64 @@ export const SearchSidebar: React.FC = () => {
           minWidth: 0,
         }}
       >
-        <input
-          value={query}
-          onChange={e => {
-            const val = e.target.value;
-            setQuery(val);
-            if (val.trim()) {
-              window.api.searchFiles({ query: val, rootPath: fileStore.workspacePath || '' })
-                .then((res: any) => {
-                  setResults(res || []);
-                  const allFilePaths = (res || []).map((r: any) => r.filePath);
-                  setExpandedFiles(new Set(allFilePaths));
-                });
-            } else {
-              setResults([]);
-            }
-          }}
-          placeholder="Search files..."
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: '#3c3c3c',
-            border: '1px solid #555',
-            borderRadius: '3px',
-            color: '#ccc',
-            padding: '6px 8px',
-            fontSize: '12px',
-            outline: 'none',
-          }}
-        />
+        <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+          <input
+            value={query}
+            onChange={e => {
+              const val = e.target.value;
+              setQuery(val);
+              if (val.trim()) {
+                window.api.searchFiles({ query: val, rootPath: fileStore.workspacePath || '' })
+                  .then((res: any) => {
+                    setResults(res || []);
+                    const allFilePaths = (res || []).map((r: any) => r.filePath);
+                    setExpandedFiles(new Set(allFilePaths));
+                  });
+              } else {
+                setResults([]);
+              }
+            }}
+            placeholder="Search files..."
+            style={{
+              width: '100%',
+              background: '#3c3c3c',
+              border: '1px solid #555',
+              borderRadius: '3px',
+              color: '#ccc',
+              padding: '6px 28px 6px 8px',
+              fontSize: '12px',
+              outline: 'none',
+            }}
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setResults([]);
+                setExpandedFiles(new Set());
+              }}
+              style={{
+                position: 'absolute',
+                right: '4px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'transparent',
+                border: 'none',
+                color: '#888',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+              }}
+              title="Clear search"
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+          )}
+        </div>
         <button
           type="submit"
           disabled={loading}
