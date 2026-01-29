@@ -1,0 +1,129 @@
+/* Container */
+.live-canvas-container {
+  padding: 20px;
+  background: #0e0e10;
+  border-radius: 8px;
+  border: 1px solid #333;
+  margin-bottom: 20px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.live-header {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #888;
+  letter-spacing: 1px;
+}
+
+/* --- ARRAY STYLES --- */
+.array-items {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.array-bracket {
+  font-size: 40px;
+  color: #fff;
+  font-weight: bold;
+}
+
+.data-box {
+  width: 50px;
+  height: 50px;
+  background: #1e1e1e;
+  border: 2px solid #ffd700; /* Yellow like JS logo */
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 18px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.data-box.existing {
+  opacity: 0.7;
+}
+
+/* The Magic Animation for Push */
+.data-box.new-item-pop {
+  background: #00f2ff; /* Neon Cyan */
+  color: #000;
+  border-color: #fff;
+  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0) translateY(-50px); opacity: 0; }
+  70% { transform: scale(1.2) translateY(0); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* --- VARIABLE STYLES --- */
+.memory-box-container {
+  text-align: center;
+}
+.var-label { color: #bc13fe; font-size: 14px; margin-bottom: 5px; font-weight: bold; }
+.memory-box {
+  width: 100px;
+  height: 100px;
+  border: 3px solid #bc13fe;
+  background: rgba(188, 19, 254, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  animation: borderFlash 1s infinite alternate;
+}
+.memory-value {
+  font-size: 24px;
+  color: #fff;
+  font-family: monospace;
+}
+
+@keyframes borderFlash {
+  from { box-shadow: 0 0 5px #bc13fe; }
+  to { box-shadow: 0 0 20px #bc13fe; }
+}
+
+/* --- CSS FLEX STYLES --- */
+.flex-container-demo {
+  width: 250px;
+  height: 150px;
+  border: 2px dashed #666;
+  background: #1a1a1a;
+  display: flex;
+  border-radius: 8px;
+  transition: all 0.5s ease;
+}
+.flex-item-demo {
+  width: 40px;
+  height: 40px;
+  margin: 5px;
+  background: #ff0055;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.code-caption {
+  margin-top: 20px;
+  color: #888;
+  font-size: 12px;
+  font-family: monospace;
+}
+.highlight { color: #00f2ff; font-weight: bold; }

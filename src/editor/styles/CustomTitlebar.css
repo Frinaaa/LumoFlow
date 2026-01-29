@@ -184,45 +184,172 @@
 }
 
 
-/* Monaco Find Widget Positioning - Move below breadcrumb */
+/* Monaco Find Widget - Completely Hidden */
 .monaco-editor .find-widget {
-  top: 50px !important;
-  z-index: 100 !important;
-  pointer-events: auto !important;
-  position: absolute !important;
-}
-
-/* Ensure all find widget buttons are clickable */
-.monaco-editor .find-widget .button,
-.monaco-editor .find-widget .codicon,
-.monaco-editor .find-widget input,
-.monaco-editor .find-widget .monaco-action-bar {
-  pointer-events: auto !important;
-}
-
-/* Ensure close button works - target all possible close button selectors */
-.monaco-editor .find-widget .codicon-widget-close,
-.monaco-editor .find-widget .codicon-close,
-.monaco-editor .find-widget [title="Close"],
-.monaco-editor .find-widget [aria-label="Close"] {
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  background: transparent !important;
-  border: none !important;
-  padding: 4px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.monaco-editor .find-widget .codicon-widget-close:hover,
-.monaco-editor .find-widget .codicon-close:hover,
-.monaco-editor .find-widget [title="Close"]:hover,
-.monaco-editor .find-widget [aria-label="Close"]:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Ensure breadcrumb doesn't cover find widget */
 .monaco-editor .breadcrumbs-control {
   z-index: 50 !important;
+}
+
+/* Custom Find/Replace Panel */
+.find-replace-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #1e1e1e;
+  border: 2px solid #a855f7;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: none;
+  z-index: 1000;
+  margin: 8px;
+  width: calc(100% - 16px);
+}
+
+.find-replace-panel.hidden {
+  display: none !important;
+}
+
+.find-replace-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.find-replace-input {
+  flex: 1;
+  background: #2d2d30;
+  border: 1px solid #3e3e42;
+  color: #e0e0e0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  transition: all 0.2s;
+  height: 28px;
+}
+
+.find-replace-input:focus {
+  background: #2d2d30;
+  border-color: #a855f7;
+  outline: none;
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.3);
+}
+
+.find-replace-input::placeholder {
+  color: #858585;
+}
+
+.find-replace-button {
+  background: transparent;
+  border: 1px solid #555555;
+  color: #cccccc;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  font-weight: 500;
+  height: 28px;
+}
+
+.find-replace-button:hover {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: #a855f7;
+  color: #ffffff;
+}
+
+.find-replace-button:active {
+  background: rgba(168, 85, 247, 0.2);
+}
+
+.find-replace-button.close {
+  padding: 4px 6px;
+  font-size: 14px;
+  margin-left: auto;
+}
+
+.find-replace-options {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.find-replace-option-btn {
+  background: transparent;
+  border: none;
+  color: #999999;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  height: 28px;
+}
+
+.find-replace-option-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
+}
+
+.find-replace-option-btn.active {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid #a855f7;
+  color: #a855f7;
+}
+
+.find-replace-counter {
+  color: #858585;
+  font-size: 11px;
+  padding: 0 4px;
+  white-space: nowrap;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.find-replace-toggle-btn {
+  background: transparent;
+  border: none;
+  color: #999999;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.find-replace-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
+}
+
+.find-replace-toggle-btn:active {
+  background: rgba(255, 255, 255, 0.1);
 }

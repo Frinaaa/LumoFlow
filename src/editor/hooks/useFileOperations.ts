@@ -52,22 +52,24 @@ export const useFileOperations = () => {
       let fullPath = fileName;
 
       if (parentPath) {
-        // If parentPath is provided, we should join it with the filename.
-        // The electron side handles resolving absolute paths within the sandbox.
-        // We'll use a simple separator here, electron handles normalization.
         fullPath = `${parentPath}/${fileName}`;
       }
 
-      if (!fullPath.includes('.') && !fileName.includes('.')) {
+      if (!fullPath.includes('.')) {
         fullPath += '.js';
       }
 
+      console.log('Creating file:', fullPath);
+      
       const newFilePath = await fileSystemApi.createFile(fullPath, '');
+      console.log('File created at:', newFilePath);
+      
       await refreshFiles();
       await openFile(newFilePath);
       editorStore.appendOutputData(`✅ Created: ${fileName}\n`);
       return true;
     } catch (error: any) {
+      console.error('Create file error:', error);
       editorStore.appendOutputData(`❌ Error: ${error.message}\n`);
       return false;
     }

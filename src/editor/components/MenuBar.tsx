@@ -92,8 +92,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
             <div className="menu-option" onClick={() => dispatchMonacoCmd('copy')}><span>Copy</span><span className="shortcut">Ctrl+C</span></div>
             <div className="menu-option" onClick={() => dispatchMonacoCmd('paste')}><span>Paste</span><span className="shortcut">Ctrl+V</span></div>
             <hr />
-            <div className="menu-option" onClick={() => dispatchMonacoCmd('find')}><span>Find</span><span className="shortcut">Ctrl+F</span></div>
-            <div className="menu-option" onClick={() => dispatchMonacoCmd('replace')}><span>Replace</span><span className="shortcut">Ctrl+H</span></div>
+            <div className="menu-option" onClick={() => { window.dispatchEvent(new CustomEvent('toggle-find-replace', { detail: { mode: 'find' } })); setOpenMenu(null); }}><span>Find</span><span className="shortcut">Ctrl+F</span></div>
+            <div className="menu-option" onClick={() => { window.dispatchEvent(new CustomEvent('toggle-find-replace', { detail: { mode: 'replace' } })); setOpenMenu(null); }}><span>Replace</span><span className="shortcut">Ctrl+H</span></div>
           </div>
         )}
       </div>

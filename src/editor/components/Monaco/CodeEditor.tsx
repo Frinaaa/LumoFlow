@@ -1,6 +1,9 @@
-import React, { useMemo, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useMemo, useRef, useEffect, memo, useState } from 'react';
 import Editor, { Monaco } from '@monaco-editor/react';
 import { useEditorStore } from '../../stores/editorStore';
+import { useAnalysisStore } from '../../stores/analysisStore';
+import { parseLiveCode } from '../../utils/liveParser';
+import FindReplace from './FindReplace';
 
 interface CodeEditorProps {
   code: string;
@@ -10,21 +13,22 @@ interface CodeEditorProps {
   onRun: () => void;
   onClose: () => void;
   onCursorChange: (line: number, col: number) => void;
-  isActive: boolean;
   onFocus: () => void;
   onProblemsDetected?: (problems: Array<{ message: string; line: number; source: string; type: 'error' | 'warning'; column?: number }>) => void;
   editorRef?: React.MutableRefObject<any>;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({
-  code, onChange, selectedFile, onSave, onRun, onCursorChange, isActive, onFocus, onProblemsDetected, editorRef
+  code, onChange, selectedFile, onSave, onRun, onCursorChange, onFocus, onProblemsDetected, editorRef
 }) => {
   const internalEditorRef = useRef<any>(null);
   const monacoRef = useRef<Monaco | null>(null);
-  const [isGeneratingFix, setIsGeneratingFix] = React.useState(false);
+  const [isGeneratingFix, setIsGeneratingFix] = useState(false);
+  const [showFindReplace, setShowFindReplace] = useState(false);
   const editorStore = useEditorStore();
+  const analysisStore = useAnalysisStore();
   const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
-
+  
   const language = useMemo(() => {
     if (!fileName) return 'javascript';
     const ext = fileName.split('.').pop()?.toLowerCase();
@@ -39,23 +43,42 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     }
   }, [editorStore.wordWrap]);
 
+  // Add this Effect to listen to code changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const visualResult = parseLiveCode(code);
+      if (visualResult.type !== 'NONE') {
+        analysisStore.setLiveVisual(visualResult);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [code, analysisStore]);
+
+  // Listen for find/replace toggle from menu
+  useEffect(() => {
+    const handleToggleFindReplace = () => {
+      setShowFindReplace(true);
+    };
+
+    window.addEventListener('toggle-find-replace', handleToggleFindReplace);
+    return () => window.removeEventListener('toggle-find-replace', handleToggleFindReplace);
+  }, []);
+
   // AI-powered code fix generator
   const generateAIFix = async (errorMessage: string, line: number, currentCode: string): Promise<string | null> => {
     setIsGeneratingFix(true);
 
     try {
-      // Simulate AI processing (in production, this would call an AI API)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const lines = currentCode.split('\n');
       const errorLine = lines[line - 1];
 
-      // Smart fix generation based on error patterns
       if (errorMessage.includes('is not defined') || errorMessage.includes('undefined')) {
         const match = errorMessage.match(/'([^']+)'/);
         const varName = match ? match[1] : 'variable';
 
-        // Add variable declaration
         if (language === 'javascript' || language === 'typescript') {
           lines.splice(line - 1, 0, `const ${varName} = null; // Auto-fixed: Added missing declaration`);
         } else if (language === 'python') {
@@ -63,7 +86,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         }
       }
       else if (errorMessage.includes('missing') && errorMessage.includes('import')) {
-        // Add missing import
         const match = errorMessage.match(/'([^']+)'/);
         const moduleName = match ? match[1] : 'module';
 
@@ -74,7 +96,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         }
       }
       else if (errorMessage.includes('syntax error') || errorMessage.includes('unexpected')) {
-        // Fix common syntax errors
         if (errorLine.includes('console.log') && !errorLine.includes(';')) {
           lines[line - 1] = errorLine + ';  // Auto-fixed: Added missing semicolon';
         } else if (errorLine.trim().endsWith(',')) {
@@ -82,13 +103,11 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         }
       }
       else if (errorMessage.includes('type')) {
-        // Add type annotation for TypeScript
         if (language === 'typescript' && errorLine.includes('function')) {
           lines[line - 1] = errorLine.replace(')', '): void)') + '  // Auto-fixed: Added return type';
         }
       }
       else {
-        // Generic fix: Add a comment
         lines[line - 1] = errorLine + '  // TODO: Fix - ' + errorMessage;
       }
 
@@ -113,19 +132,54 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     });
     monacoRef.current = monaco;
 
-    // Listen for Global Menu Commands (Go to line, Select All, etc.)
+    // Disable built-in find and replace - we'll use custom implementation
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+      setShowFindReplace(true);
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
+      setShowFindReplace(true);
+    });
+
+    // Completely disable Monaco's find controller
+    const findController = editor.getContribution('editor.contrib.findController') as any;
+    if (findController) {
+      findController.closeFindWidget();
+      // Override the show method to prevent it from appearing
+      const originalShow = findController.show;
+      findController.show = function() {
+        return;
+      };
+    }
+
+    // Hide any find widget that might appear
+    const hideFindWidget = () => {
+      const findWidget = document.querySelector('.monaco-editor .find-widget') as HTMLElement;
+      if (findWidget) {
+        findWidget.style.display = 'none';
+      }
+    };
+
+    setTimeout(hideFindWidget, 100);
+    
+    // Monitor and hide find widget if it appears
+    const hideInterval = setInterval(hideFindWidget, 500);
+    
+    // Store interval for cleanup
+    (editor as any)._findHideInterval = hideInterval;
+
+    // 2. Global Command Listener
     const monacoCommandListener = (e: any) => {
       const { action, value, column } = e.detail;
       editor.focus();
-
+      
       switch (action) {
         case 'revealLine':
           editor.revealLineInCenter(value);
           editor.setPosition({ lineNumber: value, column: column || 1 });
-          editor.focus(); // Ensure editor key focus
+          editor.focus();
           break;
 
-        // Edit actions
         case 'undo':
           editor.focus();
           editor.trigger('keyboard', 'undo', {});
@@ -147,10 +201,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           editor.trigger('keyboard', 'editor.action.clipboardPasteAction', {});
           break;
         case 'find':
-          editor.trigger('menu', 'actions.find', {});
+          setShowFindReplace(true);
           break;
         case 'replace':
-          editor.trigger('menu', 'editor.action.startFindReplaceAction', {});
+          setShowFindReplace(true);
           break;
         case 'findInFiles':
           editor.trigger('menu', 'actions.find', {});
@@ -162,7 +216,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           editor.trigger('menu', 'editor.action.blockComment', {});
           break;
 
-        // Selection actions
         case 'selectAll':
           editor.trigger('menu', 'editor.action.selectAll', {});
           break;
@@ -197,17 +250,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           editor.trigger('menu', 'editor.action.insertCursorAtEndOfEachLineSelected', {});
           break;
 
-        // Go actions
         case 'goBack':
-          // Simple navigation back
           editor.trigger('menu', 'cursorUndo', {});
           break;
         case 'goForward':
-          // Simple navigation forward
           editor.trigger('menu', 'cursorRedo', {});
           break;
         case 'toggleBreakpoint':
-          // Try standard debug action, or fallback to glyph margin logic if needed later
           editor.trigger('menu', 'editor.debug.action.toggleBreakpoint', {});
           break;
       }
@@ -215,40 +264,43 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
     window.addEventListener('monaco-cmd', monacoCommandListener);
 
-    // Ensure initial Word Wrap matches storage/context
     editor.updateOptions({ wordWrap: editorStore.wordWrap || 'on' });
 
     // Configure JavaScript/TypeScript validation
-    // @ts-ignore - Using deprecated API for JavaScript validation
-    if (monaco.languages.typescript && monaco.languages.typescript.javascriptDefaults) {
-      // @ts-ignore
-      monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-        noSemanticValidation: false,
-        noSyntaxValidation: false,
-        diagnosticCodesToIgnore: []
-      });
+    try {
+      // @ts-ignore - Using deprecated API for JavaScript validation
+      if (monaco.languages.typescript?.javascriptDefaults) {
+        // @ts-ignore
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+          noSemanticValidation: false,
+          noSyntaxValidation: false,
+          diagnosticCodesToIgnore: []
+        });
 
-      // @ts-ignore
-      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
         // @ts-ignore
-        target: monaco.languages.typescript.ScriptTarget.ES2020,
-        allowNonTsExtensions: true,
-        // @ts-ignore
-        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        // @ts-ignore
-        module: monaco.languages.typescript.ModuleKind.CommonJS,
-        noEmit: true,
-        esModuleInterop: true,
-        allowJs: true,
-        checkJs: true,
-        strict: false,
-        noImplicitAny: false,
-        strictNullChecks: false,
-        strictFunctionTypes: false,
-        strictPropertyInitialization: false,
-        noImplicitThis: false,
-        alwaysStrict: false
-      });
+        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+          // @ts-ignore
+          target: monaco.languages.typescript.ScriptTarget.ES2020,
+          allowNonTsExtensions: true,
+          // @ts-ignore
+          moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+          // @ts-ignore
+          module: monaco.languages.typescript.ModuleKind.CommonJS,
+          noEmit: true,
+          esModuleInterop: true,
+          allowJs: true,
+          checkJs: true,
+          strict: false,
+          noImplicitAny: false,
+          strictNullChecks: false,
+          strictFunctionTypes: false,
+          strictPropertyInitialization: false,
+          noImplicitThis: false,
+          alwaysStrict: false
+        });
+      }
+    } catch (e) {
+      // Silently fail if TypeScript config is not available
     }
 
     // Register code action provider for quick fixes
@@ -256,14 +308,12 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       provideCodeActions: (model, range) => {
         const actions: any[] = [];
 
-        // Get diagnostics at current position
         const markers = monaco.editor.getModelMarkers({ resource: model.uri });
         const relevantMarkers = markers.filter(m =>
           m.startLineNumber === range.startLineNumber
         );
 
         relevantMarkers.forEach(marker => {
-          // Quick Fix action
           actions.push({
             title: `💡 Quick Fix: ${marker.message}`,
             diagnostics: [marker],
@@ -279,7 +329,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             }
           });
 
-          // Auto-fix with AI action
           actions.push({
             title: `🤖 Auto-fix with AI`,
             diagnostics: [marker],
@@ -314,7 +363,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         const fixedCode = await generateAIFix(errorMessage, line, currentCode);
         if (fixedCode) {
           ed.setValue(fixedCode);
-          // Show notification
           ed.trigger('keyboard', 'editor.action.showHover', {});
         }
       }
@@ -341,15 +389,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         }
       };
 
-      // Listen for marker changes (errors/warnings)
       const markerDisposable = monaco.editor.onDidChangeMarkers((uris) => {
         if (uris.some(uri => uri.toString() === model.uri.toString())) {
           if (diagnosticTimeout) clearTimeout(diagnosticTimeout);
-          diagnosticTimeout = setTimeout(handleDiagnosticsChange, 1000); // 1s debounce for problems
+          diagnosticTimeout = setTimeout(handleDiagnosticsChange, 1000);
         }
       });
 
-      // Initial check
       diagnosticTimeout = setTimeout(handleDiagnosticsChange, 500);
 
       return () => {
@@ -357,11 +403,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         markerDisposable.dispose();
         provider.dispose();
         window.removeEventListener('monaco-cmd', monacoCommandListener);
+        if ((editor as any)._findHideInterval) {
+          clearInterval((editor as any)._findHideInterval);
+        }
       };
     }
 
     // Keyboard shortcuts
-    // File operations
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSave();
     });
@@ -370,7 +418,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       onRun();
     });
 
-    // Edit menu shortcuts
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
       editor.trigger('keyboard', 'undo', {});
     });
@@ -378,126 +425,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {
       editor.trigger('keyboard', 'redo', {});
     });
-
-    // Note: Cut (Ctrl+X), Copy (Ctrl+C), Paste (Ctrl+V) are handled natively by Monaco
-    // We don't override them to ensure clipboard works properly
-
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
-      editor.trigger('keyboard', 'actions.find', {});
-    });
-
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
-      editor.trigger('keyboard', 'editor.action.startFindReplaceAction', {});
-    });
-
-    // Escape key to close find widget
-    editor.addCommand(monaco.KeyCode.Escape, () => {
-      const findController = editor.getContribution('editor.contrib.findController');
-      if (findController && findController.getState()?.isRevealed) {
-        findController.closeFindWidget();
-      }
-    });
-
-    // Register custom close find widget action
-    editor.addAction({
-      id: 'editor.action.closeFindWidget',
-      label: 'Close Find Widget',
-      keybindings: [monaco.KeyCode.Escape],
-      run: (ed: any) => {
-        const findController = ed.getContribution('editor.contrib.findController');
-        if (findController) {
-          findController.closeFindWidget();
-        }
-      }
-    });
-
-    // Simple and direct approach to handle find widget close
-    const handleFindWidgetClose = () => {
-      // Wait for the widget to be rendered
-      setTimeout(() => {
-        const findWidget = document.querySelector('.monaco-editor .find-widget') as HTMLElement;
-        if (findWidget && !findWidget.hasAttribute('data-close-fixed')) {
-          findWidget.setAttribute('data-close-fixed', 'true');
-          
-          // Use event delegation on the entire find widget
-          findWidget.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-            
-            // Check if clicked element is a close button
-            if (target.matches('.codicon-widget-close, .codicon-close') ||
-                target.closest('.codicon-widget-close, .codicon-close') ||
-                target.getAttribute('title') === 'Close' ||
-                target.getAttribute('aria-label') === 'Close') {
-              
-              console.log('Close button clicked - forcing widget close');
-              
-              // Prevent default Monaco behavior
-              e.preventDefault();
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-              
-              // Force close the widget
-              const findController = editor.getContribution('editor.contrib.findController');
-              if (findController) {
-                try {
-                  // Method 1: Use Monaco's API
-                  findController.closeFindWidget();
-                  
-                  // Method 2: Hide the widget directly
-                  findWidget.style.display = 'none';
-                  
-                  // Method 3: Remove from DOM temporarily
-                  setTimeout(() => {
-                    if (findWidget.style.display === 'none') {
-                      findWidget.style.display = '';
-                    }
-                  }, 50);
-                  
-                } catch (error) {
-                  console.error('Error closing find widget:', error);
-                  // Fallback: just hide it
-                  findWidget.style.display = 'none';
-                }
-              }
-            }
-          }, true); // Use capture phase
-        }
-      }, 300);
-    };
-
-    // Hook into Monaco's find actions
-    const originalAddAction = editor.addAction;
-    editor.addAction = function(descriptor: any) {
-      const result = originalAddAction.call(this, descriptor);
-      if (descriptor.id && descriptor.id.includes('find')) {
-        handleFindWidgetClose();
-      }
-      return result;
-    };
-
-    // Listen for keyboard shortcuts that open find
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
-      editor.trigger('keyboard', 'actions.find', {});
-      handleFindWidgetClose();
-    });
-
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
-      editor.trigger('keyboard', 'editor.action.startFindReplaceAction', {});
-      handleFindWidgetClose();
-    });
-
-    // Also handle menu-triggered find
-    const menuCommandListener = (e: any) => {
-      const { action } = e.detail;
-      if (action === 'find' || action === 'replace') {
-        handleFindWidgetClose();
-      }
-    };
-    
-    window.addEventListener('monaco-cmd', menuCommandListener);
-
-    // Initial setup
-    handleFindWidgetClose();
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
       editor.trigger('keyboard', 'editor.action.commentLine', {});
@@ -523,10 +450,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       onFocus();
     });
 
-    // Cleanup listener on unmount
     return () => {
       window.removeEventListener('monaco-cmd', monacoCommandListener);
-      window.removeEventListener('monaco-cmd', menuCommandListener);
     };
   };
 
@@ -559,40 +484,53 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           Generating AI fix...
         </div>
       )}
-      <Editor
-        height="100%"
-        width="100%"
-        theme={editorStore.theme === 'light' ? 'vs-light' : 'vs-dark'}
-        language={language}
-        value={code}
-        onChange={(val) => onChange(val || "")}
-        onMount={handleEditorDidMount}
-        options={{
-          fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-          fontSize: 14,
-          minimap: { enabled: true },
-          cursorBlinking: 'smooth',
-          cursorSmoothCaretAnimation: 'on',
-          smoothScrolling: true,
-          contextmenu: true,
-          multiCursorModifier: 'ctrlCmd',
-          wordWrap: editorStore.wordWrap || 'on',
-          padding: { top: 10 },
-          guides: { indentation: true, bracketPairs: true },
-          bracketPairColorization: { enabled: true },
-          renderLineHighlight: 'all',
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-          lightbulb: {
-            enabled: 'on' as any
-          },
-          quickSuggestions: {
-            other: true,
-            comments: false,
-            strings: false
-          }
-        }}
-      />
+      <div style={{
+        flex: 1,
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <Editor
+          height="100%"
+          width="100%"
+          theme={editorStore.theme === 'light' ? 'vs-light' : 'vs-dark'}
+          language={language}
+          value={code}
+          onChange={(val) => onChange(val || "")}
+          onMount={handleEditorDidMount}
+          options={{
+            fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+            fontSize: 14,
+            minimap: { enabled: true },
+            cursorBlinking: 'smooth',
+            cursorSmoothCaretAnimation: 'on',
+            smoothScrolling: true,
+            contextmenu: true,
+            multiCursorModifier: 'ctrlCmd',
+            wordWrap: editorStore.wordWrap || 'on',
+            padding: { top: 10 },
+            guides: { indentation: true, bracketPairs: true },
+            bracketPairColorization: { enabled: true },
+            renderLineHighlight: 'all',
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            lightbulb: {
+              enabled: 'on' as any
+            },
+            quickSuggestions: {
+              other: true,
+              comments: false,
+              strings: false
+            }
+          }}
+        />
+        <FindReplace 
+          editorRef={internalEditorRef} 
+          isVisible={showFindReplace}
+          onClose={() => setShowFindReplace(false)}
+        />
+      </div>
     </div>
   );
 };

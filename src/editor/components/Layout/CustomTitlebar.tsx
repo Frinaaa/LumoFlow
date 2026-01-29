@@ -71,19 +71,55 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
         </div>
         <div className="titlebar-menu-wrapper">
           <MenuBar
-            onNewFile={() => editorState.onMenuAction?.('newTextFile')}
-            onNewFolder={() => editorState.onMenuAction?.('newFolder')}
-            onOpenFile={() => editorState.onMenuAction?.('openFile')}
-            onOpenFolder={() => editorState.onMenuAction?.('openFolder')}
-            onSave={() => editorState.onSave?.()}
-            onSaveAs={() => editorState.onMenuAction?.('saveAs')}
-            onSaveAll={() => editorState.onMenuAction?.('saveAll')}
-            onCloseEditor={() => editorState.onMenuAction?.('closeEditor')}
-            onCloseFolder={() => editorState.onMenuAction?.('closeFolder')}
-            onNewWindow={() => editorState.onMenuAction?.('newWindow')}
-            onCloseWindow={() => editorState.onMenuAction?.('closeWindow')}
+            onNewFile={() => {
+              console.log('New file clicked');
+              editorState.onMenuAction?.('newTextFile');
+            }}
+            onNewFolder={() => {
+              console.log('New folder clicked');
+              editorState.onMenuAction?.('newFolder');
+            }}
+            onOpenFile={() => {
+              console.log('Open file clicked');
+              editorState.onMenuAction?.('openFile');
+            }}
+            onOpenFolder={() => {
+              console.log('Open folder clicked');
+              editorState.onMenuAction?.('openFolder');
+            }}
+            onSave={() => {
+              console.log('Save clicked');
+              editorState.onSave?.();
+            }}
+            onSaveAs={() => {
+              console.log('Save as clicked');
+              editorState.onMenuAction?.('saveAs');
+            }}
+            onSaveAll={() => {
+              console.log('Save all clicked');
+              editorState.onMenuAction?.('saveAll');
+            }}
+            onCloseEditor={() => {
+              console.log('Close editor clicked');
+              editorState.onMenuAction?.('closeEditor');
+            }}
+            onCloseFolder={() => {
+              console.log('Close folder clicked');
+              editorState.onMenuAction?.('closeFolder');
+            }}
+            onNewWindow={() => {
+              console.log('New window clicked');
+              editorState.onMenuAction?.('newWindow');
+            }}
+            onCloseWindow={() => {
+              console.log('Close window clicked');
+              editorState.onMenuAction?.('closeWindow');
+            }}
             autoSave={editorState.autoSave}
-            onToggleAutoSave={() => editorState.onMenuAction?.('toggleAutoSave')}
+            onToggleAutoSave={() => {
+              console.log('Toggle auto save clicked');
+              editorState.onMenuAction?.('toggleAutoSave');
+            }}
             onRun={editorState.onRun}
           />
         </div>
