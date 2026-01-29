@@ -182,7 +182,23 @@ const DebugRaceScreen: React.FC = () => {
               language="javascript"
               value={userCode}
               onChange={(val) => setUserCode(val || '')}
-              options={{ fontSize: 16, minimap: { enabled: false }, fontFamily: "'JetBrains Mono', monospace" }}
+              options={{
+                fontSize: 16,
+                minimap: { enabled: false },
+                fontFamily: "'JetBrains Mono', monospace",
+                readOnly: false,
+                wordWrap: 'on',
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                contextmenu: true,
+                formatOnPaste: true,
+                formatOnType: true,
+                bracketPairColorization: { enabled: true },
+                guides: { indentation: true, bracketPairs: true },
+                cursorBlinking: 'smooth',
+                smoothScrolling: true,
+                padding: { top: 10, bottom: 10 }
+              }}
             />
           </div>
         </div>
