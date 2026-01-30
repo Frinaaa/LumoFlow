@@ -20,7 +20,11 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const handleMenuAction = async (action: string) => {
     switch (action) {
       case 'newTextFile':
-        await fileOps.createFile('untitled.js');
+        // Prompt user for filename
+        const fileName = prompt('Enter file name (with extension):', 'untitled.js');
+        if (fileName && fileName.trim()) {
+          await fileOps.createFile(fileName.trim());
+        }
         break;
       case 'newFolder':
         // Ensure sidebar is visible

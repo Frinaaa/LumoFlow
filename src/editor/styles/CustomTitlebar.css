@@ -215,6 +215,7 @@
   z-index: 1000;
   margin: 8px;
   width: calc(100% - 16px);
+  max-width: 500px;
 }
 
 .find-replace-panel.hidden {
@@ -352,4 +353,140 @@
 
 .find-replace-toggle-btn:active {
   background: rgba(255, 255, 255, 0.1);
+}
+
+
+/* Debug Race Custom Titlebar */
+.debug-titlebar {
+  height: 45px;
+  background-color: #1e1e1e;
+  border-bottom: 2px solid #a855f7;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  gap: 16px;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.debug-titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  -webkit-app-region: no-drag;
+}
+
+.debug-titlebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.debug-titlebar-logo i {
+  color: #00f2ff;
+  font-size: 14px;
+}
+
+.debug-titlebar-logo span {
+  color: white;
+}
+
+.debug-titlebar-logo span span {
+  color: #ff003c;
+}
+
+.debug-titlebar-title {
+  color: #a855f7;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  border-left: 1px solid #444;
+  padding-left: 12px;
+}
+
+.debug-titlebar-center {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+}
+
+.debug-titlebar-level {
+  color: #cccccc;
+  border: 1px solid #444;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.debug-titlebar-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #a855f7;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: rgba(168, 85, 247, 0.1);
+  transition: all 0.2s;
+}
+
+.debug-titlebar-timer .timer-label {
+  color: #999;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.debug-titlebar-timer .timer-val {
+  color: #a855f7;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 35px;
+}
+
+.debug-titlebar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.debug-titlebar-btn {
+  background: transparent;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.debug-titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.debug-titlebar-btn.exit-btn:hover {
+  background: #e81123;
+  color: white;
+}
+
+.debug-titlebar-btn:active {
+  background: rgba(255, 255, 255, 0.15);
 }

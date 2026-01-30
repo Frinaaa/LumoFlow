@@ -147,7 +147,34 @@ const DebugRaceScreen: React.FC = () => {
 
   return (
     <div className="debug-race-wrapper">
-      <header className="hud-header">
+      {/* Custom Titlebar */}
+      <div className="debug-titlebar">
+        <div className="debug-titlebar-left">
+          <div className="debug-titlebar-logo">
+            <i className="fa-solid fa-bolt"></i>
+            <span>LUMO<span style={{ color: '#ff003c' }}>FLOW</span></span>
+          </div>
+          <span className="debug-titlebar-title">DEBUG RACE</span>
+        </div>
+        <div className="debug-titlebar-center">
+          <div className="debug-titlebar-level">LEVEL {level}</div>
+          <div className="debug-titlebar-timer" style={{ backgroundColor: timeLeft <= 10 ? 'rgba(255,0,60,0.4)' : '' }}>
+            <span className="timer-label">TIME</span>
+            <span className="timer-val" style={{ color: timeLeft <= 10 ? '#fff' : '' }}>{formatTime(timeLeft)}</span>
+          </div>
+        </div>
+        <div className="debug-titlebar-right">
+          <button 
+            className="debug-titlebar-btn exit-btn"
+            onClick={() => navigate('/games')}
+            title="Exit"
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <header className="hud-header" style={{ display: 'none' }}>
         <div className="debug-brand">
           <div className="debug-icon"><i className="fa-solid fa-bolt"></i></div>
           DEBUG<span style={{ color: '#ff003c' }}>RACE</span>

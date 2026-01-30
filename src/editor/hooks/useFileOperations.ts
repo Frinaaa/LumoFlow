@@ -14,14 +14,19 @@ export const useFileOperations = () => {
 
   const openFile = async (filePath: string): Promise<boolean> => {
     try {
+      console.log('Reading file:', filePath);
       const content = await fileSystemApi.readFile(filePath);
+      console.log('File content read, length:', content.length);
+      
       const fileName = filePath.split(/[\\/]/).pop() || 'untitled';
       const language = getLanguageFromFile(fileName);
 
+      console.log('Adding tab:', fileName, 'language:', language);
       editorStore.addTab(filePath, fileName, content, language);
       editorStore.appendOutputData(`✅ Opened: ${fileName}\n`);
       return true;
     } catch (error: any) {
+      console.error('Open file error:', error);
       editorStore.appendOutputData(`❌ Error opening file: ${error.message}\n`);
       return false;
     }
@@ -128,8 +133,11 @@ export const useFileOperations = () => {
 
   const refreshFiles = async (): Promise<boolean> => {
     try {
+      console.log('Refreshing files...');
       const files = await fileSystemApi.readProjectFiles();
+      console.log('Files loaded:', files.length, 'files');
       fileStore.setFiles(files);
+      console.log('File store updated');
       return true;
     } catch (error) {
       console.error('Error refreshing files:', error);
@@ -139,17 +147,37 @@ export const useFileOperations = () => {
 
   const openFolder = async (): Promise<boolean> => {
     try {
+      console.log('Opening folder dialog...');
       const result = await fileSystemApi.openFolderDialog();
+      console.log('Folder dialog result:', result);
+      
       if (result && !result.canceled && result.folderPath) {
+        console.log('Setting workspace to:', result.folderPath);
         const folderName = result.folderPath.split(/[\\/]/).pop() || 'Workspace';
         fileStore.setWorkspace(result.folderPath, folderName);
-        await refreshFiles();
+        
+        console.log('Refreshing files...');
+        const filesRefreshed = await refreshFiles();
+        console.log('Files refreshed:', filesRefreshed);
+        
         editorStore.setWorkspaceStatus('Folder Opened');
         editorStore.appendOutputData(`✅ Opened: ${folderName}\n`);
+        
+        // Ensure sidebar is visible to show the files
+        if (!editorStore.sidebarVisible) {
+          editorStore.toggleSidebar();
+        }
+        editorStore.setActiveSidebar('Explorer');
+        
+        console.log('Folder opened successfully');
         return true;
+      } else {
+        console.log('Folder dialog canceled or no folder selected');
+        editorStore.appendOutputData(`ℹ️ Folder selection canceled.\n`);
       }
       return false;
     } catch (error: any) {
+      console.error('Folder dialog error:', error);
       editorStore.appendOutputData(`❌ Error: ${error.message}\n`);
       return false;
     }
@@ -242,12 +270,19 @@ export const useFileOperations = () => {
 
   const openFileDialog = async (): Promise<boolean> => {
     try {
+      console.log('Opening file dialog...');
       const result = await fileSystemApi.openFileDialog();
+      console.log('File dialog result:', result);
+      
       if (result && !result.canceled && result.filePath) {
+        console.log('Opening file:', result.filePath);
         return await openFile(result.filePath);
+      } else {
+        console.log('File dialog canceled or no file selected');
       }
       return false;
     } catch (error: any) {
+      console.error('File dialog error:', error);
       editorStore.appendOutputData(`❌ Error: ${error.message}\n`);
       return false;
     }

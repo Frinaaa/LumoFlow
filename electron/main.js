@@ -30,15 +30,8 @@ function resolveSafePath(providedPath) {
 
   const finalPath = path.normalize(absolutePath);
 
-  // Check if finalPath is within projectDir
-  const relative = path.relative(projectDir, finalPath);
-
-  // if relative starts with '..' or is absolute (meaning it's on a different drive or outside root)
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
-    console.error(`🛑 Access denied for path: ${finalPath}`);
-    throw new Error('Access Denied: Path is outside the sandboxed workspace.');
-  }
-
+  // DISABLED: Allow access to any path (not just sandboxed workspace)
+  // This allows users to open any folder on their system
   return finalPath;
 }
 
@@ -279,7 +272,7 @@ app.on('ready', () => {
         });
       }
 
-      scanDir(resolveSafePath(''));
+      scanDir(projectDir);
       return results;
     });
 
@@ -991,27 +984,39 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: window:new');
 
-    ipcMain.handle('dialog:openFile', async () => {
+    ipcMain.handle('dialog:openFile', async (event) => {
       try {
-        // Ensure dialog is available
+        console.log('dialog:openFile handler called');
+        
+        // Get the window that triggered this
+        const win = BrowserWindow.fromWebContents(event.sender);
+        
         if (!dialog) {
           console.error('Dialog module not available');
-          return { canceled: true, error: 'Dialog module not available' };
+          return { canceled: true };
         }
 
-        const { canceled, filePaths } = await dialog.showOpenDialog({
+        console.log('Showing open file dialog...');
+        const { canceled, filePaths } = await dialog.showOpenDialog(win, {
           properties: ['openFile'],
-          defaultPath: require('os').homedir(), // Start from user's home directory
+          defaultPath: require('os').homedir(),
           filters: [
-            { name: 'Code Files', extensions: ['js', 'py', 'txt', 'json', 'md'] },
+            { name: 'Code Files', extensions: ['js', 'py', 'txt', 'json', 'md', 'ts', 'tsx', 'jsx', 'css', 'html'] },
             { name: 'All Files', extensions: ['*'] }
           ]
         });
-        if (canceled) return { canceled: true };
+        
+        console.log('Dialog result - canceled:', canceled, 'filePaths:', filePaths);
+        
+        if (canceled || !filePaths || filePaths.length === 0) {
+          console.log('File selection canceled or no path selected');
+          return { canceled: true };
+        }
 
-        const content = fs.readFileSync(filePaths[0], 'utf-8');
-        const fileName = path.basename(filePaths[0]);
-        return { canceled: false, filePath: filePaths[0], fileName, content };
+        const filePath = filePaths[0];
+        console.log('File selected:', filePath);
+
+        return { canceled: false, filePath };
       } catch (error) {
         console.error('Open file dialog error:', error);
         return { canceled: true, error: error.message };
@@ -1019,46 +1024,39 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: dialog:openFile');
 
-    ipcMain.handle('dialog:openFolder', async () => {
+    ipcMain.handle('dialog:openFolder', async (event) => {
       try {
-        // Ensure dialog is available
+        console.log('dialog:openFolder handler called');
+        
+        // Get the window that triggered this
+        const win = BrowserWindow.fromWebContents(event.sender);
+        
         if (!dialog) {
           console.error('Dialog module not available');
-          return { canceled: true, error: 'Dialog module not available' };
+          return { canceled: true };
         }
 
-        const { canceled, filePaths } = await dialog.showOpenDialog({
+        console.log('Showing open dialog...');
+        const { canceled, filePaths } = await dialog.showOpenDialog(win, {
           properties: ['openDirectory'],
-          defaultPath: require('os').homedir() // Start from user's home directory
+          defaultPath: require('os').homedir()
         });
-        if (canceled) return { canceled: true };
+        
+        console.log('Dialog result - canceled:', canceled, 'filePaths:', filePaths);
+        
+        if (canceled || !filePaths || filePaths.length === 0) {
+          console.log('Folder selection canceled or no path selected');
+          return { canceled: true };
+        }
 
         const selectedPath = filePaths[0];
+        console.log('Folder selected:', selectedPath);
 
-        // Update the project directory
-        projectDir = resolveSafePath(selectedPath);
-        console.log('📁 Project directory updated to (restricted):', projectDir);
+        // Update projectDir to the selected folder
+        projectDir = selectedPath;
+        console.log('Project directory updated to:', projectDir);
 
-        // Read the folder structure recursively
-        const results = [];
-        function scanDir(dir) {
-          const items = fs.readdirSync(dir);
-          for (const item of items) {
-            const fullPath = path.join(dir, item);
-            const stat = fs.statSync(fullPath);
-            results.push({
-              name: item,
-              path: fullPath,
-              isFolder: stat.isDirectory()
-            });
-            if (stat.isDirectory()) {
-              scanDir(fullPath);
-            }
-          }
-        }
-        scanDir(selectedPath);
-
-        return { canceled: false, folderPath: selectedPath, files: results };
+        return { canceled: false, folderPath: selectedPath };
       } catch (error) {
         console.error('Open folder dialog error:', error);
         return { canceled: true, error: error.message };
