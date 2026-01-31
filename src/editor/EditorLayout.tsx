@@ -41,11 +41,20 @@ export const EditorLayout: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       // Load files and sync workspace
-      fileOps.refreshFiles();
+      try {
+        await fileOps.refreshFiles();
+      } catch (e) {
+        console.error('Error refreshing files:', e);
+      }
+      
       if ((window as any).api?.getWorkspace) {
-        const workspace = await (window as any).api.getWorkspace();
-        if (workspace.path) {
-          fileStore.setWorkspace(workspace.path, workspace.name);
+        try {
+          const workspace = await (window as any).api.getWorkspace();
+          if (workspace.path) {
+            fileStore.setWorkspace(workspace.path, workspace.name);
+          }
+        } catch (e) {
+          console.error('Error loading workspace:', e);
         }
       }
 

@@ -37,15 +37,25 @@ function AppLayout() {
       if (token && userInfo) {
         try {
           const res = await authService.getProfile();
-          if (res.success) {
+          if (res.success && res.user) {
+            setIsAuthenticated(true);
+          } else if (userInfo) {
+            // If getProfile fails but we have cached user data, still authenticate
+            console.log('⚠️ Using cached authentication');
             setIsAuthenticated(true);
           } else {
             await authService.logout();
             setIsAuthenticated(false);
           }
         } catch (err) {
-          await authService.logout();
-          setIsAuthenticated(false);
+          // If error but we have cached data, still authenticate
+          if (userInfo) {
+            console.log('⚠️ Error during init, using cached authentication');
+            setIsAuthenticated(true);
+          } else {
+            await authService.logout();
+            setIsAuthenticated(false);
+          }
         }
       }
       setIsLoading(false);

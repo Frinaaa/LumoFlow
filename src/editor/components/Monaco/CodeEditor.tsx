@@ -57,8 +57,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
   // Listen for find/replace toggle from menu
   useEffect(() => {
-    const handleToggleFindReplace = () => {
+    const handleToggleFindReplace = (e: any) => {
       setShowFindReplace(true);
+      // If mode is specified, show/hide replace accordingly
+      if (e.detail?.mode === 'find') {
+        // Just show find (replace will be hidden by default in FindReplace component)
+      } else if (e.detail?.mode === 'replace') {
+        // Show both find and replace
+      }
     };
 
     window.addEventListener('toggle-find-replace', handleToggleFindReplace);

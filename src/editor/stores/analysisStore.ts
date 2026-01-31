@@ -1,45 +1,63 @@
 import { create } from 'zustand';
 
-// Define types of visuals we support
-export type VisualType = 'NONE' | 'ARRAY_PUSH' | 'VARIABLE_BOX' | 'CSS_FLEX';
+// 1. Define valid modes for the UI
+export type VisualMode = 'SORTING' | 'LIST_PROCESS' | 'STRING_HUD' | 'MATH_LOGIC' | 'UNIVERSAL';
 
-interface LiveVisualData {
-  type: VisualType;
-  params: any; // e.g., { arrayName: 'arr', value: '10' }
+// 2. Define the "Video Frame" structure
+export interface TraceFrame {
+  id: number;
+  memory: Record<string, any>;
+  activeVariable: string | null;
+  action: 'READ' | 'WRITE' | 'EXECUTE'; // <--- Ensure this matches
+  desc: string;
 }
 
+// 3. The interface that the components see
 interface AnalysisState {
   isVisible: boolean;
-  isAnalyzing: boolean;
-  data: any | null;
-  currentStep: number;
+  isAnalyzing: boolean; // 🟢 Fixes: "isAnalyzing does not exist"
+  data: any | null;      // Stores AI explanation data
+  traceFrames: TraceFrame[];
+  currentFrameIndex: number;
+  isPlaying: boolean;
+  visualMode: VisualMode;
   
-  // NEW: Live Visual State
-  liveVisual: LiveVisualData;
-  
+  // Actions
   togglePanel: () => void;
-  setAnalysisData: (data: any) => void;
-  setStep: (step: number) => void;
-  setAnalyzing: (isAnalyzing: boolean) => void;
+  setAnalyzing: (val: boolean) => void;     // 🟢 Fixes: "setAnalyzing does not exist"
+  setAnalysisData: (data: any) => void;     // 🟢 Fixes: "setAnalysisData does not exist"
   
-  // NEW: Action
-  setLiveVisual: (data: LiveVisualData) => void;
+  // 🟢 Fixes: "Expected 1 arguments, but got 2" error
+  setTraceFrames: (frames: TraceFrame[], mode?: VisualMode) => void; 
+  
+  setFrameIndex: (index: number | ((prev: number) => number)) => void;
+  togglePlay: () => void;
 }
 
+// 4. Implementation
 export const useAnalysisStore = create<AnalysisState>((set) => ({
   isVisible: false,
   isAnalyzing: false,
   data: null,
-  currentStep: 0,
-  
-  // Default state
-  liveVisual: { type: 'NONE', params: {} },
+  traceFrames: [],
+  currentFrameIndex: 0,
+  isPlaying: false,
+  visualMode: 'UNIVERSAL',
 
   togglePanel: () => set((state) => ({ isVisible: !state.isVisible })),
-  setAnalysisData: (data) => set({ data, isVisible: true, currentStep: 0, liveVisual: { type: 'NONE', params: {} } }),
-  setStep: (step) => set({ currentStep: step }),
-  setAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
-  
-  // Update live visual
-  setLiveVisual: (data) => set({ liveVisual: data, isVisible: true })
+  setAnalyzing: (val) => set({ isAnalyzing: val }),
+  setAnalysisData: (data) => set({ data }),
+
+  setTraceFrames: (frames, mode = 'UNIVERSAL') => set({ 
+    traceFrames: frames, 
+    currentFrameIndex: 0, 
+    visualMode: mode,
+    isVisible: true 
+  }),
+
+  setFrameIndex: (input) => set((state) => ({
+    currentFrameIndex: typeof input === 'function' ? input(state.currentFrameIndex) : input
+  })),
+
+  togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
 }));

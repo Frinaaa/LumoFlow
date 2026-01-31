@@ -7,7 +7,7 @@ import GamesTab from './GamesTab';
 import { analysisPanelStyles } from './styles';
 
 const AnalysisPanel: React.FC = () => {
-    const { isVisible, data, isAnalyzing, currentStep, setStep, togglePanel } = useAnalysisStore();
+    const { isVisible, data, isAnalyzing, togglePanel } = useAnalysisStore();
     const [activeTab, setActiveTab] = useState<'visualize' | 'explain' | 'interact' | 'games'>('visualize');
 
     if (!isVisible) return null;
@@ -76,76 +76,88 @@ const AnalysisPanel: React.FC = () => {
                 </div>
 
                 {/* Content */}
-                <div className="analysis-panel-content">
-                    {isAnalyzing ? (
-                        <div
-                            style={{
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '20px',
-                                color: '#888',
-                            }}
-                        >
+                <div className="analysis-panel-content" style={{ background: '#1e1e1e', minHeight: '200px' }}>
+                    {activeTab === 'visualize' && <VisualizeTab />}
+                    {activeTab === 'explain' && (
+                        isAnalyzing ? (
                             <div
                                 style={{
-                                    width: '40px',
-                                    height: '40px',
-                                    border: '3px solid #333',
-                                    borderTopColor: '#00f2ff',
-                                    borderRadius: '50%',
-                                    animation: 'spin 1s linear infinite'
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '20px',
+                                    color: '#888',
                                 }}
-                            />
-                            <div style={{ fontSize: '13px', letterSpacing: '1px' }}>ANALYZING NEURAL LINK...</div>
-                            <style>{`
-                @keyframes spin {
-                  to { transform: rotate(360deg); }
-                }
-              `}</style>
-                        </div>
-                    ) : data ? (
-                        <>
-                            {activeTab === 'visualize' && (
-                                <VisualizeTab
-                                    analysisData={data}
-                                    currentStep={currentStep}
-                                    onStepChange={setStep}
+                            >
+                                <div
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        border: '3px solid #333',
+                                        borderTopColor: '#00f2ff',
+                                        borderRadius: '50%',
+                                        animation: 'spin 1s linear infinite'
+                                    }}
                                 />
-                            )}
-                            {activeTab === 'explain' && (
-                                <ExplanationTab analysisData={data} />
-                            )}
-                            {activeTab === 'interact' && (
-                                <InteractionTab analysisData={data} />
-                            )}
-                            {activeTab === 'games' && (
-                                <GamesTab />
-                            )}
-                        </>
-                    ) : (
-                        <div
-                            style={{
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '16px',
-                                color: '#666',
-                                textAlign: 'center',
-                                padding: '20px'
-                            }}
-                        >
-                            <i className="fa-solid fa-bolt" style={{ fontSize: '32px', opacity: 0.2 }}></i>
-                            <div>
-                                <div style={{ fontSize: '14px', marginBottom: '8px' }}>No Data Available</div>
-                                <div style={{ fontSize: '12px' }}>Run the code or trigger analysis to see results</div>
+                                <div style={{ fontSize: '13px', letterSpacing: '1px' }}>ANALYZING NEURAL LINK...</div>
+                                <style>{`
+                    @keyframes spin {
+                      to { transform: rotate(360deg); }
+                    }
+                  `}</style>
                             </div>
-                        </div>
+                        ) : data ? (
+                            <ExplanationTab analysisData={data} />
+                        ) : (
+                            <div
+                                style={{
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '16px',
+                                    color: '#666',
+                                    textAlign: 'center',
+                                    padding: '20px'
+                                }}
+                            >
+                                <i className="fa-solid fa-bolt" style={{ fontSize: '32px', opacity: 0.2 }}></i>
+                                <div>
+                                    <div style={{ fontSize: '14px', marginBottom: '8px' }}>No Data Available</div>
+                                    <div style={{ fontSize: '12px' }}>Run the code or trigger analysis to see results</div>
+                                </div>
+                            </div>
+                        )
                     )}
+                    {activeTab === 'interact' && (
+                        data ? (
+                            <InteractionTab analysisData={data} />
+                        ) : (
+                            <div
+                                style={{
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '16px',
+                                    color: '#666',
+                                    textAlign: 'center',
+                                    padding: '20px'
+                                }}
+                            >
+                                <i className="fa-solid fa-bolt" style={{ fontSize: '32px', opacity: 0.2 }}></i>
+                                <div>
+                                    <div style={{ fontSize: '14px', marginBottom: '8px' }}>No Data Available</div>
+                                    <div style={{ fontSize: '12px' }}>Run the code or trigger analysis to see results</div>
+                                </div>
+                            </div>
+                        )
+                    )}
+                    {activeTab === 'games' && <GamesTab />}
                 </div>
             </div>
         </>

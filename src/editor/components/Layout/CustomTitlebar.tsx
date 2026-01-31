@@ -20,47 +20,34 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
   // src/components/CustomTitlebar.tsx
 
   const handleAnalyze = async () => {
-    console.log("🔍 Analyze button clicked");
-
-    // 1. Get the current active tab and its content
     const activeTab = tabs.find(t => t.id === activeTabId);
-    if (!activeTab) {
-      console.warn("⚠️ No active file to analyze");
-      return;
-    }
+    if (!activeTab) return;
 
-    console.log(`📄 Analyzing file: ${activeTab.fileName} (${activeTab.language})`);
-
-    // 2. Start the loading state and open the panel
-    analysisStore.setAnalyzing(true);
-
-    // If the panel is closed, open it
-    if (!analysisStore.isVisible) {
-      analysisStore.togglePanel();
-    }
-
+    // 1. Open the panel immediately
+    if (!analysisStore.isVisible) analysisStore.togglePanel();
+    
+    // The VisualizeTab will automatically detect the code and generate frames
+    // No need to manually generate frames here anymore
+    
+    // 2. Optional: Run background AI analysis if available
     try {
-      // 3. Call the Electron Backend
-      const result = await (window as any).api.analyzeCode({
-        code: activeTab.content,
-        language: activeTab.language,
-      });
-
-      console.log("📊 Analysis result:", result);
-
-      if (result.success) {
-        // 4. Send results to the store
-        analysisStore.setAnalysisData(result.analysis);
-      } else {
-        console.error("❌ Analysis failed:", result.msg);
+      if ((window as any).api?.analyzeCode) {
+        analysisStore.setAnalyzing(true);
+        const result = await (window as any).api.analyzeCode({
+          code: activeTab.content,
+          language: activeTab.language,
+        });
+        if (result.success) {
+          analysisStore.setAnalysisData(result.analysis);
+        }
       }
-    } catch (e) {
-      console.error("💥 IPC Error during analysis:", e);
+    } catch (backendErr) {
+      console.warn("AI Backend Analysis not available:", backendErr);
     } finally {
-      // 5. Stop the loading spinner
       analysisStore.setAnalyzing(false);
     }
   };
+
   return (
     <div className="vs-titlebar-container">
       {/* 1. LEFT SECTION: Logo and MenuBar */}

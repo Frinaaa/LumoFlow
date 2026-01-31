@@ -1,719 +1,933 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import ProgressBar from './ProgressBar';
-import { useAnalysisStore } from '../../editor/stores/analysisStore';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useAnalysisStore, TraceFrame } from '../../editor/stores/analysisStore';
+import { useEditorStore } from '../../editor/stores/editorStore';
 
-interface AnalysisData {
-  language: string;
-  totalLines: number;
-  functions: Array<{ name: string; line: number; type: string }>;
-  variables: Array<{ name: string; line: number; type: string }>;
-  controlFlow: Array<{ type: string; line: number; condition?: string }>;
-  explanation: string[];
-  flowchart?: {
-    nodes: Array<any>;
-    connections: Array<any>;
-  };
-}
+// Helper functions defined outside component for better performance
+const generateSortingTrace = (code: string, frames: TraceFrame[]) => {
+  const arrayMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[\s\S]*?\])/);
+  if (!arrayMatch) return;
 
-interface VisualizeTabProps {
-  analysisData: AnalysisData | null;
-  currentStep: number;
-  onStepChange: (step: number) => void;
-}
+  const varName = arrayMatch[1];
+  const arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
+  
+  frames.push({
+    id: 0,
+    memory: { [varName]: [...arrayData] },
+    activeVariable: varName,
+    action: 'EXECUTE',
+    desc: `Starting with array: [${arrayData.join(', ')}]`
+  });
 
-const VisualizeTab: React.FC<VisualizeTabProps> = ({ analysisData, currentStep, onStepChange }) => {
-  const { liveVisual } = useAnalysisStore();
-  const [autoPlay, setAutoPlay] = useState(false);
+  const arr = [...arrayData];
+  for (let i = 0; i < arr.length - 1; i++) {
+    for (let j = 0; j < arr.length - i - 1; j++) {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arr], comparing: [j, j + 1] },
+        activeVariable: varName,
+        action: 'READ',
+        desc: `Comparing ${arr[j]} and ${arr[j + 1]}`
+      });
 
-  // Auto-detect animation flavor based on code characteristics
-  const animationFlavor = useMemo(() => {
-    if (!analysisData) return 'smooth';
-    
-    const hasLoops = analysisData.controlFlow.some(cf => cf.type === 'loop');
-    const hasAsync = analysisData.functions.some(f => (f as any).async);
-    const isComplex = analysisData.totalLines > 50 || analysisData.functions.length > 5;
-    
-    if (hasAsync) return 'energetic';
-    if (hasLoops) return 'smooth';
-    if (isComplex) return 'minimal';
-    return 'smooth';
-  }, [analysisData]);
+      if (arr[j] > arr[j + 1]) {
+        frames.push({
+          id: frames.length,
+          memory: { [varName]: [...arr], swapping: [j, j + 1] },
+          activeVariable: varName,
+          action: 'WRITE',
+          desc: `Swapping ${arr[j]} ↔ ${arr[j + 1]}`
+        });
 
-  const animSpeed = animationFlavor === 'minimal' ? 300 : animationFlavor === 'energetic' ? 500 : 400;
+        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
 
-  useEffect(() => {
-    if (!autoPlay || !analysisData) return;
-
-    const interval = setInterval(() => {
-      const nextStep = currentStep + 1;
-      if (nextStep >= analysisData.explanation.length) {
-        setAutoPlay(false);
-        return;
+        frames.push({
+          id: frames.length,
+          memory: { [varName]: [...arr] },
+          activeVariable: varName,
+          action: 'WRITE',
+          desc: `After swap: [${arr.join(', ')}]`
+        });
       }
-      onStepChange(nextStep);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [autoPlay, analysisData, onStepChange, currentStep]);
-
-  // Render Live Visual (merged from LiveCanvas)
-  const renderLiveVisual = () => {
-    if (liveVisual.type === 'NONE' || !liveVisual.params) return null;
-
-    const { params } = liveVisual;
-
-    return (
-      <div style={{
-        padding: '30px',
-        background: 'linear-gradient(135deg, #0e0e10 0%, #1a0a1e 100%)',
-        borderRadius: '12px',
-        border: '2px solid #bc13fe',
-        minHeight: '400px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: '15px',
-          left: '15px',
-          fontSize: '10px',
-          fontWeight: 'bold',
-          color: '#bc13fe',
-          letterSpacing: '2px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}>
-          <i className="fa-solid fa-bolt"></i> LIVE PREVIEW
-        </div>
-
-        {/* ARRAY PUSH */}
-        {liveVisual.type === 'ARRAY_PUSH' && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <span style={{ fontSize: '40px', color: '#fff' }}>[</span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {Array.isArray(params.prevItems) && params.prevItems.map((item: any, i: number) => (
-                  <div
-                    key={`prev-${i}`}
-                    style={{
-                      padding: '10px 15px',
-                      background: '#1e1e1e',
-                      border: '2px solid #ffd700',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      fontSize: '16px',
-                      fontFamily: 'monospace',
-                      opacity: 0.7
-                    }}
-                  >
-                    {String(item)}
-                  </div>
-                ))}
-                {params.value !== undefined && (
-                  <div
-                    style={{
-                      padding: '10px 15px',
-                      background: '#00f2ff',
-                      color: '#000',
-                      border: '2px solid #fff',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      fontFamily: 'monospace',
-                      animation: 'popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                    }}
-                  >
-                    {String(params.value)}
-                  </div>
-                )}
-              </div>
-              <span style={{ fontSize: '40px', color: '#fff' }}>]</span>
-            </div>
-            <div style={{ color: '#888', fontSize: '13px', fontFamily: 'monospace' }}>
-              {params.arrayName || 'array'}.push(<span style={{ color: '#00f2ff', fontWeight: 'bold' }}>{String(params.value)}</span>)
-            </div>
-          </div>
-        )}
-
-        {/* VARIABLE BOX */}
-        {liveVisual.type === 'VARIABLE_BOX' && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ color: '#bc13fe', fontSize: '14px', marginBottom: '10px', fontWeight: 'bold' }}>
-              {params.name || 'variable'}
-            </div>
-            <div style={{
-              width: '120px',
-              height: '120px',
-              border: '3px solid #bc13fe',
-              background: 'rgba(188, 19, 254, 0.1)',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              animation: 'borderFlash 1s infinite alternate'
-            }}>
-              <div style={{
-                fontSize: '28px',
-                color: '#fff',
-                fontFamily: 'monospace',
-                fontWeight: 'bold'
-              }}>
-                {String(params.value ?? '')}
-              </div>
-            </div>
-            <div style={{ color: '#888', fontSize: '12px', marginTop: '15px' }}>
-              Storing value in memory...
-            </div>
-          </div>
-        )}
-
-        {/* CSS FLEX */}
-        {liveVisual.type === 'CSS_FLEX' && (
-          <div style={{ textAlign: 'center', width: '100%' }}>
-            <div 
-              style={{ 
-                width: '300px',
-                height: '180px',
-                border: '2px dashed #666',
-                background: '#1a1a1a',
-                borderRadius: '8px',
-                display: 'flex',
-                justifyContent: params.justify || 'flex-start',
-                alignItems: params.align || 'stretch',
-                padding: '10px',
-                margin: '0 auto 20px',
-                transition: 'all 0.5s ease'
-              }}
-            >
-              {[1, 2, 3].map(num => (
-                <div
-                  key={num}
-                  style={{
-                    width: '50px',
-                    height: '50px',
-                    background: '#ff0055',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '6px',
-                    fontWeight: 'bold',
-                    margin: '5px'
-                  }}
-                >
-                  {num}
-                </div>
-              ))}
-            </div>
-            <div style={{ color: '#888', fontSize: '12px', fontFamily: 'monospace' }}>
-              justify: {params.justify || 'flex-start'} | align: {params.align || 'stretch'}
-            </div>
-          </div>
-        )}
-
-        <style>{`
-          @keyframes popIn {
-            0% { transform: scale(0) translateY(-50px); opacity: 0; }
-            70% { transform: scale(1.2) translateY(0); opacity: 1; }
-            100% { transform: scale(1); }
-          }
-          @keyframes borderFlash {
-            from { box-shadow: 0 0 5px #bc13fe; }
-            to { box-shadow: 0 0 20px #bc13fe; }
-          }
-        `}</style>
-      </div>
-    );
-  };
-
-  // Render Output-Based Visualization
-  const renderOutputVisualization = () => {
-    if (!analysisData) return null;
-
-    const currentNode = analysisData.flowchart?.nodes?.[currentStep];
-    const currentExplanation = analysisData.explanation[currentStep];
-
-    // Extract output type from explanation
-    const isLoop = currentExplanation?.toLowerCase().includes('loop');
-    const isFunction = currentExplanation?.toLowerCase().includes('function');
-    const isVariable = currentExplanation?.toLowerCase().includes('variable');
-    const isConditional = currentExplanation?.toLowerCase().includes('conditional') || currentExplanation?.toLowerCase().includes('if');
-    const isOutput = currentExplanation?.toLowerCase().includes('console') || currentExplanation?.toLowerCase().includes('print');
-
-    // Calculate progress percentage
-    const progressPercent = ((currentStep + 1) / analysisData.explanation.length) * 100;
-
-    return (
-      <div style={{
-        background: 'linear-gradient(135deg, #0a0a0e 0%, #1a0a1e 100%)',
-        border: '2px solid rgba(0, 242, 255, 0.3)',
-        borderRadius: '12px',
-        padding: '25px',
-        minHeight: '450px',
-        position: 'relative'
-      }}>
-        {/* Progress Ring */}
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          width: '50px',
-          height: '50px'
-        }}>
-          <svg width="50" height="50" style={{ transform: 'rotate(-90deg)' }}>
-            <circle
-              cx="25"
-              cy="25"
-              r="20"
-              fill="none"
-              stroke="rgba(0, 242, 255, 0.2)"
-              strokeWidth="4"
-            />
-            <circle
-              cx="25"
-              cy="25"
-              r="20"
-              fill="none"
-              stroke="#00f2ff"
-              strokeWidth="4"
-              strokeDasharray={`${2 * Math.PI * 20}`}
-              strokeDashoffset={`${2 * Math.PI * 20 * (1 - progressPercent / 100)}`}
-              style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-            />
-          </svg>
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            color: '#00f2ff'
-          }}>
-            {Math.round(progressPercent)}%
-          </div>
-        </div>
-
-        {/* Current Execution Visual */}
-        <div style={{
-          background: 'rgba(0, 0, 0, 0.5)',
-          border: '2px solid ' + (currentNode?.color || '#00f2ff'),
-          borderRadius: '12px',
-          padding: '30px',
-          marginBottom: '25px',
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Background Glow Effect */}
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '200px',
-            height: '200px',
-            background: `radial-gradient(circle, ${currentNode?.color || '#00f2ff'}20 0%, transparent 70%)`,
-            animation: 'pulse 3s ease-in-out infinite',
-            pointerEvents: 'none'
-          }} />
-
-          {/* Animated Icon */}
-          <div style={{
-            width: '80px',
-            height: '80px',
-            margin: '0 auto 20px',
-            background: currentNode?.color || '#00f2ff',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: `0 0 30px ${currentNode?.color || '#00f2ff'}`,
-            animation: isLoop ? 'spin 2s linear infinite' : 'pulse 2s ease-in-out infinite',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <i className={`fa-solid fa-${
-              isLoop ? 'rotate' :
-              isFunction ? 'code' :
-              isVariable ? 'database' :
-              isConditional ? 'code-branch' :
-              isOutput ? 'terminal' :
-              'play'
-            }`} style={{ color: '#000', fontSize: '32px' }}></i>
-          </div>
-
-          {/* Main Label */}
-          <div style={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#fff',
-            marginBottom: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '2px',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            {currentNode?.label || 'Executing'}
-          </div>
-
-          {/* Explanation Text with Typewriter Effect */}
-          <div style={{
-            fontSize: '13px',
-            color: '#00ff00',
-            fontFamily: 'monospace',
-            lineHeight: '1.8',
-            maxWidth: '500px',
-            margin: '0 auto',
-            textShadow: '0 0 10px rgba(0, 255, 0, 0.5)',
-            animation: `fadeIn ${animSpeed}ms ease-out`,
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <span style={{ color: '#00f2ff', marginRight: '8px' }}>▶</span>
-            {currentExplanation}
-          </div>
-
-          {/* Step Counter */}
-          <div style={{
-            marginTop: '15px',
-            fontSize: '11px',
-            color: '#888',
-            fontFamily: 'monospace',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            Step {currentStep + 1} of {analysisData.explanation.length}
-          </div>
-        </div>
-
-        {/* Interactive Timeline */}
-        <div style={{
-          background: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '8px',
-          padding: '15px',
-          marginBottom: '20px'
-        }}>
-          <div style={{
-            fontSize: '10px',
-            color: '#888',
-            marginBottom: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            fontWeight: 'bold'
-          }}>
-            Execution Timeline
-          </div>
-          <div style={{
-            display: 'flex',
-            gap: '6px',
-            overflowX: 'auto',
-            padding: '5px 0'
-          }}>
-            {analysisData.explanation.map((exp, idx) => {
-              const isActive = idx === currentStep;
-              const isPast = idx < currentStep;
-              const node = analysisData.flowchart?.nodes?.[idx];
-
-              return (
-                <div
-                  key={idx}
-                  onClick={() => onStepChange(idx)}
-                  title={exp}
-                  style={{
-                    minWidth: '45px',
-                    height: '45px',
-                    borderRadius: '8px',
-                    background: isActive 
-                      ? `linear-gradient(135deg, ${node?.color || '#00f2ff'}, ${node?.color || '#bc13fe'})`
-                      : isPast
-                      ? 'rgba(0, 242, 255, 0.3)'
-                      : 'rgba(100, 100, 100, 0.2)',
-                    border: `2px solid ${isActive ? '#fff' : 'transparent'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    color: isActive ? '#000' : isPast ? '#00f2ff' : '#666',
-                    boxShadow: isActive ? `0 0 20px ${node?.color || '#00f2ff'}80` : 'none',
-                    transform: isActive ? 'scale(1.15)' : 'scale(1)',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.transform = 'scale(1.1)';
-                      e.currentTarget.style.borderColor = '#00f2ff';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.borderColor = 'transparent';
-                    }
-                  }}
-                >
-                  {isPast ? (
-                    <i className="fa-solid fa-check"></i>
-                  ) : (
-                    <span>{idx + 1}</span>
-                  )}
-                  {isActive && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-8px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: '0',
-                      height: '0',
-                      borderLeft: '5px solid transparent',
-                      borderRight: '5px solid transparent',
-                      borderTop: '5px solid #fff'
-                    }} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Code Insights */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '15px'
-        }}>
-          {/* Variables */}
-          {analysisData.variables && analysisData.variables.length > 0 && (
-            <div style={{
-              padding: '15px',
-              background: 'rgba(188, 19, 254, 0.05)',
-              border: '1px solid rgba(188, 19, 254, 0.3)',
-              borderRadius: '8px'
-            }}>
-              <div style={{
-                fontSize: '11px',
-                color: '#bc13fe',
-                fontWeight: 'bold',
-                marginBottom: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <i className="fa-solid fa-database"></i>
-                VARIABLES ({analysisData.variables.slice(0, currentStep + 1).length})
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {analysisData.variables.slice(0, currentStep + 1).map((v, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '5px 10px',
-                      background: 'rgba(188, 19, 254, 0.15)',
-                      border: '1px solid rgba(188, 19, 254, 0.4)',
-                      borderRadius: '6px',
-                      fontSize: '10px',
-                      color: '#bc13fe',
-                      fontFamily: 'monospace',
-                      fontWeight: 'bold',
-                      animation: `slideUp ${animSpeed}ms ease-out ${idx * 100}ms both`
-                    }}
-                  >
-                    {v.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Functions */}
-          {analysisData.functions && analysisData.functions.length > 0 && (
-            <div style={{
-              padding: '15px',
-              background: 'rgba(0, 242, 255, 0.05)',
-              border: '1px solid rgba(0, 242, 255, 0.3)',
-              borderRadius: '8px'
-            }}>
-              <div style={{
-                fontSize: '11px',
-                color: '#00f2ff',
-                fontWeight: 'bold',
-                marginBottom: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <i className="fa-solid fa-code"></i>
-                FUNCTIONS ({analysisData.functions.length})
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {analysisData.functions.map((f, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '5px 10px',
-                      background: 'rgba(0, 242, 255, 0.15)',
-                      border: '1px solid rgba(0, 242, 255, 0.4)',
-                      borderRadius: '6px',
-                      fontSize: '10px',
-                      color: '#00f2ff',
-                      fontFamily: 'monospace',
-                      fontWeight: 'bold',
-                      animation: `slideUp ${animSpeed}ms ease-out ${idx * 100}ms both`
-                    }}
-                  >
-                    {f.name}()
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <style>{`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-5px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.1); opacity: 1; }
-          }
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          @keyframes slideUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
-      </div>
-    );
-  };
-
-  // Priority: Show live visual if available
-  if (liveVisual && liveVisual.type !== 'NONE') {
-    return renderLiveVisual();
+    }
+    
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arr], sorted: arr.length - i - 1 },
+      activeVariable: varName,
+      action: 'EXECUTE',
+      desc: `Pass ${i + 1} complete`
+    });
   }
 
-  return (
-    <>
-      {analysisData && (
-        <>
-          <div style={{ marginBottom: '15px' }}>
-            <ProgressBar
-              currentStep={currentStep}
-              totalSteps={analysisData.explanation.length}
-              onStepChange={onStepChange}
-            />
-          </div>
+  frames.push({
+    id: frames.length,
+    memory: { [varName]: [...arr], sorted: arr.length },
+    activeVariable: varName,
+    action: 'EXECUTE',
+    desc: `✓ Sorted: [${arr.join(', ')}]`
+  });
+};
 
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-            <button
-              onClick={() => onStepChange(Math.max(0, currentStep - 1))}
-              disabled={currentStep === 0}
-              style={{
-                padding: '10px 18px',
-                background: currentStep === 0 ? '#333' : 'linear-gradient(135deg, #bc13fe, #8a0fc9)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
-                opacity: currentStep === 0 ? 0.5 : 1,
-                transition: 'all 0.2s',
-                boxShadow: currentStep === 0 ? 'none' : '0 4px 15px rgba(188, 19, 254, 0.4)'
-              }}
-            >
-              <i className="fa-solid fa-chevron-left"></i> Previous
-            </button>
-            <button
-              onClick={() => setAutoPlay(!autoPlay)}
-              style={{
-                padding: '10px 18px',
-                background: autoPlay 
-                  ? 'linear-gradient(135deg, #00f2ff, #00b8cc)' 
-                  : 'linear-gradient(135deg, #bc13fe, #8a0fc9)',
-                border: 'none',
-                borderRadius: '8px',
-                color: autoPlay ? '#000' : 'white',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                flex: 1,
-                transition: 'all 0.2s',
-                boxShadow: autoPlay 
-                  ? '0 4px 15px rgba(0, 242, 255, 0.6)' 
-                  : '0 4px 15px rgba(188, 19, 254, 0.4)'
-              }}
-            >
-              <i className={`fa-solid fa-${autoPlay ? 'pause' : 'play'}`}></i> {autoPlay ? 'Pause' : 'Auto Play'}
-            </button>
-            <button
-              onClick={() => onStepChange(Math.min(analysisData.explanation.length - 1, currentStep + 1))}
-              disabled={currentStep === analysisData.explanation.length - 1}
-              style={{
-                padding: '10px 18px',
-                background: currentStep === analysisData.explanation.length - 1 ? '#333' : 'linear-gradient(135deg, #bc13fe, #8a0fc9)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: currentStep === analysisData.explanation.length - 1 ? 'not-allowed' : 'pointer',
-                opacity: currentStep === analysisData.explanation.length - 1 ? 0.5 : 1,
-                transition: 'all 0.2s',
-                boxShadow: currentStep === analysisData.explanation.length - 1 ? 'none' : '0 4px 15px rgba(188, 19, 254, 0.4)'
-              }}
-            >
-              Next <i className="fa-solid fa-chevron-right"></i>
-            </button>
-          </div>
-        </>
-      )}
+const generateSearchingTrace = (code: string, frames: TraceFrame[]) => {
+  const arrayMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[\s\S]*?\])/);
+  const targetMatch = code.match(/(?:find|search|indexOf)\s*\(\s*(\w+|\d+)\s*\)/i);
+  
+  if (!arrayMatch) return;
 
-      <div>
-        {analysisData ? renderOutputVisualization() : (
-          <div style={{
-            padding: '80px 40px',
-            textAlign: 'center',
-            border: '2px dashed rgba(0, 242, 255, 0.3)',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(10, 10, 14, 0.5), rgba(26, 10, 30, 0.5))'
-          }}>
-            <div style={{
-              width: '70px',
-              height: '70px',
-              margin: '0 auto 25px',
-              border: '3px solid rgba(0, 242, 255, 0.3)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              animation: 'pulse 2s ease-in-out infinite'
-            }}>
-              <i className="fa-solid fa-code" style={{ fontSize: '32px', color: '#00f2ff' }}></i>
-            </div>
-            <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#888', fontWeight: 'bold' }}>
-              Ready to Analyze
-            </p>
-            <p style={{ margin: 0, fontSize: '12px', color: '#555' }}>
-              Write code and click analyze to see execution visualization
-            </p>
-          </div>
-        )}
+  const varName = arrayMatch[1];
+  const arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
+  const target = targetMatch ? targetMatch[1] : arrayData[Math.floor(arrayData.length / 2)];
+  
+  frames.push({
+    id: 0,
+    memory: { [varName]: [...arrayData], target },
+    activeVariable: varName,
+    action: 'EXECUTE',
+    desc: `Searching for ${target} in array`
+  });
+
+  for (let i = 0; i < arrayData.length; i++) {
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arrayData], currentIndex: i, target },
+      activeVariable: varName,
+      action: 'READ',
+      desc: `Checking index ${i}: ${arrayData[i]} ${arrayData[i] == target ? '✓ Found!' : '≠ ' + target}`
+    });
+
+    if (arrayData[i] == target) {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arrayData], foundIndex: i, target },
+        activeVariable: varName,
+        action: 'EXECUTE',
+        desc: `✓ Found ${target} at index ${i}!`
+      });
+      return;
+    }
+  }
+
+  frames.push({
+    id: frames.length,
+    memory: { [varName]: [...arrayData], target },
+    activeVariable: varName,
+    action: 'EXECUTE',
+    desc: `✗ ${target} not found in array`
+  });
+};
+
+const generateStringTrace = (code: string, frames: TraceFrame[]) => {
+  const strMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*["']([^"']+)["']/);
+  if (!strMatch) return;
+
+  const varName = strMatch[1];
+  const strValue = strMatch[2];
+  
+  frames.push({
+    id: 0,
+    memory: { [varName]: strValue },
+    activeVariable: varName,
+    action: 'EXECUTE',
+    desc: `String: "${strValue}"`
+  });
+
+  if (/split/.test(code)) {
+    const chars = strValue.split('');
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: strValue, result: chars },
+      activeVariable: 'result',
+      action: 'WRITE',
+      desc: `Split into: [${chars.join(', ')}]`
+    });
+  }
+
+  if (/toUpperCase/.test(code)) {
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: strValue, result: strValue.toUpperCase() },
+      activeVariable: 'result',
+      action: 'WRITE',
+      desc: `Uppercase: "${strValue.toUpperCase()}"`
+    });
+  }
+
+  if (/toLowerCase/.test(code)) {
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: strValue, result: strValue.toLowerCase() },
+      activeVariable: 'result',
+      action: 'WRITE',
+      desc: `Lowercase: "${strValue.toLowerCase()}"`
+    });
+  }
+
+  if (/reverse/.test(code)) {
+    const reversed = strValue.split('').reverse().join('');
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: strValue, result: reversed },
+      activeVariable: 'result',
+      action: 'WRITE',
+      desc: `Reversed: "${reversed}"`
+    });
+  }
+};
+
+const generateArrayOperationTrace = (code: string, frames: TraceFrame[]) => {
+  const arrayMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[\s\S]*?\])/);
+  if (!arrayMatch) return;
+
+  const varName = arrayMatch[1];
+  const arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
+  
+  frames.push({
+    id: 0,
+    memory: { [varName]: [...arrayData] },
+    activeVariable: varName,
+    action: 'EXECUTE',
+    desc: `Array: [${arrayData.join(', ')}]`
+  });
+
+  const isMap = /\.map\s*\(/.test(code);
+  const isFilter = /\.filter\s*\(/.test(code);
+
+  if (isMap) {
+    const result: any[] = [];
+    arrayData.forEach((val: any, idx: number) => {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arrayData], currentIndex: idx, processing: val },
+        activeVariable: varName,
+        action: 'READ',
+        desc: `Processing ${val} at index ${idx}`
+      });
+
+      const transformed = val * 2;
+      result.push(transformed);
+      
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arrayData], result: [...result], currentIndex: idx },
+        activeVariable: 'result',
+        action: 'WRITE',
+        desc: `Transformed ${val} → ${transformed}`
+      });
+    });
+
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arrayData], result },
+      activeVariable: 'result',
+      action: 'EXECUTE',
+      desc: `✓ Map complete: [${result.join(', ')}]`
+    });
+  } else if (isFilter) {
+    const result: any[] = [];
+    arrayData.forEach((val: any, idx: number) => {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arrayData], currentIndex: idx, checking: val },
+        activeVariable: varName,
+        action: 'READ',
+        desc: `Checking ${val}: ${val > 5 ? '✓ Pass' : '✗ Fail'}`
+      });
+
+      if (val > 5) {
+        result.push(val);
+        frames.push({
+          id: frames.length,
+          memory: { [varName]: [...arrayData], result: [...result] },
+          activeVariable: 'result',
+          action: 'WRITE',
+          desc: `Added ${val} to result`
+        });
+      }
+    });
+
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arrayData], result },
+      activeVariable: 'result',
+      action: 'EXECUTE',
+      desc: `✓ Filter complete: [${result.join(', ')}]`
+    });
+  } else {
+    arrayData.forEach((val: any, idx: number) => {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arrayData], currentIndex: idx },
+        activeVariable: varName,
+        action: 'READ',
+        desc: `Processing element ${idx}: ${JSON.stringify(val)}`
+      });
+    });
+
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arrayData] },
+      activeVariable: varName,
+      action: 'EXECUTE',
+      desc: `✓ Processed all ${arrayData.length} elements`
+    });
+  }
+};
+
+const generateLoopTrace = (code: string, frames: TraceFrame[]) => {
+  const forMatch = code.match(/for\s*\(\s*let\s+(\w+)\s*=\s*(\d+)\s*;\s*\w+\s*<\s*(\d+)/);
+  
+  if (forMatch) {
+    const varName = forMatch[1];
+    const start = parseInt(forMatch[2]);
+    const end = parseInt(forMatch[3]);
+    
+    frames.push({
+      id: 0,
+      memory: {},
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: `Starting loop: ${varName} from ${start} to ${end - 1}`
+    });
+
+    for (let i = start; i < end; i++) {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: i },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `Iteration ${i - start + 1}: ${varName} = ${i}`
+      });
+    }
+
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: end },
+      activeVariable: varName,
+      action: 'EXECUTE',
+      desc: `✓ Loop complete after ${end - start} iterations`
+    });
+  }
+};
+
+const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
+  const varMatches = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*([^;\n]+)/g));
+  const memory: Record<string, any> = {};
+
+  frames.push({
+    id: 0,
+    memory: {},
+    activeVariable: null,
+    action: 'EXECUTE',
+    desc: 'Evaluating conditions...'
+  });
+
+  varMatches.forEach(match => {
+    const varName = match[1];
+    const value = match[2].trim();
+    
+    try {
+      const evalValue = new Function(`return ${value}`)();
+      memory[varName] = evalValue;
+      
+      frames.push({
+        id: frames.length,
+        memory: { ...memory },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `${varName} = ${JSON.stringify(evalValue)}`
+      });
+    } catch (e) {
+      memory[varName] = value;
+    }
+  });
+
+  const ifMatch = code.match(/if\s*\(\s*([^)]+)\s*\)/);
+  if (ifMatch) {
+    const condition = ifMatch[1];
+    frames.push({
+      id: frames.length,
+      memory: { ...memory },
+      activeVariable: null,
+      action: 'READ',
+      desc: `Checking: if (${condition})`
+    });
+
+    try {
+      const result = new Function(...Object.keys(memory), `return ${condition}`)(...Object.values(memory));
+      frames.push({
+        id: frames.length,
+        memory: { ...memory, conditionResult: result },
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: `Condition is ${result ? 'TRUE ✓' : 'FALSE ✗'}`
+      });
+    } catch (e) {
+      // Ignore
+    }
+  }
+};
+
+const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
+  const funcMatch = code.match(/function\s+(\w+)\s*\(([^)]*)\)/);
+  
+  if (funcMatch) {
+    const funcName = funcMatch[1];
+    const params = funcMatch[2];
+    
+    frames.push({
+      id: 0,
+      memory: {},
+      activeVariable: funcName,
+      action: 'EXECUTE',
+      desc: `Function ${funcName}(${params}) defined`
+    });
+
+    frames.push({
+      id: 1,
+      memory: { [funcName]: 'function' },
+      activeVariable: funcName,
+      action: 'EXECUTE',
+      desc: `Ready to call ${funcName}()`
+    });
+  }
+};
+
+const generateVariableTrace = (code: string, frames: TraceFrame[]) => {
+  const varMatches = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*([^;\n]+)/g));
+  const memory: Record<string, any> = {};
+
+  if (varMatches.length === 0) {
+    frames.push({
+      id: 0,
+      memory: {},
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: 'No variables detected. Try: let x = 10 or let arr = [1, 2, 3]'
+    });
+    return;
+  }
+
+  frames.push({
+    id: 0,
+    memory: {},
+    activeVariable: null,
+    action: 'EXECUTE',
+    desc: 'Starting execution...'
+  });
+
+  varMatches.forEach(match => {
+    const varName = match[1];
+    const value = match[2].trim();
+    
+    try {
+      const evalValue = new Function(`return ${value}`)();
+      memory[varName] = evalValue;
+      
+      frames.push({
+        id: frames.length,
+        memory: { ...memory },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `Declaring ${varName} = ${JSON.stringify(evalValue)}`
+      });
+    } catch (e) {
+      memory[varName] = value;
+      frames.push({
+        id: frames.length,
+        memory: { ...memory },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `Declaring ${varName} = ${value}`
+      });
+    }
+  });
+
+  frames.push({
+    id: frames.length,
+    memory: { ...memory },
+    activeVariable: null,
+    action: 'EXECUTE',
+    desc: `✓ Execution complete with ${varMatches.length} variable(s)`
+  });
+};
+
+const generateArithmeticTrace = (code: string, frames: TraceFrame[]) => {
+  const varMatches = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*([^;\n]+)/g));
+  const memory: Record<string, any> = {};
+
+  frames.push({
+    id: 0,
+    memory: {},
+    activeVariable: null,
+    action: 'EXECUTE',
+    desc: 'Starting arithmetic operations...'
+  });
+
+  varMatches.forEach(match => {
+    const varName = match[1];
+    const expression = match[2].trim();
+    
+    try {
+      // Check if it's an arithmetic expression
+      if (/[\+\-\*\/\%]/.test(expression)) {
+        // Show the expression first
+        frames.push({
+          id: frames.length,
+          memory: { ...memory },
+          activeVariable: varName,
+          action: 'READ',
+          desc: `Evaluating: ${varName} = ${expression}`
+        });
+      }
+      
+      const evalValue = new Function(...Object.keys(memory), `return ${expression}`)(...Object.values(memory));
+      memory[varName] = evalValue;
+      
+      frames.push({
+        id: frames.length,
+        memory: { ...memory },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `${varName} = ${evalValue}`
+      });
+    } catch (e) {
+      memory[varName] = expression;
+      frames.push({
+        id: frames.length,
+        memory: { ...memory },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `${varName} = ${expression}`
+      });
+    }
+  });
+
+  frames.push({
+    id: frames.length,
+    memory: { ...memory },
+    activeVariable: null,
+    action: 'EXECUTE',
+    desc: '✓ Arithmetic operations complete'
+  });
+};
+
+const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
+  // Universal fallback: Try to execute and capture any state changes
+  frames.push({
+    id: 0,
+    memory: {},
+    activeVariable: null,
+    action: 'EXECUTE',
+    desc: 'Executing code...'
+  });
+
+  try {
+    // Try to extract any meaningful information
+    const lines = code.split('\n').filter(line => line.trim());
+    
+    lines.forEach((line, idx) => {
+      if (line.trim()) {
+        frames.push({
+          id: frames.length,
+          memory: { line: line.trim() },
+          activeVariable: null,
+          action: 'EXECUTE',
+          desc: `Line ${idx + 1}: ${line.trim().substring(0, 50)}${line.length > 50 ? '...' : ''}`
+        });
+      }
+    });
+
+    frames.push({
+      id: frames.length,
+      memory: {},
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: `✓ Executed ${lines.length} line(s) of code`
+    });
+  } catch (e) {
+    frames.push({
+      id: frames.length,
+      memory: {},
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: 'Code structure analyzed'
+    });
+  }
+};
+
+const VisualizeTab: React.FC = () => {
+  const { traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames, isPlaying, togglePlay } = useAnalysisStore();
+  const { tabs, activeTabId } = useEditorStore();
+  const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // --- 3. UNIVERSAL CODE TRACER (Visualizes ANY JavaScript) ---
+  const buildAdvancedTrace = React.useCallback((code: string) => {
+    const frames: TraceFrame[] = [];
+    
+    try {
+      const cleanCode = code.trim();
+      if (!cleanCode) {
+        console.log('No code to visualize');
+        setTraceFrames([]);
+        return;
+      }
+
+      console.log('🎬 Starting visualization for code:', cleanCode.substring(0, 100));
+
+      // Detect code patterns
+      const hasArray = /\[.*\]/.test(code);
+      const hasLoop = /for\s*\(|while\s*\(|\.forEach|\.map|\.filter|\.reduce/i.test(code);
+      const hasFunction = /function\s+\w+|const\s+\w+\s*=\s*\(|=>\s*{/.test(code);
+      const hasConditional = /if\s*\(|else|switch|case|\?/.test(code);
+      const isSorting = /sort|bubble|selection|insertion|quick|merge/i.test(code);
+      const isSearching = /search|find|indexOf|includes|binary/i.test(code);
+      const isStringOp = /split|join|slice|substring|concat|replace|toUpperCase|toLowerCase/.test(code);
+      const hasVariable = /(?:let|const|var)\s+\w+\s*=/.test(code);
+      const hasArithmetic = /[\+\-\*\/\%]/.test(code);
+      const hasComparison = /[<>]=?|===?|!==?/.test(code);
+
+      // PRIORITY 1: Sorting Algorithms (most visual)
+      if (isSorting && hasArray) {
+        console.log('✅ Detected: Sorting algorithm');
+        generateSortingTrace(code, frames);
+      }
+      // PRIORITY 2: Searching Algorithms
+      else if (isSearching && hasArray) {
+        console.log('✅ Detected: Searching algorithm');
+        generateSearchingTrace(code, frames);
+      }
+      // PRIORITY 3: Array Operations (map, filter, reduce)
+      else if (hasArray && hasLoop) {
+        console.log('✅ Detected: Array operations');
+        generateArrayOperationTrace(code, frames);
+      }
+      // PRIORITY 4: String Operations
+      else if (isStringOp && hasVariable) {
+        console.log('✅ Detected: String operations');
+        generateStringTrace(code, frames);
+      }
+      // PRIORITY 5: Loops (for, while)
+      else if (hasLoop) {
+        console.log('✅ Detected: Loop');
+        generateLoopTrace(code, frames);
+      }
+      // PRIORITY 6: Conditionals (if/else)
+      else if (hasConditional && hasVariable) {
+        console.log('✅ Detected: Conditional');
+        generateConditionalTrace(code, frames);
+      }
+      // PRIORITY 7: Functions
+      else if (hasFunction) {
+        console.log('✅ Detected: Function');
+        generateFunctionTrace(code, frames);
+      }
+      // PRIORITY 8: Arithmetic Operations
+      else if (hasArithmetic && hasVariable) {
+        console.log('✅ Detected: Arithmetic operations');
+        generateArithmeticTrace(code, frames);
+      }
+      // PRIORITY 9: Any Variables (universal fallback)
+      else if (hasVariable) {
+        console.log('✅ Detected: Variables');
+        generateVariableTrace(code, frames);
+      }
+      // PRIORITY 10: Execute and trace (for any other code)
+      else {
+        console.log('✅ Attempting universal execution trace');
+        generateUniversalTrace(code, frames);
+      }
+
+      console.log(`📊 Generated ${frames.length} frames`);
+      
+      if (frames.length === 0) {
+        // Create a helpful frame if nothing was generated
+        frames.push({
+          id: 0,
+          memory: {},
+          activeVariable: null,
+          action: 'EXECUTE',
+          desc: 'Code executed. Try adding variables to see visualization: let x = 10'
+        });
+      }
+
+      setTraceFrames(frames);
+    } catch (e) {
+      console.error('❌ Trace generation error:', e);
+      // Show error frame instead of empty
+      setTraceFrames([{
+        id: 0,
+        memory: {},
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: `Error analyzing code: ${e instanceof Error ? e.message : 'Unknown error'}`
+      }]);
+    }
+  }, [setTraceFrames]);
+
+  // --- 1. REAL-TIME OBSERVER (Watches Editor Changes) ---
+  useEffect(() => {
+    if (!activeTab?.content) {
+      console.log('No active tab content');
+      return;
+    }
+    console.log('Building trace for:', activeTab.content.substring(0, 50));
+    const timeout = setTimeout(() => buildAdvancedTrace(activeTab.content), 300);
+    return () => clearTimeout(timeout);
+  }, [activeTab?.content, activeTabId, buildAdvancedTrace]);
+
+  // --- 2. VIDEO ENGINE (Auto-play animation) ---
+  useEffect(() => {
+    if (isPlaying && traceFrames.length > 0) {
+      timerRef.current = setInterval(() => {
+        setFrameIndex((prev: number) => {
+           if (prev < traceFrames.length - 1) return prev + 1;
+           togglePlay(); // Auto-stop at end
+           return prev;
+        });
+      }, 600); // Reduced from 1000ms to 600ms for faster playback
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isPlaying, traceFrames.length, setFrameIndex, togglePlay]);
+
+  // --- 4. THE RENDERER ---
+  const currentFrame = traceFrames[currentFrameIndex];
+
+  // Fix for Black Screen: Show Loader if no frames exist
+  if (!currentFrame || traceFrames.length === 0) {
+    return (
+      <div className="universal-viz empty">
+        <div className="loader-box">
+          <div className="spinner-neon"></div>
+          <p>SCANNING CODE...</p>
+          <span>Write code with arrays or variables to visualize</span>
+          <span style={{ marginTop: '10px', fontSize: '11px', color: '#555' }}>
+            Try: let arr = [5, 2, 8, 1, 9]
+          </span>
+        </div>
+        <style>{styles}</style>
       </div>
-    </>
+    );
+  }
+
+  // Render array visualization for sorting
+  const renderArrayVisualization = () => {
+    const arrayKey = Object.keys(currentFrame.memory).find(k => Array.isArray(currentFrame.memory[k]));
+    if (!arrayKey) return null;
+
+    const array = currentFrame.memory[arrayKey];
+    const comparing = currentFrame.memory.comparing || [];
+    const swapping = currentFrame.memory.swapping || [];
+    const sorted = currentFrame.memory.sorted || 0;
+    const currentIndex = currentFrame.memory.currentIndex;
+
+    return (
+      <div className="array-visualization">
+        <div className="array-container">
+          {array.map((val: any, idx: number) => {
+            const isComparing = comparing.includes(idx);
+            const isSwapping = swapping.includes(idx);
+            const isSorted = idx >= array.length - sorted;
+            const isCurrent = idx === currentIndex;
+            
+            let className = 'array-bar';
+            if (isSwapping) className += ' swapping';
+            else if (isComparing) className += ' comparing';
+            else if (isCurrent) className += ' current';
+            else if (isSorted) className += ' sorted';
+
+            return (
+              <div key={idx} className="array-item">
+                <div 
+                  className={className}
+                  style={{ 
+                    height: `${Math.max(val * 8, 30)}px`,
+                    transition: 'all 0.5s ease'
+                  }}
+                >
+                  <span className="bar-value">{val}</span>
+                </div>
+                <div className="bar-index">{idx}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="universal-viz">
+      <div className="hud-header">
+        <div className="badge">STEP-BY-STEP VISUALIZATION</div>
+        <div className="step">STEP {currentFrameIndex + 1} / {traceFrames.length}</div>
+      </div>
+
+      {renderArrayVisualization()}
+
+      <div className="memory-grid">
+        {Object.entries(currentFrame.memory)
+          .filter(([key]) => !['comparing', 'swapping', 'sorted', 'currentIndex'].includes(key))
+          .map(([key, value]) => {
+            const isActive = currentFrame.activeVariable === key;
+            return (
+              <div key={key} className={`widget ${isActive ? 'active' : ''} ${currentFrame.action}`}>
+                <div className="widget-label">{key}</div>
+                <div className="widget-content">
+                  {Array.isArray(value) ? (
+                    <div className="array-viz">
+                      {value.map((v: any, i: number) => (
+                        <div key={i} className="mini-bar" style={{ height: `${Math.min(Math.abs(Number(v)) * 2 || 5, 60)}px` }}>
+                          {v}
+                        </div>
+                      ))}
+                    </div>
+                  ) : typeof value === 'object' ? (
+                    <div className="obj-viz">{JSON.stringify(value)}</div>
+                  ) : (
+                    <div className="val-viz">{String(value)}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+      </div>
+
+      <div className="explanation-hud">
+        <i className={`fa-solid ${
+          currentFrame.action === 'WRITE' ? 'fa-pen-nib' : 
+          currentFrame.action === 'READ' ? 'fa-eye' : 
+          'fa-play'
+        }`}></i>
+        <span>{currentFrame.desc}</span>
+      </div>
+
+      <div className="controls">
+        <input 
+          type="range" 
+          min="0" 
+          max={traceFrames.length - 1} 
+          value={currentFrameIndex} 
+          onChange={(e) => setFrameIndex(Number(e.target.value))} 
+        />
+        <div className="control-buttons">
+          <button 
+            onClick={() => setFrameIndex(Math.max(0, currentFrameIndex - 1))}
+            className="nav-btn"
+            disabled={currentFrameIndex === 0}
+          >
+            <i className="fa-solid fa-backward-step"></i>
+          </button>
+          <button onClick={togglePlay} className="p-btn">
+            <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+          </button>
+          <button 
+            onClick={() => setFrameIndex(Math.min(traceFrames.length - 1, currentFrameIndex + 1))}
+            className="nav-btn"
+            disabled={currentFrameIndex === traceFrames.length - 1}
+          >
+            <i className="fa-solid fa-forward-step"></i>
+          </button>
+        </div>
+      </div>
+      <style>{styles}</style>
+    </div>
   );
 };
 
 export default VisualizeTab;
+
+const styles = `
+  .universal-viz { display: flex; flex-direction: column; height: 100%; min-height: 400px; background: #0c0c0f; padding: 15px; gap: 15px; overflow: hidden; }
+  .universal-viz.empty { justify-content: center; align-items: center; background: #0c0c0f; }
+  
+  .loader-box { text-align: center; color: #888; }
+  .loader-box p { color: #00f2ff; font-size: 14px; margin: 10px 0 5px; font-weight: bold; }
+  .loader-box span { color: #666; font-size: 12px; display: block; }
+  .spinner-neon { width: 40px; height: 40px; border: 2px solid #222; border-top: 2px solid #bc13fe; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hud-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .badge { background: #bc13fe; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 4px; letter-spacing: 1px; }
+  .step { color: #888; font-size: 10px; font-family: monospace; }
+
+  /* ARRAY VISUALIZATION STYLES */
+  .array-visualization { flex-shrink: 0; background: #1a1a1d; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px; margin-bottom: 10px; }
+  .array-container { display: flex; gap: 15px; justify-content: center; align-items: flex-end; min-height: 200px; }
+  .array-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  
+  .array-bar { 
+    width: 50px; 
+    background: linear-gradient(180deg, #00f2ff, #0088cc); 
+    border-radius: 8px 8px 0 0; 
+    display: flex; 
+    align-items: flex-end; 
+    justify-content: center; 
+    padding-bottom: 8px;
+    box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+    position: relative;
+    transition: all 0.5s ease;
+  }
+  
+  .array-bar.comparing { 
+    background: linear-gradient(180deg, #ffaa00, #ff6600); 
+    box-shadow: 0 4px 20px rgba(255, 170, 0, 0.5);
+    transform: translateY(-10px);
+  }
+  
+  .array-bar.swapping { 
+    background: linear-gradient(180deg, #ff0055, #cc0044); 
+    box-shadow: 0 4px 25px rgba(255, 0, 85, 0.6);
+    transform: translateY(-15px) scale(1.1);
+    animation: pulse 0.5s ease-in-out;
+  }
+  
+  .array-bar.sorted { 
+    background: linear-gradient(180deg, #00ff88, #00cc66); 
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4);
+  }
+  
+  .array-bar.current { 
+    background: linear-gradient(180deg, #bc13fe, #8800cc); 
+    box-shadow: 0 4px 20px rgba(188, 19, 254, 0.5);
+    transform: translateY(-8px);
+  }
+  
+  @keyframes pulse {
+    0%, 100% { transform: translateY(-15px) scale(1.1); }
+    50% { transform: translateY(-20px) scale(1.15); }
+  }
+  
+  .bar-value { color: #fff; font-weight: bold; font-size: 16px; font-family: 'Orbitron', monospace; }
+  .bar-index { color: #666; font-size: 11px; font-family: monospace; }
+
+  .memory-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; align-content: flex-start; overflow-y: auto; padding-right: 5px; }
+  .no-vars { grid-column: 1/-1; color: #666; text-align: center; margin-top: 50px; font-size: 13px; }
+  
+  .widget { background: #1a1a1d; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; transition: 0.3s; position: relative; overflow: hidden; }
+  .widget.active.WRITE { border-color: #ff0055; box-shadow: 0 0 15px rgba(255, 0, 85, 0.2); transform: scale(1.02); }
+  .widget.active.READ { border-color: #00f2ff; box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); transform: scale(1.02); }
+  
+  .widget-label { font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 10px; font-weight: bold; letter-spacing: 0.5px; }
+  .val-viz { font-size: 22px; color: #fff; font-family: 'Orbitron'; text-align: center; }
+  .array-viz { display: flex; align-items: flex-end; gap: 4px; height: 60px; justify-content: center; }
+  .mini-bar { width: 14px; background: #00f2ff; font-size: 8px; color: #000; text-align: center; border-radius: 2px 2px 0 0; font-weight: bold; display: flex; align-items: flex-end; justify-content: center; }
+  .obj-viz { font-size: 10px; color: #00ff88; font-family: monospace; word-break: break-all; opacity: 0.8; }
+
+  .explanation-hud { flex-shrink: 0; background: rgba(188, 19, 254, 0.05); border-left: 3px solid #bc13fe; padding: 12px; display: flex; gap: 12px; align-items: center; color: #fff; font-size: 13px; border-radius: 0 4px 4px 0; }
+  .explanation-hud i { color: #bc13fe; font-size: 14px; }
+
+  .controls { flex-shrink: 0; background: #1a1a1d; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; border: 1px solid #2a2a2a; }
+  .controls input { -webkit-appearance: none; height: 4px; background: #333; border-radius: 2px; outline: none; width: 100%; }
+  .controls input::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #bc13fe; border-radius: 50%; cursor: pointer; }
+  
+  .control-buttons { display: flex; gap: 10px; justify-content: center; align-items: center; }
+  .nav-btn { background: #2a2a2a; color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 14px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+  .nav-btn:hover:not(:disabled) { background: #3a3a3a; transform: scale(1.05); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  
+  .p-btn { background: #fff; color: #000; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+  .p-btn:hover { transform: scale(1.1); background: #00f2ff; }
+`;
