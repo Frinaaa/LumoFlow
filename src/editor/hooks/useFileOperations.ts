@@ -79,7 +79,6 @@ export const useFileOperations = () => {
       return false;
     }
   };
-
   const createFolder = async (folderName: string, parentPath?: string): Promise<boolean> => {
     try {
       let fullPath = folderName;

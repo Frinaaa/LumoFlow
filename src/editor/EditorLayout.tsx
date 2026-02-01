@@ -4,7 +4,10 @@ import { useEditorStore } from './stores/editorStore';
 import { useFileStore } from './stores/fileStore';
 import { useGitStore } from './stores/gitStore';
 import { useFileOperations } from './hooks/useFileOperations';
+// 🟢 ADD THIS IMPORT at the top of the file
+import { useEditor } from '../context/EditorContext';
 
+// ... rest of imports ...
 // Components
 import { StatusBar } from './components/Layout';
 import { CodeEditor } from './components/Monaco';
@@ -137,12 +140,118 @@ export const EditorLayout: React.FC = () => {
       if (path) fileOps.openFile(path);
     };
     const handleQuickOpenToggle = () => setQuickOpenVisible(prev => !prev);
+    
+    const handleCreateNewFile = async () => {
+      console.log('🔥 Create new file event received (Ctrl+N)');
+      
+      try {
+        // Auto-generate filename with incrementing number
+        let fileName = 'Untitled-1';
+        let counter = 1;
+        
+        // Check existing tabs for untitled files
+        const existingTabs = editorStore.tabs.map(t => t.fileName.toLowerCase());
+        while (existingTabs.includes(fileName.toLowerCase())) {
+          counter++;
+          fileName = `Untitled-${counter}`;
+        }
+        
+        console.log('🔥 Creating untitled file:', fileName);
+        
+        // If no workspace, create an in-memory file (unsaved tab)
+        if (!fileStore.workspacePath) {
+          // Create a new tab without a file path (in-memory)
+          editorStore.addTab('', fileName, '', 'javascript');
+          console.log('🔥 Created in-memory file (no workspace)');
+        } else {
+          // If workspace exists, create actual file
+          const jsFileName = `${fileName}.js`;
+          let fileCounter = 1;
+          const existingFiles = fileStore.files.map(f => f.name.toLowerCase());
+          let finalFileName = jsFileName;
+          
+          while (existingFiles.includes(finalFileName.toLowerCase())) {
+            finalFileName = `Untitled-${fileCounter}.js`;
+            fileCounter++;
+          }
+          
+          const result = await fileOps.createFile(finalFileName);
+          
+          if (!result) {
+            console.error('🔥 File creation failed, creating in-memory file');
+            // Fallback to in-memory file
+            editorStore.addTab('', fileName, '', 'javascript');
+          } else {
+            console.log('🔥 File created and opened successfully!');
+          }
+        }
+      } catch (error) {
+        console.error('🔥 Error creating file:', error);
+        // Fallback to in-memory file on error
+        const fileName = `Untitled-${Date.now()}`;
+        editorStore.addTab('', fileName, '', 'javascript');
+      }
+    };
+    
+    const handleCreateNewFolder = async () => {
+      console.log('🔥 Create new folder event received (Ctrl+Alt+N)');
+      
+      // Check if workspace is set
+      if (!fileStore.workspacePath) {
+        alert('Please open a folder first before creating folders.');
+        return;
+      }
+      
+      // Use DOM input for folder name
+      const folderName = await new Promise<string | null>((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = 'new-folder';
+        input.placeholder = 'Enter folder name';
+        input.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;padding:10px;font-size:16px;border:2px solid #00f2ff;background:#1e1e1e;color:#fff;width:300px;';
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        
+        const handleSubmit = () => {
+          const value = input.value;
+          document.body.removeChild(input);
+          resolve(value || null);
+        };
+        
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') handleSubmit();
+          if (e.key === 'Escape') {
+            document.body.removeChild(input);
+            resolve(null);
+          }
+        });
+        
+        setTimeout(() => {
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+            resolve(null);
+          }
+        }, 30000);
+      });
+      
+      if (folderName && folderName.trim()) {
+        const result = await fileOps.createFolder(folderName.trim());
+        if (!result) {
+          alert('Folder creation failed! Check console for details.');
+        }
+      }
+    };
 
     window.addEventListener('open-file', handleOpenFile);
     window.addEventListener('quick-open-toggle', handleQuickOpenToggle);
+    window.addEventListener('create-new-file', handleCreateNewFile);
+    window.addEventListener('create-new-folder', handleCreateNewFolder);
     return () => {
       window.removeEventListener('open-file', handleOpenFile);
       window.removeEventListener('quick-open-toggle', handleQuickOpenToggle);
+      window.removeEventListener('create-new-file', handleCreateNewFile);
+      window.removeEventListener('create-new-folder', handleCreateNewFolder);
     };
   }, []);
 
@@ -220,24 +329,18 @@ export const EditorLayout: React.FC = () => {
       } else if (isMod && e.shiftKey && e.key === 'N') {
         e.preventDefault();
         if ((window as any).api?.newWindow) (window as any).api.newWindow();
-      } else if (isMod && e.altKey && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
+      } else if (isMod && e.altKey && (e.key === 'n' || e.key === 'N')) {
         // Ctrl+Alt+N -> New Folder
         e.preventDefault();
-        console.log('🆕 Ctrl+Alt+N pressed - Creating new folder');
-        const folderName = prompt('Enter folder name:');
-        if (folderName && folderName.trim()) {
-          console.log('Creating folder:', folderName);
-          fileOps.createFolder(folderName.trim());
-        }
+        e.stopPropagation();
+        console.log('🔥 Ctrl+Alt+N pressed (global)');
+        window.dispatchEvent(new CustomEvent('create-new-folder'));
       } else if (isMod && !e.shiftKey && !e.altKey && (e.key === 'n' || e.key === 'N')) {
         // Ctrl+N -> New Text File
         e.preventDefault();
-        console.log('🆕 Ctrl+N pressed - Creating new file');
-        const fileName = prompt('Enter file name (with extension):', 'untitled.js');
-        if (fileName && fileName.trim()) {
-          console.log('Creating file:', fileName);
-          fileOps.createFile(fileName.trim());
-        }
+        e.stopPropagation();
+        console.log('🔥 Ctrl+N pressed (global)');
+        window.dispatchEvent(new CustomEvent('create-new-file'));
       } else if (isMod && e.key === 'o') {
         // Toggle Breakpoint - send to monaco
         e.preventDefault();
@@ -517,7 +620,7 @@ export const EditorLayout: React.FC = () => {
               <CodeEditor
                 code={activeTab.content}
                 selectedFile={activeTab.filePath}
-                isActive={true}
+        
                 onRun={() => fileOps.runCode(activeTab.id)}
                 onChange={(content) => editorStore.updateTabContent(activeTab.id, content)}
                 onCursorChange={(line, col) => editorStore.updateCursorPosition(activeTab.id, line, col)}

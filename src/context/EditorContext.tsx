@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useEditorStore } from '../editor/stores/editorStore';
 import { useFileStore } from '../editor/stores/fileStore';
 import { useFileOperations } from '../editor/hooks/useFileOperations';
@@ -22,18 +22,20 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     switch (action) {
       case 'newTextFile':
         try {
-          // Prompt user for filename
-          const fileName = prompt('Enter file name (with extension):', 'untitled.js');
-          console.log('User entered filename:', fileName);
-          if (fileName && fileName.trim()) {
-            console.log('Creating file:', fileName.trim());
-            const result = await fileOps.createFile(fileName.trim());
-            console.log('File creation result:', result);
-          } else {
-            console.log('File creation cancelled or empty filename');
-          }
+          const fileName = prompt('Enter file name (e.g., script.js):', 'untitled.js');
+          if (!fileName) return;
+
+          // 🧠 INTELLIGENT PATH DETECTION
+          // If a folder is selected in the file tree, use it. Otherwise use root.
+          const parentFolder = fileStore.selectedFolder || null;
+          
+          console.log(`Creating file '${fileName}' in: ${parentFolder || 'ROOT'}`);
+          
+          // Call createFile with the determined parent
+          await fileOps.createFile(fileName.trim(), parentFolder);
+          
         } catch (error) {
-          console.error('Error in newTextFile:', error);
+          console.error('Error creating file:', error);
         }
         break;
       case 'newFolder':
@@ -90,6 +92,15 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         break;
     }
   };
+  useEffect(() => {
+    const handleGlobalShortcut = (e: any) => {
+      handleMenuAction(e.detail);
+    };
+    window.addEventListener('trigger-menu-action', handleGlobalShortcut);
+    return () => window.removeEventListener('trigger-menu-action', handleGlobalShortcut);
+  }, [editorStore.activeTabId]); // Re-bind when active tab changes
+
+
 
   const handleSave = () => {
     if (editorStore.activeTabId) {

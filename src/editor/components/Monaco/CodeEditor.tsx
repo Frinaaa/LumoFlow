@@ -448,6 +448,18 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, metaKey: true }));
     });
 
+    // Ctrl+N -> New Text File (dispatch to EditorLayout)
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, () => {
+      console.log('🔥 Monaco: Ctrl+N pressed, dispatching event');
+      window.dispatchEvent(new CustomEvent('create-new-file'));
+    });
+
+    // Ctrl+Alt+N -> New Folder (dispatch to EditorLayout)
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyN, () => {
+      console.log('🔥 Monaco: Ctrl+Alt+N pressed, dispatching event');
+      window.dispatchEvent(new CustomEvent('create-new-folder'));
+    });
+
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyA, () => {
       editor.trigger('keyboard', 'editor.action.blockComment', {});
     });

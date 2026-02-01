@@ -28,6 +28,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
     e.stopPropagation();
     if (node.isFolder) {
       toggleFolder(node.path);
+      fileStore.setSelectedFolder(node.path); 
     } else {
       openFile(node.path);
     }
