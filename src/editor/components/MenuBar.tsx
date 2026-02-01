@@ -52,6 +52,50 @@ const MenuBar: React.FC<MenuBarProps> = ({
     setOpenMenu(null);
   };
 
+  const createLaunchJson = async () => {
+    const launchJsonContent = {
+      version: "0.2.0",
+      configurations: [
+        {
+          type: "node",
+          request: "launch",
+          name: "Launch Program",
+          skipFiles: ["<node_internals>/**"],
+          program: "${workspaceFolder}/index.js"
+        }
+      ]
+    };
+
+    try {
+      if ((window as any).api?.createFile) {
+        await (window as any).api.createFolder('.vscode');
+        await (window as any).api.createFile({
+          fileName: '.vscode/launch.json',
+          content: JSON.stringify(launchJsonContent, null, 2)
+        });
+        console.log('✅ Created launch.json');
+        // Dispatch event to open the file
+        window.dispatchEvent(new CustomEvent('open-file-in-editor', { 
+          detail: { path: '.vscode/launch.json' } 
+        }));
+      } else {
+        console.log('⚠️ File creation not available');
+      }
+    } catch (error) {
+      console.error('Error creating launch.json:', error);
+    }
+  };
+
+  const handleOpenConfigurations = async () => {
+    await createLaunchJson();
+    setOpenMenu(null);
+  };
+
+  const handleAddConfiguration = async () => {
+    await createLaunchJson();
+    setOpenMenu(null);
+  };
+
   return (
     <div className="menu-bar">
       {/* FILE */}
@@ -165,8 +209,8 @@ const MenuBar: React.FC<MenuBarProps> = ({
             <div className="menu-option" onClick={() => setOpenMenu(null)} style={{ opacity: 0.5 }}><span>Stop Debugging</span><span className="shortcut">Shift+F5</span></div>
             <div className="menu-option" onClick={() => { onRun?.(); setOpenMenu(null); }}><span>Restart Debugging</span><span className="shortcut">Ctrl+Shift+F5</span></div>
             <hr />
-            <div className="menu-option" onClick={() => setOpenMenu(null)}><span>Open Configurations</span></div>
-            <div className="menu-option" onClick={() => setOpenMenu(null)}><span>Add Configuration...</span></div>
+            <div className="menu-option" onClick={handleOpenConfigurations}><span>Open Configurations</span></div>
+            <div className="menu-option" onClick={handleAddConfiguration}><span>Add Configuration...</span></div>
             <hr />
             <div className="menu-option" onClick={() => dispatchMonacoCmd('toggleBreakpoint')}><span>Toggle Breakpoint</span><span className="shortcut">F9</span></div>
             <div className="menu-option" onClick={() => setOpenMenu(null)} style={{ opacity: 0.5 }}><span>New Breakpoint</span></div>

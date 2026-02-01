@@ -217,32 +217,28 @@ export const EditorLayout: React.FC = () => {
         e.preventDefault();
         editorStore.setActiveSidebar('Explorer');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-      } else if (isMod && e.shiftKey && e.key === 'n') {
+      } else if (isMod && e.shiftKey && e.key === 'N') {
         e.preventDefault();
         if ((window as any).api?.newWindow) (window as any).api.newWindow();
-      } else if (isMod && !e.shiftKey && e.key === 'n') {
+      } else if (isMod && e.altKey && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
+        // Ctrl+Alt+N -> New Folder
         e.preventDefault();
-        fileOps.createFile('untitled.txt'); // New Text File
-      } else if (isMod && e.key === 'o') {
-        e.preventDefault();
-        fileOps.openFileDialog();
-      } else if (e.altKey && e.key === 'F4') {
-        e.preventDefault();
-        if ((window as any).api?.closeWindow) (window as any).api.closeWindow();
-      } else if (e.key === 'F5') {
-        e.preventDefault();
-        if (activeTab) {
-          // Both F5 and Ctrl+F5 will run code for now
-          fileOps.runCode(activeTab.id);
+        console.log('🆕 Ctrl+Alt+N pressed - Creating new folder');
+        const folderName = prompt('Enter folder name:');
+        if (folderName && folderName.trim()) {
+          console.log('Creating folder:', folderName);
+          fileOps.createFolder(folderName.trim());
         }
-      } else if (isMod && e.altKey && (e.key === 'n' || e.code === 'KeyN')) { // Ctrl+Alt+N -> New Folder
+      } else if (isMod && !e.shiftKey && !e.altKey && (e.key === 'n' || e.key === 'N')) {
+        // Ctrl+N -> New Text File
         e.preventDefault();
-        // Ensure sidebar is visible and set creating folder
-        if (editorStore.activeSidebar !== 'Explorer') editorStore.setActiveSidebar('Explorer');
-        if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-        fileStore.setCreatingInFolder(null);
-        fileStore.setIsCreatingFolder(true);
-      } else if (e.key === 'F9') {
+        console.log('🆕 Ctrl+N pressed - Creating new file');
+        const fileName = prompt('Enter file name (with extension):', 'untitled.js');
+        if (fileName && fileName.trim()) {
+          console.log('Creating file:', fileName);
+          fileOps.createFile(fileName.trim());
+        }
+      } else if (isMod && e.key === 'o') {
         // Toggle Breakpoint - send to monaco
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'toggleBreakpoint' } }));

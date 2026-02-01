@@ -18,12 +18,22 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const fileOps = useFileOperations();
 
   const handleMenuAction = async (action: string) => {
+    console.log('📋 Menu action triggered:', action);
     switch (action) {
       case 'newTextFile':
-        // Prompt user for filename
-        const fileName = prompt('Enter file name (with extension):', 'untitled.js');
-        if (fileName && fileName.trim()) {
-          await fileOps.createFile(fileName.trim());
+        try {
+          // Prompt user for filename
+          const fileName = prompt('Enter file name (with extension):', 'untitled.js');
+          console.log('User entered filename:', fileName);
+          if (fileName && fileName.trim()) {
+            console.log('Creating file:', fileName.trim());
+            const result = await fileOps.createFile(fileName.trim());
+            console.log('File creation result:', result);
+          } else {
+            console.log('File creation cancelled or empty filename');
+          }
+        } catch (error) {
+          console.error('Error in newTextFile:', error);
         }
         break;
       case 'newFolder':
