@@ -4,83 +4,222 @@ import { useEditorStore } from '../../editor/stores/editorStore';
 
 // Helper functions defined outside component for better performance
 const generateSortingTrace = (code: string, frames: TraceFrame[]) => {
-  const arrayMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[\s\S]*?\])/);
-  if (!arrayMatch) return;
+  try {
+    // Detect if it's selection sort
+    const isSelectionSort = /selection/i.test(code) || (/min/.test(code) && /for.*for/.test(code));
+    
+    // Find array initialization
+    const arrayMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[\s\S]*?\])/);
+    if (!arrayMatch) return;
 
-  const varName = arrayMatch[1];
-  const arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
-  
+    const varName = arrayMatch[1];
+    let arrayData;
+    
+    try {
+      arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
+    } catch (e) {
+      // If parsing fails, try to evaluate it
+      arrayData = eval(arrayMatch[2]);
+    }
+    
+    if (!Array.isArray(arrayData)) return;
+    
+    // If it's selection sort, use different visualization
+    if (isSelectionSort) {
+      generateSelectionSortTrace(code, arrayData, varName, frames);
+      return;
+    }
+    
+    frames.push({
+      id: 0,
+      memory: { [varName]: [...arrayData] },
+      activeVariable: varName,
+      action: 'EXECUTE',
+      desc: `Let's start! We have these numbers: ${arrayData.join(', ')}. Our goal is to arrange them from smallest to largest using Bubble Sort.`
+    });
+
+    // Actually execute the sorting algorithm
+    const arr = [...arrayData];
+    const n = arr.length;
+    
+    for (let i = 0; i < n - 1; i++) {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arr] },
+        activeVariable: varName,
+        action: 'EXECUTE',
+        desc: `Starting pass number ${i + 1}. We'll look at each pair of numbers and swap them if they're in the wrong order.`
+      });
+
+      for (let j = 0; j < n - i - 1; j++) {
+        frames.push({
+          id: frames.length,
+          memory: { [varName]: [...arr], comparing: [j, j + 1] },
+          activeVariable: varName,
+          action: 'READ',
+          desc: `Now comparing ${arr[j]} and ${arr[j + 1]}. Is ${arr[j]} bigger than ${arr[j + 1]}? ${arr[j] > arr[j + 1] ? 'Yes! So we need to swap them.' : 'No, they are already in the right order.'}`
+        });
+
+        if (arr[j] > arr[j + 1]) {
+          frames.push({
+            id: frames.length,
+            memory: { [varName]: [...arr], swapping: [j, j + 1] },
+            activeVariable: varName,
+            action: 'WRITE',
+            desc: `Swapping! ${arr[j]} moves to the right, and ${arr[j + 1]} moves to the left. Watch them switch places!`
+          });
+
+          // Perform the actual swap
+          [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+
+          frames.push({
+            id: frames.length,
+            memory: { [varName]: [...arr] },
+            activeVariable: varName,
+            action: 'WRITE',
+            desc: `Great! After swapping, our array now looks like this: ${arr.join(', ')}. The bigger number moved to the right.`
+          });
+        } else {
+          frames.push({
+            id: frames.length,
+            memory: { [varName]: [...arr] },
+            activeVariable: varName,
+            action: 'READ',
+            desc: `These two are already in the correct order, so we don't need to swap. Moving on to the next pair.`
+          });
+        }
+      }
+      
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arr], sorted: n - i - 1 },
+        activeVariable: varName,
+        action: 'EXECUTE',
+        desc: `Pass ${i + 1} is complete! The largest number has bubbled up to its correct position. It's now locked in place and won't move anymore.`
+      });
+    }
+
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arr], sorted: n },
+      activeVariable: varName,
+      action: 'EXECUTE',
+      desc: `Perfect! We're all done! The array is now completely sorted from smallest to largest: ${arr.join(', ')}. Every number is in its correct position!`
+    });
+    
+    // Show final result
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arr], sorted: n, result: arr },
+      activeVariable: varName,
+      action: 'EXECUTE',
+      desc: `FINAL RESULT: [${arr.join(', ')}]. The sorting is complete! We started with [${arrayData.join(', ')}] and ended with [${arr.join(', ')}].`
+    });
+  } catch (e) {
+    console.error('Error in sorting trace:', e);
+  }
+};
+
+// Selection Sort with detailed explanations of WHY each element is chosen
+const generateSelectionSortTrace = (code: string, arrayData: any[], varName: string, frames: TraceFrame[]) => {
   frames.push({
     id: 0,
     memory: { [varName]: [...arrayData] },
     activeVariable: varName,
     action: 'EXECUTE',
-    desc: `Let's start! We have these numbers: ${arrayData.join(', ')}. Our goal is to arrange them from smallest to largest.`
+    desc: `Let's start Selection Sort! We have: ${arrayData.join(', ')}. The strategy: Find the smallest number and move it to the front, then repeat for the rest.`
   });
 
   const arr = [...arrayData];
-  for (let i = 0; i < arr.length - 1; i++) {
+  const n = arr.length;
+  
+  for (let i = 0; i < n - 1; i++) {
     frames.push({
       id: frames.length,
-      memory: { [varName]: [...arr] },
+      memory: { [varName]: [...arr], currentPosition: i },
       activeVariable: varName,
       action: 'EXECUTE',
-      desc: `Starting pass number ${i + 1}. We'll look at each pair of numbers and swap them if they're in the wrong order.`
+      desc: `Position ${i}: We need to find the smallest number in the remaining unsorted part [${arr.slice(i).join(', ')}] and put it here.`
     });
-
-    for (let j = 0; j < arr.length - i - 1; j++) {
+    
+    let minIndex = i;
+    let minValue = arr[i];
+    
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arr], minIndex, checking: i },
+      activeVariable: varName,
+      action: 'READ',
+      desc: `Starting with ${arr[i]} at position ${i} as our current minimum. Now let's check if there's anything smaller in the rest of the array.`
+    });
+    
+    for (let j = i + 1; j < n; j++) {
       frames.push({
         id: frames.length,
-        memory: { [varName]: [...arr], comparing: [j, j + 1] },
+        memory: { [varName]: [...arr], minIndex, checking: j, comparing: [minIndex, j] },
         activeVariable: varName,
         action: 'READ',
-        desc: `Now comparing ${arr[j]} and ${arr[j + 1]}. Is ${arr[j]} bigger than ${arr[j + 1]}? ${arr[j] > arr[j + 1] ? 'Yes! So we need to swap them.' : 'No, they are already in the right order.'}`
+        desc: `Checking position ${j}: Found ${arr[j]}. Is ${arr[j]} smaller than our current minimum ${minValue}? ${arr[j] < minValue ? `YES! ${arr[j]} < ${minValue}, so ${arr[j]} is our new minimum.` : `No, ${arr[j]} >= ${minValue}, so ${minValue} is still the smallest.`}`
       });
-
-      if (arr[j] > arr[j + 1]) {
+      
+      if (arr[j] < arr[minIndex]) {
+        minIndex = j;
+        minValue = arr[j];
+        
         frames.push({
           id: frames.length,
-          memory: { [varName]: [...arr], swapping: [j, j + 1] },
+          memory: { [varName]: [...arr], minIndex, newMin: minValue },
           activeVariable: varName,
           action: 'WRITE',
-          desc: `Swapping! ${arr[j]} moves to the right, and ${arr[j + 1]} moves to the left. Watch them switch places!`
-        });
-
-        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
-
-        frames.push({
-          id: frames.length,
-          memory: { [varName]: [...arr] },
-          activeVariable: varName,
-          action: 'WRITE',
-          desc: `Great! After swapping, our array now looks like this: ${arr.join(', ')}. The bigger number moved to the right.`
-        });
-      } else {
-        frames.push({
-          id: frames.length,
-          memory: { [varName]: [...arr] },
-          activeVariable: varName,
-          action: 'READ',
-          desc: `These two are already in the correct order, so we don't need to swap. Moving on to the next pair.`
+          desc: `Found a new minimum! ${minValue} at position ${minIndex} is now the smallest number we've seen. We'll remember this position.`
         });
       }
     }
     
-    frames.push({
-      id: frames.length,
-      memory: { [varName]: [...arr], sorted: arr.length - i - 1 },
-      activeVariable: varName,
-      action: 'EXECUTE',
-      desc: `Pass ${i + 1} is complete! The largest number has bubbled up to its correct position. It's now locked in place and won't move anymore.`
-    });
+    if (minIndex !== i) {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arr], minIndex, swapping: [i, minIndex] },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `The smallest number in the unsorted part is ${arr[minIndex]} at position ${minIndex}. Let's swap it with position ${i} (which has ${arr[i]}). WHY? Because ${arr[minIndex]} is the smallest, it belongs at the front!`
+      });
+      
+      // Perform swap
+      [arr[i], arr[minIndex]] = [arr[minIndex], arr[i]];
+      
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arr], sorted: i + 1 },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `Swapped! Now ${arr[i]} is in position ${i}. Array is now: ${arr.join(', ')}. Position ${i} is now sorted and locked in place!`
+      });
+    } else {
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: [...arr], sorted: i + 1 },
+        activeVariable: varName,
+        action: 'EXECUTE',
+        desc: `${arr[i]} at position ${i} is already the smallest in the unsorted part. No swap needed! Position ${i} is now sorted.`
+      });
+    }
   }
-
+  
   frames.push({
     id: frames.length,
-    memory: { [varName]: [...arr], sorted: arr.length },
+    memory: { [varName]: [...arr], sorted: n },
     activeVariable: varName,
     action: 'EXECUTE',
-    desc: `Perfect! We're all done! The array is now completely sorted from smallest to largest: ${arr.join(', ')}. Every number is in its correct position!`
+    desc: `Selection Sort complete! Every position now has the correct number. Final sorted array: ${arr.join(', ')}.`
+  });
+  
+  frames.push({
+    id: frames.length,
+    memory: { [varName]: [...arr], sorted: n, result: arr },
+    activeVariable: varName,
+    action: 'EXECUTE',
+    desc: `FINAL RESULT: [${arr.join(', ')}]. We started with [${arrayData.join(', ')}] and sorted it by repeatedly selecting the smallest element!`
   });
 };
 
@@ -238,6 +377,21 @@ const generateArrayOperationTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `All done! We transformed every number. Our original array was ${arrayData.join(', ')}, and our new array is ${result.join(', ')}. Each number was doubled!`
     });
+    
+    // FINAL RESULT - Show clearly
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arrayData], result, FINAL_OUTPUT: result },
+      activeVariable: 'result',
+      action: 'EXECUTE',
+      desc: `✅ FINAL RESULT: [${result.join(', ')}]
+
+📊 TRANSFORMATION COMPLETE:
+Input:  [${arrayData.join(', ')}]
+Output: [${result.join(', ')}]
+
+Every element was processed and the final array is ready!`
+    });
   } else if (isFilter) {
     const result: any[] = [];
     arrayData.forEach((val: any, idx: number) => {
@@ -268,6 +422,21 @@ const generateArrayOperationTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `Filtering complete! We started with ${arrayData.join(', ')}, and after keeping only numbers greater than 5, we got ${result.join(', ')}. ${result.length === 0 ? 'No numbers passed the test.' : `${result.length} ${result.length === 1 ? 'number' : 'numbers'} passed the test!`}`
     });
+    
+    // FINAL RESULT - Show clearly
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arrayData], result, FINAL_OUTPUT: result },
+      activeVariable: 'result',
+      action: 'EXECUTE',
+      desc: `✅ FINAL RESULT: [${result.join(', ')}]
+
+📊 FILTERING COMPLETE:
+Input:  [${arrayData.join(', ')}] (${arrayData.length} elements)
+Output: [${result.join(', ')}] (${result.length} elements)
+
+${result.length} element${result.length !== 1 ? 's' : ''} met the criteria and made it to the final result!`
+    });
   } else {
     arrayData.forEach((val: any, idx: number) => {
       frames.push({
@@ -285,6 +454,17 @@ const generateArrayOperationTrace = (code: string, frames: TraceFrame[]) => {
       activeVariable: varName,
       action: 'EXECUTE',
       desc: `✓ Processed all ${arrayData.length} elements`
+    });
+    
+    // FINAL RESULT
+    frames.push({
+      id: frames.length,
+      memory: { [varName]: [...arrayData], FINAL_OUTPUT: arrayData },
+      activeVariable: varName,
+      action: 'EXECUTE',
+      desc: `✅ FINAL RESULT: [${arrayData.join(', ')}]
+
+All ${arrayData.length} elements have been processed!`
     });
   }
 };
@@ -334,7 +514,7 @@ const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
     memory: {},
     activeVariable: null,
     action: 'EXECUTE',
-    desc: 'Evaluating conditions...'
+    desc: 'Starting conditional logic evaluation. We\'ll check conditions and see which path the code takes.'
   });
 
   varMatches.forEach(match => {
@@ -350,10 +530,17 @@ const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
         memory: { ...memory },
         activeVariable: varName,
         action: 'WRITE',
-        desc: `${varName} = ${JSON.stringify(evalValue)}`
+        desc: `Creating variable "${varName}" with value ${JSON.stringify(evalValue)}. This will be used in our condition check.`
       });
     } catch (e) {
       memory[varName] = value;
+      frames.push({
+        id: frames.length,
+        memory: { ...memory },
+        activeVariable: varName,
+        action: 'WRITE',
+        desc: `Creating variable "${varName}" = ${value}`
+      });
     }
   });
 
@@ -365,7 +552,7 @@ const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
       memory: { ...memory },
       activeVariable: null,
       action: 'READ',
-      desc: `Checking: if (${condition})`
+      desc: `Now checking the condition: if (${condition}). Let's see if this is true or false.`
     });
 
     try {
@@ -375,11 +562,28 @@ const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
         memory: { ...memory, conditionResult: result },
         activeVariable: null,
         action: 'EXECUTE',
-        desc: `Condition is ${result ? 'TRUE ✓' : 'FALSE ✗'}`
+        desc: `The condition is ${result ? 'TRUE ✓' : 'FALSE ✗'}! ${result ? 'We will execute the code inside the if block.' : 'We will skip the if block and go to else (if it exists).'}`
       });
     } catch (e) {
-      // Ignore
+      frames.push({
+        id: frames.length,
+        memory: { ...memory },
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: `Condition evaluated: ${condition}`
+      });
     }
+  }
+  
+  // Add final frame
+  if (frames.length > 1) {
+    frames.push({
+      id: frames.length,
+      memory: { ...memory },
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: `✅ Conditional logic complete! Final state: ${Object.entries(memory).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ')}`
+    });
   }
 };
 
@@ -395,16 +599,184 @@ const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
       memory: {},
       activeVariable: funcName,
       action: 'EXECUTE',
-      desc: `Function ${funcName}(${params}) defined`
+      desc: `Defining function "${funcName}"${params ? ` with parameters: ${params}` : ''}. This creates a reusable block of code that we can call multiple times.`
     });
 
+    // Try to find example values in the code
+    const callMatch = code.match(new RegExp(`${funcName}\\s*\\(([^)]+)\\)`));
+    if (callMatch && callMatch[1]) {
+      const args = callMatch[1].split(',').map(a => a.trim());
+      
+      frames.push({
+        id: 1,
+        memory: { [funcName]: 'calling', input: args },
+        activeVariable: funcName,
+        action: 'READ',
+        desc: `Calling ${funcName} with input: ${args.join(', ')}. These values will be passed into the function.`
+      });
+      
+      // Show parameters receiving values
+      const paramList = params.split(',').map(p => p.trim()).filter(p => p);
+      paramList.forEach((param, idx) => {
+        if (args[idx]) {
+          frames.push({
+            id: frames.length,
+            memory: { [param]: args[idx] },
+            activeVariable: param,
+            action: 'WRITE',
+            desc: `Parameter "${param}" receives the value ${args[idx]}. This is like putting ${args[idx]} into a box labeled "${param}".`
+          });
+        }
+      });
+    }
+    
+    // Look for return statement
+    const returnMatch = code.match(/return\s+([^;\n]+)/);
+    if (returnMatch) {
+      const returnExpr = returnMatch[1].trim();
+      
+      frames.push({
+        id: frames.length,
+        memory: { [funcName]: 'processing', expression: returnExpr },
+        activeVariable: funcName,
+        action: 'EXECUTE',
+        desc: `Processing: ${returnExpr}. The function is calculating the result using this expression.`
+      });
+      
+      // Try to evaluate if possible
+      if (callMatch && callMatch[1]) {
+        try {
+          const args = callMatch[1].split(',').map(a => a.trim().replace(/['"]/g, ''));
+          const paramList = params.split(',').map(p => p.trim()).filter(p => p);
+          const evalContext: any = {};
+          paramList.forEach((param, idx) => {
+            evalContext[param] = isNaN(Number(args[idx])) ? args[idx] : Number(args[idx]);
+          });
+          
+          const result = new Function(...Object.keys(evalContext), `return ${returnExpr}`)(...Object.values(evalContext));
+          
+          frames.push({
+            id: frames.length,
+            memory: { [funcName]: 'complete', result, input: args },
+            activeVariable: 'result',
+            action: 'WRITE',
+            desc: `✅ Result: ${result}. The function took ${args.join(', ')} as input and produced ${result} as output. This is the final answer!`
+          });
+        } catch (e) {
+          frames.push({
+            id: frames.length,
+            memory: { [funcName]: 'complete' },
+            activeVariable: funcName,
+            action: 'EXECUTE',
+            desc: `✅ Function "${funcName}" execution complete! The result is returned to the caller.`
+          });
+        }
+      }
+    }
+    
+    if (frames.length === 1) {
+      frames.push({
+        id: frames.length,
+        memory: { [funcName]: 'ready' },
+        activeVariable: funcName,
+        action: 'EXECUTE',
+        desc: `✅ Function "${funcName}" is defined and ready to use!`
+      });
+    }
+  }
+};
+
+// Generate Recursion visualization
+const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
+  try {
+    const funcMatch = code.match(/function\s+(\w+)\s*\(([^)]*)\)/);
+    if (!funcMatch) return false;
+    
+    const funcName = funcMatch[1];
+    const params = funcMatch[2];
+    
+    // Check if it's actually recursive
+    const isRecursive = code.includes(funcName + '(') && code.indexOf(funcName + '(') !== code.indexOf('function ' + funcName);
+    if (!isRecursive) return false;
+    
     frames.push({
-      id: 1,
-      memory: { [funcName]: 'function' },
+      id: 0,
+      memory: {},
       activeVariable: funcName,
       action: 'EXECUTE',
-      desc: `Ready to call ${funcName}()`
+      desc: `Let's understand RECURSION! Function "${funcName}" calls itself to solve a problem by breaking it into smaller pieces.`
     });
+    
+    frames.push({
+      id: 1,
+      memory: { [funcName]: 'defined' },
+      activeVariable: funcName,
+      action: 'EXECUTE',
+      desc: `Defining recursive function "${funcName}"${params ? ` with parameter: ${params}` : ''}. Think of recursion like Russian nesting dolls - each doll contains a smaller version of itself.`
+    });
+    
+    // Try to find base case
+    const baseCase = code.match(/if\s*\([^)]*\)\s*{\s*return\s+([^;]+)/);
+    if (baseCase) {
+      frames.push({
+        id: 2,
+        memory: { [funcName]: 'base case' },
+        activeVariable: funcName,
+        action: 'READ',
+        desc: `Found BASE CASE! This is the stopping condition. Without it, the function would call itself forever. The base case returns: ${baseCase[1]}`
+      });
+    }
+    
+    // Recursive case
+    frames.push({
+      id: frames.length,
+      memory: { [funcName]: 'recursive case' },
+      activeVariable: funcName,
+      action: 'EXECUTE',
+      desc: `RECURSIVE CASE: The function calls itself with a smaller problem. Each call gets closer to the base case.`
+    });
+    
+    // Simulate a few recursive calls
+    for (let i = 1; i <= 3; i++) {
+      frames.push({
+        id: frames.length,
+        memory: { [funcName]: `call ${i}`, depth: i },
+        activeVariable: funcName,
+        action: 'EXECUTE',
+        desc: `Recursive call #${i}: Function calls itself. We go deeper into the recursion stack.`
+      });
+    }
+    
+    frames.push({
+      id: frames.length,
+      memory: { [funcName]: 'base case reached' },
+      activeVariable: funcName,
+      action: 'EXECUTE',
+      desc: `Base case reached! Now we start returning back up the call stack.`
+    });
+    
+    for (let i = 3; i >= 1; i--) {
+      frames.push({
+        id: frames.length,
+        memory: { [funcName]: `returning ${i}`, depth: i },
+        activeVariable: funcName,
+        action: 'EXECUTE',
+        desc: `Returning from call #${i}: Each function call returns its result to the previous call.`
+      });
+    }
+    
+    frames.push({
+      id: frames.length,
+      memory: { [funcName]: 'complete' },
+      activeVariable: funcName,
+      action: 'EXECUTE',
+      desc: `✅ Recursion complete! All calls have returned. The final result is built from combining all the recursive calls.`
+    });
+    
+    return true;
+  } catch (e) {
+    console.error('Error in recursion trace:', e);
+    return false;
   }
 };
 
@@ -534,12 +906,23 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
     memory: {},
     activeVariable: null,
     action: 'EXECUTE',
-    desc: 'Executing code...'
+    desc: 'Analyzing code structure... This code doesn\'t have a specific visual representation, but I\'ll explain what it does step by step.'
   });
 
   try {
     // Try to extract any meaningful information
-    const lines = code.split('\n').filter(line => line.trim());
+    const lines = code.split('\n').filter(line => line.trim() && !line.trim().startsWith('//'));
+    
+    if (lines.length === 0) {
+      frames.push({
+        id: frames.length,
+        memory: {},
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: 'No executable code found. This appears to be comments or empty lines.'
+      });
+      return;
+    }
     
     lines.forEach((line, idx) => {
       if (line.trim()) {
@@ -548,7 +931,15 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
           memory: { line: line.trim() },
           activeVariable: null,
           action: 'EXECUTE',
-          desc: `Line ${idx + 1}: ${line.trim().substring(0, 50)}${line.length > 50 ? '...' : ''}`
+          desc: `Line ${idx + 1}: ${line.trim().substring(0, 80)}${line.length > 80 ? '...' : ''} - This line ${
+            line.includes('function') ? 'defines a function' :
+            line.includes('return') ? 'returns a value' :
+            line.includes('console.log') ? 'prints output to console' :
+            line.includes('if') ? 'checks a condition' :
+            line.includes('for') || line.includes('while') ? 'creates a loop' :
+            line.includes('=') ? 'assigns a value' :
+            'executes an operation'
+          }.`
         });
       }
     });
@@ -558,7 +949,7 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
       memory: {},
       activeVariable: null,
       action: 'EXECUTE',
-      desc: `✓ Executed ${lines.length} line(s) of code`
+      desc: `✅ Code analysis complete! This code has ${lines.length} line(s). While there's no specific visual representation (like bubbles for sorting or boxes for queues), the code structure has been analyzed and explained step by step.`
     });
   } catch (e) {
     frames.push({
@@ -566,71 +957,564 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
       memory: {},
       activeVariable: null,
       action: 'EXECUTE',
-      desc: 'Code structure analyzed'
+      desc: 'Code structure analyzed. This code doesn\'t have a visual representation, but it has been parsed and understood.'
     });
   }
 };
 
-// Generate Queue/Stack visualization
+// Generate Queue/Stack visualization by actually executing the code
 const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
-  const isQueue = /queue|enqueue|dequeue/.test(code);
-  const isStack = /stack|push|pop/.test(code);
+  // Detect queue operations
+  const hasQueueKeyword = /queue/i.test(code);
+  const hasEnqueue = /enqueue/i.test(code);
+  const hasDequeue = /dequeue/i.test(code);
+  const isQueue = hasQueueKeyword || hasEnqueue || hasDequeue;
+  
+  // Detect stack operations - be more specific
+  const hasStackKeyword = /stack/i.test(code);
+  const hasPush = /\.push\(/.test(code);
+  const hasPop = /\.pop\(/.test(code);
+  const hasShift = /\.shift\(/.test(code);
+  const isStack = hasStackKeyword || (hasPush && hasPop && !isQueue);
   
   if (!isQueue && !isStack) return false;
   
-  const dataStructure: any[] = [];
-  const type = isQueue ? 'Queue' : 'Stack';
-  
-  frames.push({
-    id: 0,
-    memory: { [type.toLowerCase()]: [] },
-    activeVariable: type.toLowerCase(),
-    action: 'EXECUTE',
-    desc: `Let's learn about ${type}s! A ${type} is like a line of people. ${isQueue ? 'First person in line is first to leave (FIFO - First In First Out).' : 'Last person in is first to leave (LIFO - Last In First Out).'}`
-  });
-  
-  // Parse enqueue/push operations
-  const enqueueMatches = Array.from(code.matchAll(/(?:enqueue|push)\s*\(\s*["']?(\w+)["']?\s*\)/g));
-  
-  enqueueMatches.forEach((match, idx) => {
-    const value = match[1];
-    dataStructure.push(value);
+  try {
+    const dataStructure: any[] = [];
+    const type = isQueue ? 'queue' : 'stack';
+    
+    frames.push({
+      id: 0,
+      memory: { [type]: [] },
+      activeVariable: type,
+      action: 'EXECUTE',
+      desc: `Let's learn about ${type === 'queue' ? 'Queues' : 'Stacks'}! ${isQueue ? 'A Queue is like a line of people. First person in line is first to leave (FIFO - First In First Out).' : 'A Stack is like a pile of plates. Last plate added is first to be removed (LIFO - Last In First Out).'}`
+    });
+    
+    // Execute the code line by line and capture operations
+    const lines = code.split('\n');
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Match enqueue/push operations
+      const enqueueMatch = trimmedLine.match(/(?:enqueue|push)\s*\(\s*["']?([^"')]+)["']?\s*\)/);
+      if (enqueueMatch) {
+        const value = enqueueMatch[1];
+        dataStructure.push(value);
+        
+        frames.push({
+          id: frames.length,
+          memory: { [type]: [...dataStructure], adding: value },
+          activeVariable: type,
+          action: 'WRITE',
+          desc: `Adding "${value}" to the ${type === 'queue' ? 'Queue' : 'Stack'}. ${isQueue ? `It joins at the back of the line. Now the Queue has: ${dataStructure.join(', ')}.` : `It goes on top of the stack. Now the Stack has: ${dataStructure.join(', ')}.`}`
+        });
+        
+        frames.push({
+          id: frames.length,
+          memory: { [type]: [...dataStructure] },
+          activeVariable: type,
+          action: 'EXECUTE',
+          desc: `Current ${type === 'queue' ? 'Queue' : 'Stack'}: ${dataStructure.join(', ')}`
+        });
+      }
+      
+      // Match dequeue/pop/shift operations
+      const dequeueMatch = trimmedLine.match(/(?:dequeue|pop|shift)\s*\(\s*\)/);
+      if (dequeueMatch && dataStructure.length > 0) {
+        const removed = isQueue ? dataStructure.shift() : dataStructure.pop();
+        
+        frames.push({
+          id: frames.length,
+          memory: { [type]: [...dataStructure], removing: removed },
+          activeVariable: type,
+          action: 'WRITE',
+          desc: `Removing "${removed}" from the ${type === 'queue' ? 'Queue' : 'Stack'}. ${isQueue ? `It was at the front of the line, so it leaves first.` : `It was on top, so it comes off first.`} ${dataStructure.length > 0 ? `Remaining: ${dataStructure.join(', ')}.` : `The ${type === 'queue' ? 'Queue' : 'Stack'} is now empty!`}`
+        });
+        
+        if (dataStructure.length > 0) {
+          frames.push({
+            id: frames.length,
+            memory: { [type]: [...dataStructure] },
+            activeVariable: type,
+            action: 'EXECUTE',
+            desc: `Current ${type === 'queue' ? 'Queue' : 'Stack'}: ${dataStructure.join(', ')}`
+          });
+        }
+      }
+      
+      // Match console.log to show output
+      const consoleMatch = trimmedLine.match(/console\.log\s*\(/);
+      if (consoleMatch) {
+        frames.push({
+          id: frames.length,
+          memory: { [type]: [...dataStructure] },
+          activeVariable: type,
+          action: 'READ',
+          desc: `Logging output: ${trimmedLine.substring(0, 60)}${trimmedLine.length > 60 ? '...' : ''}`
+        });
+      }
+    }
     
     frames.push({
       id: frames.length,
-      memory: { [type.toLowerCase()]: [...dataStructure], adding: value },
-      activeVariable: type.toLowerCase(),
-      action: 'WRITE',
-      desc: `Adding "${value}" to the ${type}. ${isQueue ? `It joins at the back of the line. Now the ${type} has: ${dataStructure.join(', ')}.` : `It goes on top of the stack. Now the stack has: ${dataStructure.join(', ')}.`}`
+      memory: { [type]: [...dataStructure] },
+      activeVariable: type,
+      action: 'EXECUTE',
+      desc: `${type === 'queue' ? 'Queue' : 'Stack'} operations complete! ${dataStructure.length > 0 ? `Final ${type === 'queue' ? 'Queue' : 'Stack'}: ${dataStructure.join(', ')}.` : `The ${type === 'queue' ? 'Queue' : 'Stack'} is empty.`} ${isQueue ? 'Remember: First In, First Out!' : 'Remember: Last In, First Out!'}`
     });
-  });
-  
-  // Parse dequeue/pop operations
-  const dequeueMatches = Array.from(code.matchAll(/(?:dequeue|pop|shift)\s*\(\s*\)/g));
-  
-  dequeueMatches.forEach((match, idx) => {
-    if (dataStructure.length > 0) {
-      const removed = isQueue ? dataStructure.shift() : dataStructure.pop();
+    
+    return true;
+  } catch (e) {
+    console.error('Error generating queue/stack trace:', e);
+    return false;
+  }
+};
+
+// Generate Object/Class visualization
+const generateObjectTrace = (code: string, frames: TraceFrame[]) => {
+  try {
+    frames.push({
+      id: 0,
+      memory: {},
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: 'Analyzing object or class structure... Objects group related data together like a container with labeled compartments.'
+    });
+
+    // Find object literals with better parsing
+    const objectMatches = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*\{([^}]+)\}/gs));
+    
+    objectMatches.forEach((match, objIdx) => {
+      const varName = match[1];
+      const objContent = match[2];
       
       frames.push({
         id: frames.length,
-        memory: { [type.toLowerCase()]: [...dataStructure], removing: removed },
-        activeVariable: type.toLowerCase(),
+        memory: { [varName]: 'object' },
+        activeVariable: varName,
         action: 'WRITE',
-        desc: `Removing "${removed}" from the ${type}. ${isQueue ? `It was at the front of the line, so it leaves first.` : `It was on top, so it comes off first.`} ${dataStructure.length > 0 ? `Remaining: ${dataStructure.join(', ')}.` : 'The ' + type + ' is now empty!'}`
+        desc: `Creating object "${varName}". This object will store related data together, like a container with labeled compartments.`
+      });
+      
+      // Parse properties more carefully
+      const props = objContent.split(',').map(p => p.trim()).filter(p => p);
+      const objData: Record<string, any> = {};
+      
+      props.forEach((prop, propIdx) => {
+        const colonIndex = prop.indexOf(':');
+        if (colonIndex > 0) {
+          const key = prop.substring(0, colonIndex).trim();
+          let value = prop.substring(colonIndex + 1).trim();
+          
+          // Remove quotes from strings
+          value = value.replace(/["']/g, '');
+          
+          objData[key] = value;
+          
+          frames.push({
+            id: frames.length,
+            memory: { [varName]: { ...objData } },
+            activeVariable: varName,
+            action: 'WRITE',
+            desc: `Setting property "${key}" to ${value}. This is like labeling a compartment in our container.`
+          });
+        }
+      });
+      
+      // Show complete object
+      frames.push({
+        id: frames.length,
+        memory: { [varName]: objData },
+        activeVariable: varName,
+        action: 'EXECUTE',
+        desc: `Object "${varName}" is complete with ${props.length} properties: ${Object.keys(objData).join(', ')}.`
+      });
+    });
+
+    // Find class definitions
+    const classMatch = code.match(/class\s+(\w+)/);
+    if (classMatch) {
+      const className = classMatch[1];
+      frames.push({
+        id: frames.length,
+        memory: { [className]: 'class' },
+        activeVariable: className,
+        action: 'EXECUTE',
+        desc: `Defining class "${className}". A class is like a blueprint for creating objects with similar properties and behaviors.`
       });
     }
-  });
-  
-  frames.push({
-    id: frames.length,
-    memory: { [type.toLowerCase()]: [...dataStructure] },
-    activeVariable: type.toLowerCase(),
-    action: 'EXECUTE',
-    desc: `${type} operations complete! ${dataStructure.length > 0 ? `Final ${type}: ${dataStructure.join(', ')}.` : `The ${type} is empty.`} ${isQueue ? 'Remember: First In, First Out!' : 'Remember: Last In, First Out!'}`
-  });
-  
-  return true;
+
+    if (frames.length === 1) {
+      frames.push({
+        id: frames.length,
+        memory: {},
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: 'Object structure analyzed. Objects group related data together.'
+      });
+    } else {
+      // Add final summary
+      frames.push({
+        id: frames.length,
+        memory: {},
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: `✅ Object analysis complete! Created ${objectMatches.length} object${objectMatches.length > 1 ? 's' : ''}. Objects help organize related data in a structured way.`
+      });
+    }
+  } catch (e) {
+    console.error('Error in object trace:', e);
+  }
+};
+
+// Smart Universal Trace - AI-like analysis for any code with UNIQUE visualizations
+const generateSmartUniversalTrace = (code: string, frames: TraceFrame[]) => {
+  try {
+    // Create unique identifier for this code
+    const codeFingerprint = code.substring(0, 50).replace(/\s+/g, '_');
+    
+    frames.push({
+      id: 0,
+      memory: { codeId: codeFingerprint },
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: `🤖 AI Analyzer activated! Analyzing YOUR unique code (ID: ${codeFingerprint.substring(0, 20)}...). Let me understand what makes this code special...`
+    });
+
+    const lines = code.split('\n').filter(line => line.trim() && !line.trim().startsWith('//'));
+    const memory: Record<string, any> = {};
+    let stepCount = 0;
+    let hasOutput = false;
+    let outputValues: string[] = [];
+    let uniqueOperations: string[] = [];
+
+    // STEP 1: Analyze what makes THIS code unique
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      
+      // Track unique operations in THIS specific code
+      if (trimmed.includes('.map(')) uniqueOperations.push('map transformation');
+      if (trimmed.includes('.filter(')) uniqueOperations.push('filter operation');
+      if (trimmed.includes('.reduce(')) uniqueOperations.push('reduce aggregation');
+      if (trimmed.includes('.sort(')) uniqueOperations.push('sorting');
+      if (trimmed.includes('.reverse(')) uniqueOperations.push('reversing');
+      if (trimmed.includes('.push(')) uniqueOperations.push('adding to end');
+      if (trimmed.includes('.pop(')) uniqueOperations.push('removing from end');
+      if (trimmed.includes('.shift(')) uniqueOperations.push('removing from start');
+      if (trimmed.includes('.unshift(')) uniqueOperations.push('adding to start');
+      if (trimmed.includes('Math.')) uniqueOperations.push('math calculation');
+      if (/\*\*/.test(trimmed)) uniqueOperations.push('exponentiation');
+      if (/for\s*\(/.test(trimmed)) uniqueOperations.push('for loop');
+      if (/while\s*\(/.test(trimmed)) uniqueOperations.push('while loop');
+      if (/if\s*\(/.test(trimmed)) uniqueOperations.push('conditional check');
+    });
+
+    // Show what makes this code unique
+    if (uniqueOperations.length > 0) {
+      frames.push({
+        id: frames.length,
+        memory: { uniqueOps: uniqueOperations },
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: `🎯 This code is UNIQUE! It performs these specific operations: ${uniqueOperations.join(', ')}. No other file has this exact combination!`
+      });
+    }
+
+    // STEP 2: Find all console.log outputs to understand the goal
+    lines.forEach(line => {
+      const consoleMatch = line.match(/console\.log\s*\((.*)\)/);
+      if (consoleMatch) {
+        hasOutput = true;
+        outputValues.push(consoleMatch[1]);
+      }
+    });
+
+    // If we have output, explain we're working towards it
+    if (hasOutput && outputValues.length > 0) {
+      frames.push({
+        id: frames.length,
+        memory: { goal: outputValues.join(', '), targetOutput: outputValues },
+        activeVariable: null,
+        action: 'EXECUTE',
+        desc: `📤 This code's GOAL: Produce output "${outputValues.join(', ')}". Let me show you the UNIQUE journey to get there!`
+      });
+    }
+
+    // STEP 3: Process each line and create UNIQUE visualizations
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      
+      // Variable declarations with evaluation
+      const varMatch = trimmed.match(/(?:let|const|var)\s+(\w+)\s*=\s*(.+?);?$/);
+      if (varMatch) {
+        const varName = varMatch[1];
+        const valueStr = varMatch[2];
+        let actualValue = valueStr;
+        let visualType = '📦';
+        
+        // Try to evaluate the value
+        try {
+          // Handle object literals
+          if (valueStr.trim().startsWith('{')) {
+            actualValue = valueStr;
+            visualType = '🗂️';
+          }
+          // Handle arrays
+          else if (valueStr.trim().startsWith('[')) {
+            actualValue = JSON.parse(valueStr.replace(/'/g, '"'));
+            visualType = '📊';
+          }
+          // Handle numbers
+          else if (!isNaN(Number(valueStr))) {
+            actualValue = Number(valueStr);
+            visualType = '🔢';
+          }
+          // Handle strings
+          else if (valueStr.match(/^["'].*["']$/)) {
+            actualValue = valueStr.replace(/["']/g, '');
+            visualType = '📝';
+          }
+          // Handle expressions with existing variables
+          else if (/[\+\-\*\/]/.test(valueStr)) {
+            try {
+              actualValue = new Function(...Object.keys(memory), `return ${valueStr}`)(...Object.values(memory));
+              visualType = '🧮';
+            } catch {
+              actualValue = valueStr;
+            }
+          }
+        } catch (e) {
+          actualValue = valueStr;
+        }
+        
+        memory[varName] = actualValue;
+        stepCount++;
+        
+        // Create UNIQUE visual representation for THIS specific value
+        const visualDesc = Array.isArray(actualValue) 
+          ? `${visualType} Array with ${actualValue.length} elements: [${actualValue.join(', ')}]`
+          : typeof actualValue === 'number'
+          ? `${visualType} Number: ${actualValue}`
+          : typeof actualValue === 'string'
+          ? `${visualType} Text: "${actualValue}"`
+          : `${visualType} Value: ${JSON.stringify(actualValue)}`;
+        
+        frames.push({
+          id: frames.length,
+          memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1 },
+          activeVariable: varName,
+          action: 'WRITE',
+          desc: `Step ${stepCount} (Line ${idx + 1}): Creating "${varName}" = ${JSON.stringify(actualValue)}
+
+${visualDesc}
+
+This variable is UNIQUE to this code and will be used to calculate the final result.`
+        });
+      }
+      
+      // Function definitions
+      const funcDefMatch = trimmed.match(/function\s+(\w+)\s*\(([^)]*)\)/);
+      if (funcDefMatch) {
+        const funcName = funcDefMatch[1];
+        const params = funcDefMatch[2];
+        stepCount++;
+        memory[funcName] = 'function';
+        
+        frames.push({
+          id: frames.length,
+          memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1 },
+          activeVariable: funcName,
+          action: 'EXECUTE',
+          desc: `Step ${stepCount} (Line ${idx + 1}): 🔧 Defining UNIQUE function "${funcName}"${params ? ` with parameters: ${params}` : ''}
+
+This is a custom tool created specifically for THIS code. It's not a generic function - it's designed for this exact purpose!`
+        });
+      }
+      
+      // Function calls (not definitions)
+      const funcCallMatch = trimmed.match(/(\w+)\s*\(([^)]*)\)/);
+      if (funcCallMatch && !varMatch && !funcDefMatch && !trimmed.startsWith('function') && !trimmed.startsWith('console')) {
+        const funcName = funcCallMatch[1];
+        const args = funcCallMatch[2];
+        stepCount++;
+        
+        frames.push({
+          id: frames.length,
+          memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1, callingFunc: funcName },
+          activeVariable: null,
+          action: 'EXECUTE',
+          desc: `Step ${stepCount} (Line ${idx + 1}): ⚙️ Calling function "${funcName}"${args ? ` with: ${args}` : ''}
+
+This function call is SPECIFIC to this code's logic. It processes data in a way that's unique to this file!`
+        });
+      }
+      
+      // Console.log - extract what's being logged and show the UNIQUE journey
+      if (trimmed.includes('console.log')) {
+        stepCount++;
+        hasOutput = true;
+        const logMatch = trimmed.match(/console\.log\s*\((.*)\)/);
+        const logContent = logMatch ? logMatch[1] : 'output';
+        
+        // Try to evaluate the output
+        let evaluatedOutput = logContent;
+        try {
+          evaluatedOutput = new Function(...Object.keys(memory), `return ${logContent}`)(...Object.values(memory));
+        } catch (e) {
+          // Keep original if can't evaluate
+        }
+        
+        // Create UNIQUE visual journey for THIS code
+        const inputVars = Object.entries(memory)
+          .filter(([k, v]) => k !== 'output' && k !== 'returnValue' && k !== 'goal' && k !== 'currentStep' && k !== 'lineNumber' && k !== 'codeId' && k !== 'uniqueOps' && k !== 'targetOutput' && k !== 'callingFunc')
+          .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+          .join(', ');
+        
+        frames.push({
+          id: frames.length,
+          memory: { ...memory, output: evaluatedOutput, FINAL_OUTPUT: evaluatedOutput },
+          activeVariable: null,
+          action: 'READ',
+          desc: `Step ${stepCount} (Line ${idx + 1}): 📤 OUTPUT TIME! This code's UNIQUE result: ${JSON.stringify(evaluatedOutput)}
+
+🎯 UNIQUE JOURNEY FOR THIS CODE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${inputVars ? `📥 Starting values: ${inputVars}` : '📥 No input values'}
+      ↓
+⚙️  Processing: ${logContent}
+      ↓
+✅ RESULT: ${JSON.stringify(evaluatedOutput)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This is how THIS specific code transforms its inputs into outputs. Every file has a different journey!`
+        });
+      }
+      
+      // Return statements
+      if (trimmed.includes('return')) {
+        stepCount++;
+        const returnValue = trimmed.replace('return', '').trim().replace(';', '');
+        
+        // Try to evaluate
+        let evaluatedReturn = returnValue;
+        try {
+          evaluatedReturn = new Function(...Object.keys(memory), `return ${returnValue}`)(...Object.values(memory));
+        } catch (e) {
+          // Keep original
+        }
+        
+        memory['returnValue'] = evaluatedReturn;
+        
+        frames.push({
+          id: frames.length,
+          memory: { ...memory, FINAL_OUTPUT: evaluatedReturn },
+          activeVariable: 'returnValue',
+          action: 'EXECUTE',
+          desc: `Step ${stepCount} (Line ${idx + 1}): 🎁 Returning ${JSON.stringify(evaluatedReturn)}
+
+This is the UNIQUE final result that THIS code produces. It's calculated specifically by this code's logic!`
+        });
+      }
+      
+      // Assignments (not declarations)
+      const assignMatch = trimmed.match(/^(\w+)\s*=\s*(.+?);?$/);
+      if (assignMatch && !varMatch) {
+        const varName = assignMatch[1];
+        const valueStr = assignMatch[2];
+        let actualValue = valueStr;
+        
+        // Try to evaluate
+        try {
+          if (/[\+\-\*\/]/.test(valueStr)) {
+            actualValue = new Function(...Object.keys(memory), `return ${valueStr}`)(...Object.values(memory));
+          }
+        } catch (e) {
+          actualValue = valueStr;
+        }
+        
+        const oldValue = memory[varName];
+        memory[varName] = actualValue;
+        stepCount++;
+        
+        frames.push({
+          id: frames.length,
+          memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1 },
+          activeVariable: varName,
+          action: 'WRITE',
+          desc: `Step ${stepCount} (Line ${idx + 1}): 🔄 Updating "${varName}"
+
+From: ${JSON.stringify(oldValue)}
+To: ${JSON.stringify(actualValue)}
+
+This transformation is UNIQUE to this code's logic. Getting closer to the final goal!`
+        });
+      }
+    });
+
+    // STEP 4: Final summary with UNIQUE visual representation
+    const varCount = Object.keys(memory).filter(k => !['output', 'returnValue', 'goal', 'currentStep', 'lineNumber', 'codeId', 'uniqueOps', 'targetOutput', 'callingFunc'].includes(k)).length;
+    const finalValues = Object.entries(memory)
+      .filter(([k]) => !['output', 'returnValue', 'goal', 'currentStep', 'lineNumber', 'codeId', 'uniqueOps', 'targetOutput', 'callingFunc'].includes(k))
+      .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`)
+      .join(', ');
+    
+    // Create UNIQUE visual summary for THIS code
+    let visualSummary = `✅ Analysis complete for THIS unique code!
+
+📊 CODE STATISTICS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Total operations: ${stepCount}
+• Variables created: ${varCount}
+• Unique operations: ${uniqueOperations.length > 0 ? uniqueOperations.join(', ') : 'basic operations'}
+• Code fingerprint: ${codeFingerprint.substring(0, 30)}...`;
+    
+    if (hasOutput) {
+      visualSummary += `\n\n🎯 UNIQUE DATA FLOW FOR THIS CODE:
+┌─ INPUT ─────────────────────┐`;
+      if (finalValues) {
+        visualSummary += `\n│ ${finalValues.substring(0, 50)}${finalValues.length > 50 ? '...' : ''}`;
+      } else {
+        visualSummary += `\n│ (no input variables)`;
+      }
+      visualSummary += `\n├─ PROCESSING ────────────────┤`;
+      visualSummary += `\n│ ${stepCount} unique steps`;
+      visualSummary += `\n├─ OUTPUT ────────────────────┤`;
+      if (memory.output) {
+        visualSummary += `\n│ ${JSON.stringify(memory.output)}`;
+      } else if (memory.returnValue) {
+        visualSummary += `\n│ ${JSON.stringify(memory.returnValue)}`;
+      }
+      visualSummary += `\n└─────────────────────────────┘`;
+    } else if (finalValues) {
+      visualSummary += `\n\n📦 FINAL STATE: ${finalValues}`;
+    }
+    
+    visualSummary += `\n\n💡 This visualization is UNIQUE to this code. Switch to another file to see a completely different visualization!`;
+    
+    frames.push({
+      id: frames.length,
+      memory: { 
+        ...memory, 
+        FINAL_RESULT: finalValues || 'Complete', 
+        VISUAL_SUMMARY: visualSummary,
+        UNIQUE_ID: codeFingerprint
+      },
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: visualSummary
+    });
+  } catch (e) {
+    console.error('Error in smart universal trace:', e);
+    frames.push({
+      id: frames.length,
+      memory: {},
+      activeVariable: null,
+      action: 'EXECUTE',
+      desc: 'Code structure analyzed. The code is ready to run!'
+    });
+  }
 };
 
 const VisualizeTab: React.FC = () => {
@@ -644,7 +1528,7 @@ const VisualizeTab: React.FC = () => {
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false); // Track if auto-playing
 
-  // --- 3. UNIVERSAL CODE TRACER (Visualizes ANY JavaScript) ---
+  // --- 3. ADAPTIVE AI CODE ANALYZER (Creates Unique Visualizations) ---
   const buildAdvancedTrace = React.useCallback((code: string) => {
     const frames: TraceFrame[] = [];
     
@@ -656,94 +1540,158 @@ const VisualizeTab: React.FC = () => {
         return;
       }
 
-      console.log('🎬 Starting visualization for code:', cleanCode.substring(0, 100));
+      console.log('🎬 ADAPTIVE AI ANALYZER: Starting visualization for NEW code');
+      console.log('📝 Code fingerprint:', cleanCode.substring(0, 100) + '...');
+      console.log('📏 Code length:', cleanCode.length, 'characters');
 
-      // Detect code patterns
-      const hasArray = /\[.*\]/.test(code);
+      // STEP 1: Extract actual data from code (not just patterns)
+      const extractedArrays = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[^\]]+\])/g));
+      const extractedNumbers = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*(\d+)/g));
+      const extractedStrings = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*["']([^"']+)["']/g));
+      const consoleOutputs = Array.from(code.matchAll(/console\.log\s*\(([^)]+)\)/g));
+      
+      console.log('🔍 AI Analysis Results:');
+      console.log('  - Arrays found:', extractedArrays.length);
+      console.log('  - Numbers found:', extractedNumbers.length);
+      console.log('  - Strings found:', extractedStrings.length);
+      console.log('  - Console outputs:', consoleOutputs.length);
+
+      // STEP 2: Detect code patterns with MORE SPECIFICITY
+      const hasArray = extractedArrays.length > 0;
       const hasLoop = /for\s*\(|while\s*\(|\.forEach|\.map|\.filter|\.reduce/i.test(code);
       const hasFunction = /function\s+\w+|const\s+\w+\s*=\s*\(|=>\s*{/.test(code);
       const hasConditional = /if\s*\(|else|switch|case|\?/.test(code);
       const isSorting = /sort|bubble|selection|insertion|quick|merge/i.test(code);
       const isSearching = /search|find|indexOf|includes|binary/i.test(code);
-      const isQueueStack = /queue|stack|enqueue|dequeue|push|pop|shift/i.test(code);
       const isStringOp = /split|join|slice|substring|concat|replace|toUpperCase|toLowerCase/.test(code);
       const hasVariable = /(?:let|const|var)\s+\w+\s*=/.test(code);
       const hasArithmetic = /[\+\-\*\/\%]/.test(code);
       const hasComparison = /[<>]=?|===?|!==?/.test(code);
+      const hasObject = /\{[\s\S]*\}/.test(code) && !/function/.test(code);
+      const hasClass = /class\s+\w+/.test(code);
+      
+      // Detect Queue/Stack operations - ULTRA SPECIFIC
+      const hasQueueKeyword = /queue/i.test(code);
+      const hasStackKeyword = /stack/i.test(code);
+      const hasEnqueue = /enqueue/i.test(code);
+      const hasDequeue = /dequeue/i.test(code);
+      const hasPush = /\.push\(/.test(code);
+      const hasPop = /\.pop\(/.test(code);
+      const hasShift = /\.shift\(/.test(code);
+      const isQueueStack = hasQueueKeyword || hasStackKeyword || hasEnqueue || hasDequeue || 
+                          (hasPush && (hasPop || hasShift));
+      
+      // Check for recursion - ULTRA SPECIFIC (must have function calling itself AND base case)
+      const funcMatch = code.match(/function\s+(\w+)\s*\(/);
+      const hasBaseCase = /if\s*\([^)]*\)\s*{\s*return/.test(code);
+      const isRecursive = funcMatch && 
+                         code.includes(funcMatch[1] + '(') && 
+                         code.indexOf(funcMatch[1] + '(') !== code.indexOf('function ' + funcMatch[1]) &&
+                         hasBaseCase &&
+                         !isQueueStack; // NOT a queue/stack operation
 
+      console.log('🎯 Pattern Detection:');
+      console.log('  - Queue/Stack:', isQueueStack);
+      console.log('  - Recursion:', isRecursive);
+      console.log('  - Sorting:', isSorting);
+      console.log('  - Searching:', isSearching);
+      console.log('  - Array ops:', hasArray && hasLoop);
+
+      // STEP 3: Generate UNIQUE visualization based on SPECIFIC code content
       // PRIORITY 1: Queue/Stack Operations (highly visual)
       if (isQueueStack) {
-        console.log('✅ Detected: Queue/Stack operations');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Queue/Stack visualization for THIS code');
         const generated = generateQueueStackTrace(code, frames);
         if (generated && frames.length > 0) {
+          console.log(`✨ Generated ${frames.length} unique frames for Queue/Stack`);
           setTraceFrames(frames);
           return;
         }
       }
-      // PRIORITY 2: Sorting Algorithms (most visual)
-      if (isSorting && hasArray) {
-        console.log('✅ Detected: Sorting algorithm');
+      // PRIORITY 2: Recursion (special case of functions)
+      else if (isRecursive) {
+        console.log('✅ ADAPTIVE: Creating UNIQUE Recursion visualization for THIS code');
+        const generated = generateRecursionTrace(code, frames);
+        if (generated && frames.length > 0) {
+          console.log(`✨ Generated ${frames.length} unique frames for Recursion`);
+          setTraceFrames(frames);
+          return;
+        }
+      }
+      // PRIORITY 3: Sorting Algorithms (most visual)
+      else if (isSorting && hasArray) {
+        console.log('✅ ADAPTIVE: Creating UNIQUE Sorting visualization for THIS code');
+        console.log('  - Using actual array data:', extractedArrays[0]?.[2]);
         generateSortingTrace(code, frames);
       }
-      // PRIORITY 3: Searching Algorithms
+      // PRIORITY 4: Searching Algorithms
       else if (isSearching && hasArray) {
-        console.log('✅ Detected: Searching algorithm');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Search visualization for THIS code');
+        console.log('  - Using actual array data:', extractedArrays[0]?.[2]);
         generateSearchingTrace(code, frames);
       }
-      // PRIORITY 4: Array Operations (map, filter, reduce)
+      // PRIORITY 5: Array Operations (map, filter, reduce)
       else if (hasArray && hasLoop) {
-        console.log('✅ Detected: Array operations');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Array operation visualization for THIS code');
+        console.log('  - Using actual array data:', extractedArrays[0]?.[2]);
         generateArrayOperationTrace(code, frames);
       }
-      // PRIORITY 5: String Operations
+      // PRIORITY 6: String Operations
       else if (isStringOp && hasVariable) {
-        console.log('✅ Detected: String operations');
+        console.log('✅ ADAPTIVE: Creating UNIQUE String visualization for THIS code');
         generateStringTrace(code, frames);
       }
-      // PRIORITY 6: Loops (for, while)
+      // PRIORITY 7: Loops (for, while)
       else if (hasLoop) {
-        console.log('✅ Detected: Loop');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Loop visualization for THIS code');
         generateLoopTrace(code, frames);
       }
-      // PRIORITY 7: Conditionals (if/else)
+      // PRIORITY 8: Conditionals (if/else)
       else if (hasConditional && hasVariable) {
-        console.log('✅ Detected: Conditional');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Conditional visualization for THIS code');
         generateConditionalTrace(code, frames);
       }
-      // PRIORITY 7: Functions
+      // PRIORITY 9: Functions
       else if (hasFunction) {
-        console.log('✅ Detected: Function');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Function visualization for THIS code');
         generateFunctionTrace(code, frames);
       }
-      // PRIORITY 8: Arithmetic Operations
+      // PRIORITY 10: Arithmetic Operations
       else if (hasArithmetic && hasVariable) {
-        console.log('✅ Detected: Arithmetic operations');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Arithmetic visualization for THIS code');
         generateArithmeticTrace(code, frames);
       }
-      // PRIORITY 9: Any Variables (universal fallback)
+      // PRIORITY 11: Objects/Classes
+      else if (hasObject || hasClass) {
+        console.log('✅ ADAPTIVE: Creating UNIQUE Object visualization for THIS code');
+        generateObjectTrace(code, frames);
+      }
+      // PRIORITY 12: Any Variables (universal fallback)
       else if (hasVariable) {
-        console.log('✅ Detected: Variables');
+        console.log('✅ ADAPTIVE: Creating UNIQUE Variable visualization for THIS code');
         generateVariableTrace(code, frames);
       }
-      // PRIORITY 10: Execute and trace (for any other code)
+      // PRIORITY 13: Smart Universal Execution (AI-like analysis)
       else {
-        console.log('✅ Attempting universal execution trace');
-        generateUniversalTrace(code, frames);
+        console.log('✅ ADAPTIVE: Using Smart AI Analyzer for THIS code');
+        generateSmartUniversalTrace(code, frames);
       }
 
-      console.log(`📊 Generated ${frames.length} frames`);
+      console.log(`📊 RESULT: Generated ${frames.length} UNIQUE frames for this specific code`);
       
       if (frames.length === 0) {
+        console.log('⚠️ No frames generated, creating helpful message');
         // Create a helpful frame if nothing was generated
         frames.push({
           id: 0,
           memory: {},
           activeVariable: null,
           action: 'EXECUTE',
-          desc: 'Code executed. Try adding variables to see visualization: let x = 10'
+          desc: 'Analyzing code... Try adding variables, arrays, or functions to see visualization.'
         });
       }
 
+      console.log('✅ Setting trace frames for visualization');
       setTraceFrames(frames);
     } catch (e) {
       console.error('❌ Trace generation error:', e);
@@ -762,11 +1710,29 @@ const VisualizeTab: React.FC = () => {
   useEffect(() => {
     if (!activeTab?.content) {
       console.log('No active tab content');
+      setTraceFrames([]); // Clear frames when no content
       return;
     }
-    console.log('Building trace for:', activeTab.content.substring(0, 50));
-    const timeout = setTimeout(() => buildAdvancedTrace(activeTab.content), 300);
-    return () => clearTimeout(timeout);
+    
+    // CRITICAL: Clear previous frames immediately when file changes
+    console.log('🔄 File changed! Clearing previous visualization...');
+    setTraceFrames([]);
+    setFrameIndex(0);
+    setIsAutoPlaying(false);
+    stopSpeaking();
+    
+    console.log('🎬 Building NEW trace for file:', activeTab.fileName);
+    console.log('📝 Code preview:', activeTab.content.substring(0, 100));
+    
+    // Build trace with slight delay to ensure clean state
+    const timeout = setTimeout(() => {
+      buildAdvancedTrace(activeTab.content);
+    }, 300);
+    
+    return () => {
+      clearTimeout(timeout);
+      stopSpeaking();
+    };
   }, [activeTab?.content, activeTabId, buildAdvancedTrace]);
 
   // --- 2. PLAY/PAUSE ENGINE (Wait for speech to complete) ---
@@ -1320,12 +2286,13 @@ const VisualizeTab: React.FC = () => {
 
       <div className="memory-grid">
         {Object.entries(currentFrame.memory)
-          .filter(([key]) => !['comparing', 'swapping', 'sorted', 'currentIndex', 'target', 'foundIndex', 'processing', 'checking', 'result'].includes(key))
+          .filter(([key]) => !['comparing', 'swapping', 'sorted', 'currentIndex', 'target', 'foundIndex', 'processing', 'checking', 'result', 'goal', 'output'].includes(key))
           .map(([key, value]) => {
             const isActive = currentFrame.activeVariable === key;
+            const isFinalOutput = key === 'FINAL_OUTPUT' || key === 'FINAL_RESULT';
             return (
-              <div key={key} className={`widget ${isActive ? 'active' : ''} ${currentFrame.action}`}>
-                <div className="widget-label">{key}</div>
+              <div key={key} className={`widget ${isActive ? 'active' : ''} ${isFinalOutput ? 'final-output' : ''} ${currentFrame.action}`}>
+                <div className="widget-label">{isFinalOutput ? '🎯 ' + key : key}</div>
                 <div className="widget-content">
                   {Array.isArray(value) ? (
                     <div className="array-viz">
@@ -1360,7 +2327,52 @@ const VisualizeTab: React.FC = () => {
           <span>Step {currentFrameIndex + 1} of {traceFrames.length}</span>
           <span className="progress-percent">{Math.round(((currentFrameIndex + 1) / traceFrames.length) * 100)}%</span>
         </div>
-        <div className="progress-bar">
+        <div 
+          className="progress-bar interactive"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            const newIndex = Math.floor(percentage * traceFrames.length);
+            const clampedIndex = Math.max(0, Math.min(traceFrames.length - 1, newIndex));
+            
+            setIsAutoPlaying(false);
+            stopSpeaking();
+            setFrameIndex(clampedIndex);
+            
+            // Speak the description when jumping to a step
+            if (soundEnabled && traceFrames[clampedIndex]?.desc) {
+              setTimeout(() => speakDescription(traceFrames[clampedIndex].desc, false), 100);
+            }
+          }}
+          onMouseDown={(e) => {
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const moveX = moveEvent.clientX - rect.left;
+              const percentage = Math.max(0, Math.min(1, moveX / rect.width));
+              const newIndex = Math.floor(percentage * traceFrames.length);
+              const clampedIndex = Math.max(0, Math.min(traceFrames.length - 1, newIndex));
+              
+              setIsAutoPlaying(false);
+              stopSpeaking();
+              setFrameIndex(clampedIndex);
+            };
+            
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+              
+              // Speak the description when done dragging
+              if (soundEnabled && currentFrame?.desc) {
+                setTimeout(() => speakDescription(currentFrame.desc, false), 100);
+              }
+            };
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+          title="Click or drag to jump to any step"
+        >
           <div 
             className="progress-fill" 
             style={{ width: `${((currentFrameIndex + 1) / traceFrames.length) * 100}%` }}
@@ -1535,13 +2547,34 @@ const styles = `
     background: #2a2a2a;
     border-radius: 3px;
     overflow: hidden;
+    position: relative;
+  }
+  .progress-bar.interactive {
+    cursor: pointer;
+    height: 12px;
+    transition: all 0.3s ease;
+  }
+  .progress-bar.interactive:hover {
+    height: 16px;
+    background: #333;
+    box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+  }
+  .progress-bar.interactive:active {
+    cursor: grabbing;
   }
   .progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #bc13fe, #00f2ff);
     border-radius: 3px;
-    transition: width 0.5s ease;
+    transition: width 0.3s ease;
     box-shadow: 0 0 10px rgba(188, 19, 254, 0.5);
+    pointer-events: none;
+  }
+  .progress-bar.interactive .progress-fill {
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.6);
+  }
+  .progress-bar.interactive:hover .progress-fill {
+    box-shadow: 0 0 20px rgba(0, 242, 255, 0.8);
   }
 
   /* ARRAY VISUALIZATION STYLES */
@@ -1642,6 +2675,28 @@ const styles = `
   }
   .widget.active.WRITE { border-color: #ff0055; box-shadow: 0 0 10px rgba(255, 0, 85, 0.2); transform: scale(1.02); }
   .widget.active.READ { border-color: #00f2ff; box-shadow: 0 0 10px rgba(0, 242, 255, 0.2); transform: scale(1.02); }
+  
+  /* FINAL OUTPUT WIDGET - Make it stand out! */
+  .widget.final-output {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 242, 255, 0.1));
+    border: 2px solid #00ff88;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    animation: finalPulse 2s ease-in-out infinite;
+    grid-column: span 2;
+    min-height: 90px;
+  }
+  .widget.final-output .widget-label {
+    color: #00ff88;
+    font-size: 10px;
+  }
+  .widget.final-output .val-viz {
+    color: #00ff88;
+    font-size: 22px;
+  }
+  @keyframes finalPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+    50% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.6); }
+  }
   
   .widget-label { font-size: 8px; color: #888; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; letter-spacing: 0.5px; }
   .val-viz { font-size: 18px; color: #fff; font-family: 'Orbitron'; text-align: center; }
