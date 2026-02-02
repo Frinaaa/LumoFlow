@@ -557,7 +557,8 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
 
 const VisualizeTab: React.FC = () => {
   const { traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames, isPlaying, togglePlay } = useAnalysisStore();
-  const { tabs, activeTabId } = useEditorStore();
+  const editorStore = useEditorStore();
+  const { tabs, activeTabId, outputData, debugData } = editorStore;
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -695,8 +696,148 @@ const VisualizeTab: React.FC = () => {
   // --- 4. THE RENDERER ---
   const currentFrame = traceFrames[currentFrameIndex];
 
-  // Fix for Black Screen: Show Loader if no frames exist
+  // Check if we have output data to show
+  const hasOutput = outputData && outputData.trim().length > 0;
+  const hasDebugData = debugData && debugData.trim().length > 0;
+
+  // Fix for Black Screen: Show Output if no visual frames but code has been run
   if (!currentFrame || traceFrames.length === 0) {
+    // If code has been executed and produced output, show it
+    if (hasOutput || hasDebugData) {
+      return (
+        <div className="universal-viz" style={{ padding: '16px' }}>
+          {/* File indicator */}
+          {activeTab && (
+            <div style={{
+              marginBottom: '12px',
+              padding: '8px 12px',
+              background: '#252526',
+              border: '1px solid #333',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <i className="fa-solid fa-file-code" style={{ color: '#00f2ff', fontSize: '12px' }}></i>
+              <span style={{ color: '#ccc', fontSize: '11px' }}>
+                Output from: <strong style={{ color: '#fff' }}>{activeTab.fileName}</strong>
+              </span>
+            </div>
+          )}
+
+          <div style={{
+            marginBottom: '16px',
+            padding: '12px',
+            background: 'rgba(0, 242, 255, 0.1)',
+            border: '1px solid rgba(0, 242, 255, 0.3)',
+            borderRadius: '4px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <i className="fa-solid fa-terminal" style={{ color: '#00f2ff', fontSize: '14px' }}></i>
+              <span style={{ color: '#00f2ff', fontSize: '12px', fontWeight: 'bold' }}>CONSOLE OUTPUT</span>
+            </div>
+            <div style={{ fontSize: '10px', color: '#aaa' }}>
+              This code doesn't have a visual representation, but here's what it outputs:
+            </div>
+          </div>
+
+          {/* Output Display */}
+          {hasOutput && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '16px',
+              background: '#1a1a1d',
+              border: '1px solid #2a2a2a',
+              borderRadius: '8px',
+              fontFamily: 'Consolas, Monaco, monospace',
+              fontSize: '12px',
+              lineHeight: '1.6',
+              color: '#00ff88',
+              maxHeight: '400px',
+              overflowY: 'auto'
+            }}>
+              <div style={{
+                marginBottom: '8px',
+                color: '#00f2ff',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                letterSpacing: '0.5px'
+              }}>
+                📤 OUTPUT:
+              </div>
+              <pre style={{
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                color: '#ccc'
+              }}>
+                {outputData}
+              </pre>
+            </div>
+          )}
+
+          {/* Debug/Error Display */}
+          {hasDebugData && (
+            <div style={{
+              padding: '16px',
+              background: '#1a1a1d',
+              border: '1px solid rgba(255, 0, 85, 0.3)',
+              borderRadius: '8px',
+              fontFamily: 'Consolas, Monaco, monospace',
+              fontSize: '12px',
+              lineHeight: '1.6',
+              maxHeight: '400px',
+              overflowY: 'auto'
+            }}>
+              <div style={{
+                marginBottom: '8px',
+                color: '#ff0055',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                letterSpacing: '0.5px'
+              }}>
+                ⚠️ DEBUG INFO:
+              </div>
+              <pre style={{
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                color: '#ffaa00'
+              }}>
+                {debugData}
+              </pre>
+            </div>
+          )}
+
+          {/* Helpful tips */}
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            background: 'rgba(188, 19, 254, 0.05)',
+            border: '1px solid rgba(188, 19, 254, 0.2)',
+            borderRadius: '4px',
+            fontSize: '11px',
+            color: '#aaa',
+            lineHeight: '1.5'
+          }}>
+            <div style={{ color: '#bc13fe', fontWeight: 'bold', marginBottom: '6px' }}>
+              💡 Want to see visual animations?
+            </div>
+            Try code with:
+            <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+              <li>Arrays: <code style={{ color: '#00f2ff' }}>let arr = [5, 2, 8, 1, 9]</code></li>
+              <li>Sorting: <code style={{ color: '#00f2ff' }}>arr.sort()</code></li>
+              <li>Loops: <code style={{ color: '#00f2ff' }}>for (let i = 0; i &lt; 5; i++)</code></li>
+              <li>Array methods: <code style={{ color: '#00f2ff' }}>arr.map(), arr.filter()</code></li>
+            </ul>
+          </div>
+
+          <style>{styles}</style>
+        </div>
+      );
+    }
+
+    // No output and no frames - show loading
     return (
       <div className="universal-viz empty">
         <div className="loader-box">
@@ -760,6 +901,25 @@ const VisualizeTab: React.FC = () => {
 
   return (
     <div className="universal-viz">
+      {/* File indicator */}
+      {activeTab && (
+        <div style={{
+          marginBottom: '12px',
+          padding: '8px 12px',
+          background: '#252526',
+          border: '1px solid #333',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <i className="fa-solid fa-file-code" style={{ color: '#00f2ff', fontSize: '12px' }}></i>
+          <span style={{ color: '#ccc', fontSize: '11px' }}>
+            Visualizing: <strong style={{ color: '#fff' }}>{activeTab.fileName}</strong>
+          </span>
+        </div>
+      )}
+      
       <div className="hud-header">
         <div className="badge">STEP-BY-STEP VISUALIZATION</div>
         <div className="step">STEP {currentFrameIndex + 1} / {traceFrames.length}</div>
@@ -840,8 +1000,18 @@ const VisualizeTab: React.FC = () => {
 export default VisualizeTab;
 
 const styles = `
-  .universal-viz { display: flex; flex-direction: column; height: 100%; min-height: 400px; background: #0c0c0f; padding: 15px; gap: 15px; overflow: hidden; }
-  .universal-viz.empty { justify-content: center; align-items: center; background: #0c0c0f; }
+  .universal-viz { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100%; 
+    max-height: calc(100vh - 200px);
+    background: #0c0c0f; 
+    padding: 12px; 
+    gap: 12px; 
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .universal-viz.empty { justify-content: center; align-items: center; background: #0c0c0f; overflow: hidden; }
   
   .loader-box { text-align: center; color: #888; }
   .loader-box p { color: #00f2ff; font-size: 14px; margin: 10px 0 5px; font-weight: bold; }
@@ -849,38 +1019,59 @@ const styles = `
   .spinner-neon { width: 40px; height: 40px; border: 2px solid #222; border-top: 2px solid #bc13fe; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .hud-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .hud-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; padding: 8px 0; }
   .badge { background: #bc13fe; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 4px; letter-spacing: 1px; }
   .step { color: #888; font-size: 10px; font-family: monospace; }
 
   /* ARRAY VISUALIZATION STYLES */
-  .array-visualization { flex-shrink: 0; background: #1a1a1d; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px; margin-bottom: 10px; }
-  .array-container { display: flex; gap: 15px; justify-content: center; align-items: flex-end; min-height: 200px; }
-  .array-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .array-visualization { 
+    flex-shrink: 0; 
+    background: #1a1a1d; 
+    border: 1px solid #2a2a2a; 
+    border-radius: 8px; 
+    padding: 16px; 
+    margin-bottom: 8px;
+    max-height: 280px;
+    overflow: hidden;
+  }
+  .array-container { 
+    display: flex; 
+    gap: 12px; 
+    justify-content: center; 
+    align-items: flex-end; 
+    min-height: 150px;
+    max-height: 220px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 0;
+  }
+  .array-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   
   .array-bar { 
-    width: 50px; 
+    width: 40px; 
+    min-width: 40px;
     background: linear-gradient(180deg, #00f2ff, #0088cc); 
-    border-radius: 8px 8px 0 0; 
+    border-radius: 6px 6px 0 0; 
     display: flex; 
     align-items: flex-end; 
     justify-content: center; 
-    padding-bottom: 8px;
+    padding-bottom: 6px;
     box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
     position: relative;
     transition: all 0.5s ease;
+    max-height: 180px;
   }
   
   .array-bar.comparing { 
     background: linear-gradient(180deg, #ffaa00, #ff6600); 
     box-shadow: 0 4px 20px rgba(255, 170, 0, 0.5);
-    transform: translateY(-10px);
+    transform: translateY(-8px);
   }
   
   .array-bar.swapping { 
     background: linear-gradient(180deg, #ff0055, #cc0044); 
     box-shadow: 0 4px 25px rgba(255, 0, 85, 0.6);
-    transform: translateY(-15px) scale(1.1);
+    transform: translateY(-12px) scale(1.08);
     animation: pulse 0.5s ease-in-out;
   }
   
@@ -892,42 +1083,95 @@ const styles = `
   .array-bar.current { 
     background: linear-gradient(180deg, #bc13fe, #8800cc); 
     box-shadow: 0 4px 20px rgba(188, 19, 254, 0.5);
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
   
   @keyframes pulse {
-    0%, 100% { transform: translateY(-15px) scale(1.1); }
-    50% { transform: translateY(-20px) scale(1.15); }
+    0%, 100% { transform: translateY(-12px) scale(1.08); }
+    50% { transform: translateY(-16px) scale(1.12); }
   }
   
-  .bar-value { color: #fff; font-weight: bold; font-size: 16px; font-family: 'Orbitron', monospace; }
-  .bar-index { color: #666; font-size: 11px; font-family: monospace; }
+  .bar-value { color: #fff; font-weight: bold; font-size: 14px; font-family: 'Orbitron', monospace; }
+  .bar-index { color: #666; font-size: 10px; font-family: monospace; }
 
-  .memory-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; align-content: flex-start; overflow-y: auto; padding-right: 5px; }
-  .no-vars { grid-column: 1/-1; color: #666; text-align: center; margin-top: 50px; font-size: 13px; }
+  .memory-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); 
+    gap: 10px; 
+    align-content: flex-start; 
+    max-height: 300px;
+    overflow-y: auto; 
+    padding-right: 5px;
+    margin-bottom: 8px;
+  }
+  .no-vars { grid-column: 1/-1; color: #666; text-align: center; margin-top: 30px; font-size: 12px; }
   
-  .widget { background: #1a1a1d; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; transition: 0.3s; position: relative; overflow: hidden; }
-  .widget.active.WRITE { border-color: #ff0055; box-shadow: 0 0 15px rgba(255, 0, 85, 0.2); transform: scale(1.02); }
-  .widget.active.READ { border-color: #00f2ff; box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); transform: scale(1.02); }
+  .widget { 
+    background: #1a1a1d; 
+    border: 1px solid #2a2a2a; 
+    border-radius: 6px; 
+    padding: 10px; 
+    transition: 0.3s; 
+    position: relative; 
+    overflow: hidden;
+    min-height: 80px;
+  }
+  .widget.active.WRITE { border-color: #ff0055; box-shadow: 0 0 12px rgba(255, 0, 85, 0.2); transform: scale(1.02); }
+  .widget.active.READ { border-color: #00f2ff; box-shadow: 0 0 12px rgba(0, 242, 255, 0.2); transform: scale(1.02); }
   
-  .widget-label { font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 10px; font-weight: bold; letter-spacing: 0.5px; }
-  .val-viz { font-size: 22px; color: #fff; font-family: 'Orbitron'; text-align: center; }
-  .array-viz { display: flex; align-items: flex-end; gap: 4px; height: 60px; justify-content: center; }
-  .mini-bar { width: 14px; background: #00f2ff; font-size: 8px; color: #000; text-align: center; border-radius: 2px 2px 0 0; font-weight: bold; display: flex; align-items: flex-end; justify-content: center; }
+  .widget-label { font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 8px; font-weight: bold; letter-spacing: 0.5px; }
+  .val-viz { font-size: 20px; color: #fff; font-family: 'Orbitron'; text-align: center; }
+  .array-viz { display: flex; align-items: flex-end; gap: 3px; height: 50px; justify-content: center; overflow-x: auto; }
+  .mini-bar { width: 12px; min-width: 12px; background: #00f2ff; font-size: 8px; color: #000; text-align: center; border-radius: 2px 2px 0 0; font-weight: bold; display: flex; align-items: flex-end; justify-content: center; }
   .obj-viz { font-size: 10px; color: #00ff88; font-family: monospace; word-break: break-all; opacity: 0.8; }
 
-  .explanation-hud { flex-shrink: 0; background: rgba(188, 19, 254, 0.05); border-left: 3px solid #bc13fe; padding: 12px; display: flex; gap: 12px; align-items: center; color: #fff; font-size: 13px; border-radius: 0 4px 4px 0; }
-  .explanation-hud i { color: #bc13fe; font-size: 14px; }
+  .explanation-hud { 
+    flex-shrink: 0; 
+    background: rgba(188, 19, 254, 0.05); 
+    border-left: 3px solid #bc13fe; 
+    padding: 10px 12px; 
+    display: flex; 
+    gap: 10px; 
+    align-items: center; 
+    color: #fff; 
+    font-size: 12px; 
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 8px;
+  }
+  .explanation-hud i { color: #bc13fe; font-size: 13px; }
 
-  .controls { flex-shrink: 0; background: #1a1a1d; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; border: 1px solid #2a2a2a; }
+  .controls { 
+    flex-shrink: 0; 
+    background: #1a1a1d; 
+    padding: 12px; 
+    border-radius: 8px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+    border: 1px solid #2a2a2a;
+  }
   .controls input { -webkit-appearance: none; height: 4px; background: #333; border-radius: 2px; outline: none; width: 100%; }
   .controls input::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #bc13fe; border-radius: 50%; cursor: pointer; }
   
-  .control-buttons { display: flex; gap: 10px; justify-content: center; align-items: center; }
-  .nav-btn { background: #2a2a2a; color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 14px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+  .control-buttons { display: flex; gap: 8px; justify-content: center; align-items: center; }
+  .nav-btn { background: #2a2a2a; color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 12px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
   .nav-btn:hover:not(:disabled) { background: #3a3a3a; transform: scale(1.05); }
   .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   
-  .p-btn { background: #fff; color: #000; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 18px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+  .p-btn { background: #fff; color: #000; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 16px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
   .p-btn:hover { transform: scale(1.1); background: #00f2ff; }
+  
+  /* Custom scrollbar */
+  .universal-viz::-webkit-scrollbar,
+  .memory-grid::-webkit-scrollbar,
+  .array-container::-webkit-scrollbar { width: 6px; height: 6px; }
+  .universal-viz::-webkit-scrollbar-track,
+  .memory-grid::-webkit-scrollbar-track,
+  .array-container::-webkit-scrollbar-track { background: #1a1a1d; }
+  .universal-viz::-webkit-scrollbar-thumb,
+  .memory-grid::-webkit-scrollbar-thumb,
+  .array-container::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  .universal-viz::-webkit-scrollbar-thumb:hover,
+  .memory-grid::-webkit-scrollbar-thumb:hover,
+  .array-container::-webkit-scrollbar-thumb:hover { background: #444; }
 `;
