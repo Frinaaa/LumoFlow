@@ -269,6 +269,8 @@ const Terminal: React.FC<TerminalProps> = ({
 // --- SUB-COMPONENTS ---
 
 const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigate: (line: number, col: number, source: string) => void }) => {
+  const [expandedProblems, setExpandedProblems] = React.useState<Set<number>>(new Set());
+  
   // Group problems by source (file)
   const grouped = problems.reduce((acc, p) => {
     if (!acc[p.source]) acc[p.source] = [];
@@ -277,38 +279,294 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
   }, {} as Record<string, Problem[]>);
 
   if (problems.length === 0) {
-    return <div style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '20px' }}>No problems have been detected in the workspace.</div>;
+    return (
+      <div style={{ 
+        color: 'var(--text-muted)', 
+        textAlign: 'center', 
+        marginTop: '20px',
+        padding: '20px'
+      }}>
+        <i className="fa-solid fa-circle-check" style={{ fontSize: '32px', color: '#00ff88', marginBottom: '10px' }}></i>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#00ff88' }}>No problems detected!</div>
+        <div style={{ fontSize: '11px', marginTop: '5px' }}>Your code is error-free and ready to run.</div>
+      </div>
+    );
   }
+
+  const toggleExpanded = (index: number) => {
+    const newExpanded = new Set(expandedProblems);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedProblems(newExpanded);
+  };
+
+  let globalIndex = 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      {/* Summary header */}
+      <div style={{
+        padding: '10px 15px',
+        background: 'rgba(241, 76, 76, 0.1)',
+        border: '1px solid rgba(241, 76, 76, 0.3)',
+        borderRadius: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px'
+      }}>
+        <i className="fa-solid fa-circle-exclamation" style={{ color: '#f14c4c', fontSize: '16px' }}></i>
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#f14c4c' }}>
+            {problems.length} Problem{problems.length > 1 ? 's' : ''} Found
+          </div>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Click on any problem for detailed explanation and fix suggestions
+          </div>
+        </div>
+      </div>
+
       {Object.entries(grouped).map(([source, fileProblems]) => (
         <div key={source}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '12px',
-            marginBottom: '5px'
+            marginBottom: '8px',
+            padding: '5px 0',
+            borderBottom: '1px solid #2d2d2d'
           }}>
             <i className="fa-solid fa-chevron-down" style={{ fontSize: '10px' }}></i>
             <i className="fa-solid fa-file-code" style={{ color: '#00f2ff' }}></i>
             <span>{source}</span>
+            <span style={{ 
+              marginLeft: 'auto', 
+              fontSize: '10px', 
+              color: '#f14c4c',
+              background: 'rgba(241, 76, 76, 0.1)',
+              padding: '2px 6px',
+              borderRadius: '3px'
+            }}>
+              {fileProblems.length} error{fileProblems.length > 1 ? 's' : ''}
+            </span>
           </div>
-          <div style={{ marginLeft: '20px' }}>
-            {fileProblems.map((p, i) => (
-              <div
-                key={i}
-                onClick={() => onNavigate(p.line, p.column || 1, source)}
-                style={{
-                  display: 'flex', gap: '10px', padding: '4px 0', cursor: 'pointer',
-                  fontSize: '12px', borderBottom: '1px solid #2d2d2d'
-                }}
-              >
-                <i className={p.type === 'error' ? "fa-solid fa-circle-xmark" : "fa-solid fa-triangle-exclamation"}
-                  style={{ color: p.type === 'error' ? '#f14c4c' : '#cca700' }}></i>
-                <span style={{ color: 'var(--text-primary)', flex: 1 }}>{p.message}</span>
-                <span style={{ color: 'var(--text-muted)' }}>[{p.line}, {p.column || 1}]</span>
-              </div>
-            ))}
+          <div style={{ marginLeft: '10px' }}>
+            {fileProblems.map((p, i) => {
+              const currentIndex = globalIndex++;
+              const isExpanded = expandedProblems.has(currentIndex);
+              
+              // Check if this is a detailed explanation (multi-line)
+              const isDetailedExplanation = p.message.includes('\n');
+              const lines = p.message.split('\n');
+              const firstLine = lines[0];
+              const detailLines = lines.slice(1);
+              
+              return (
+                <div
+                  key={i}
+                  style={{
+                    marginBottom: '10px',
+                    border: '1px solid #2d2d2d',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    background: isExpanded ? 'rgba(241, 76, 76, 0.05)' : 'transparent',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {/* Problem header - always visible */}
+                  <div
+                    onClick={() => {
+                      if (isDetailedExplanation) {
+                        toggleExpanded(currentIndex);
+                      } else {
+                        onNavigate(p.line, p.column || 1, source);
+                      }
+                    }}
+                    style={{
+                      display: 'flex', 
+                      gap: '10px', 
+                      padding: '8px 10px', 
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      alignItems: 'flex-start',
+                      background: isExpanded ? 'rgba(241, 76, 76, 0.1)' : 'transparent',
+                      transition: 'background 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isExpanded) {
+                        e.currentTarget.style.background = 'rgba(241, 76, 76, 0.05)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isExpanded) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
+                  >
+                    <i 
+                      className={p.type === 'error' ? "fa-solid fa-circle-xmark" : "fa-solid fa-triangle-exclamation"}
+                      style={{ 
+                        color: p.type === 'error' ? '#f14c4c' : '#cca700',
+                        marginTop: '2px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>
+                        {firstLine}
+                      </div>
+                      {isDetailedExplanation && !isExpanded && (
+                        <div style={{ 
+                          fontSize: '10px', 
+                          color: 'var(--text-muted)', 
+                          marginTop: '4px',
+                          fontStyle: 'italic'
+                        }}>
+                          Click to see detailed explanation and fix suggestions...
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      marginLeft: '10px'
+                    }}>
+                      <span 
+                        style={{ 
+                          color: 'var(--text-muted)',
+                          fontSize: '11px',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        [{p.line}, {p.column || 1}]
+                      </span>
+                      {isDetailedExplanation && (
+                        <i 
+                          className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`}
+                          style={{ 
+                            color: 'var(--text-muted)', 
+                            fontSize: '10px',
+                            transition: 'transform 0.2s ease'
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Detailed explanation - shown when expanded */}
+                  {isDetailedExplanation && isExpanded && (
+                    <div style={{
+                      padding: '15px',
+                      background: '#1a1a1d',
+                      borderTop: '1px solid #2d2d2d',
+                      fontSize: '11px',
+                      lineHeight: '1.6',
+                      fontFamily: 'Consolas, Monaco, monospace'
+                    }}>
+                      {detailLines.map((line, idx) => {
+                        // Style different sections
+                        let style: React.CSSProperties = { marginBottom: '8px' };
+                        
+                        if (line.includes('📝 WHAT THIS MEANS:') || 
+                            line.includes('🔍 COMMON CAUSES:') || 
+                            line.includes('✅ HOW TO FIX:') ||
+                            line.includes('💡 EXAMPLE:') ||
+                            line.includes('💡 TIP:')) {
+                          style = { 
+                            ...style, 
+                            color: '#00f2ff', 
+                            fontWeight: 'bold',
+                            marginTop: '12px',
+                            marginBottom: '6px'
+                          };
+                        } else if (line.startsWith('❌ Wrong:')) {
+                          style = { 
+                            ...style, 
+                            color: '#f14c4c',
+                            paddingLeft: '15px',
+                            borderLeft: '2px solid #f14c4c'
+                          };
+                        } else if (line.startsWith('✅ Correct:') || line.startsWith('✅ Safe:')) {
+                          style = { 
+                            ...style, 
+                            color: '#00ff88',
+                            paddingLeft: '15px',
+                            borderLeft: '2px solid #00ff88'
+                          };
+                        } else if (line.match(/^\d+\./)) {
+                          // Numbered list items
+                          style = { 
+                            ...style, 
+                            color: '#ccc',
+                            paddingLeft: '15px'
+                          };
+                        } else if (line.startsWith('•')) {
+                          // Bullet points
+                          style = { 
+                            ...style, 
+                            color: '#ccc',
+                            paddingLeft: '15px'
+                          };
+                        } else {
+                          style = { ...style, color: '#aaa' };
+                        }
+                        
+                        return (
+                          <div key={idx} style={style}>
+                            {line}
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Action buttons */}
+                      <div style={{
+                        marginTop: '15px',
+                        paddingTop: '15px',
+                        borderTop: '1px solid #2d2d2d',
+                        display: 'flex',
+                        gap: '10px'
+                      }}>
+                        <button
+                          onClick={() => onNavigate(p.line, p.column || 1, source)}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#0e639c',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <i className="fa-solid fa-arrow-right"></i>
+                          Go to Line {p.line}
+                        </button>
+                        <button
+                          onClick={() => toggleExpanded(currentIndex)}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#2d2d2d',
+                            color: '#ccc',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '11px'
+                          }}
+                        >
+                          Collapse
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
