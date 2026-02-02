@@ -78,60 +78,7 @@ const AnalysisPanel: React.FC = () => {
                 {/* Content */}
                 <div className="analysis-panel-content" style={{ background: '#1e1e1e', minHeight: '200px' }}>
                     {activeTab === 'visualize' && <VisualizeTab />}
-                    {activeTab === 'explain' && (
-                        isAnalyzing ? (
-                            <div
-                                style={{
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '20px',
-                                    color: '#888',
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        border: '3px solid #333',
-                                        borderTopColor: '#00f2ff',
-                                        borderRadius: '50%',
-                                        animation: 'spin 1s linear infinite'
-                                    }}
-                                />
-                                <div style={{ fontSize: '13px', letterSpacing: '1px' }}>ANALYZING NEURAL LINK...</div>
-                                <style>{`
-                    @keyframes spin {
-                      to { transform: rotate(360deg); }
-                    }
-                  `}</style>
-                            </div>
-                        ) : data ? (
-                            <ExplanationTab analysisData={data} />
-                        ) : (
-                            <div
-                                style={{
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '16px',
-                                    color: '#666',
-                                    textAlign: 'center',
-                                    padding: '20px'
-                                }}
-                            >
-                                <i className="fa-solid fa-bolt" style={{ fontSize: '32px', opacity: 0.2 }}></i>
-                                <div>
-                                    <div style={{ fontSize: '14px', marginBottom: '8px' }}>No Data Available</div>
-                                    <div style={{ fontSize: '12px' }}>Run the code or trigger analysis to see results</div>
-                                </div>
-                            </div>
-                        )
-                    )}
+                    {activeTab === 'explain' && <ExplanationTab />}
                     {activeTab === 'interact' && (
                         data ? (
                             <InteractionTab analysisData={data} />
