@@ -246,6 +246,15 @@ app.on('ready', () => {
     ipcMain.handle('user:updateProfile', userController.updateProfile);
     console.log('✅ Registered: user:updateProfile');
 
+    ipcMain.handle('user:updateStats', userController.updateStats);
+    console.log('✅ Registered: user:updateStats');
+
+    ipcMain.handle('user:addActivity', userController.addActivity);
+    console.log('✅ Registered: user:addActivity');
+
+    ipcMain.handle('user:saveGameProgress', userController.saveGameProgress);
+    console.log('✅ Registered: user:saveGameProgress');
+
     // File System
     ipcMain.handle('files:readProject', async () => {
       const results = [];
@@ -987,10 +996,10 @@ app.on('ready', () => {
     ipcMain.handle('dialog:openFile', async (event) => {
       try {
         console.log('dialog:openFile handler called');
-        
+
         // Get the window that triggered this
         const win = BrowserWindow.fromWebContents(event.sender);
-        
+
         if (!dialog) {
           console.error('Dialog module not available');
           return { canceled: true };
@@ -1005,9 +1014,9 @@ app.on('ready', () => {
             { name: 'All Files', extensions: ['*'] }
           ]
         });
-        
+
         console.log('Dialog result - canceled:', canceled, 'filePaths:', filePaths);
-        
+
         if (canceled || !filePaths || filePaths.length === 0) {
           console.log('File selection canceled or no path selected');
           return { canceled: true };
@@ -1027,10 +1036,10 @@ app.on('ready', () => {
     ipcMain.handle('dialog:openFolder', async (event) => {
       try {
         console.log('dialog:openFolder handler called');
-        
+
         // Get the window that triggered this
         const win = BrowserWindow.fromWebContents(event.sender);
-        
+
         if (!dialog) {
           console.error('Dialog module not available');
           return { canceled: true };
@@ -1041,9 +1050,9 @@ app.on('ready', () => {
           properties: ['openDirectory'],
           defaultPath: require('os').homedir()
         });
-        
+
         console.log('Dialog result - canceled:', canceled, 'filePaths:', filePaths);
-        
+
         if (canceled || !filePaths || filePaths.length === 0) {
           console.log('Folder selection canceled or no path selected');
           return { canceled: true };

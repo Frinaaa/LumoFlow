@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNextChallenge, PredictChallenge, reshuffleChallenges } from '../utils/generators';
+import { trackGameProgress, trackActivity } from '../utils/statsTracker';
 import '../styles/PredictGame.css';
 
 const PredictGameScreen: React.FC = () => {
@@ -36,6 +37,21 @@ const PredictGameScreen: React.FC = () => {
 
     if (index === question.correctIndex) {
       setScore(s => s + 1);
+
+      // 🟢 TRACK PROGRESS & SCORE
+      trackGameProgress({
+        gameName: 'Predict Output',
+        score: 50,
+        level: level
+      });
+
+      trackActivity({
+        title: 'Correct Prediction',
+        type: 'Output Prediction',
+        xp: 50,
+        color: '#00ccff',
+        icon: 'fa-terminal'
+      });
     }
   };
 

@@ -41,9 +41,9 @@ interface EditorState {
   // Tab Actions
   addTab: (filePath: string, fileName: string, content: string, language: string) => void;
   removeTab: (tabId: string) => void;
-  setActiveTab: (tabId: string) => void;
   updateTabContent: (tabId: string, content: string) => void;
   markTabDirty: (tabId: string, isDirty: boolean) => void;
+  updateTabSavedLineCount: (tabId: string, count: number) => void;
   updateCursorPosition: (tabId: string, line: number, column: number) => void;
   closeAllTabs: () => void;
   closeOtherTabs: (tabId: string) => void;
@@ -126,6 +126,7 @@ export const useEditorStore = create<EditorState>()(
           language,
           isDirty: false,
           cursorPosition: { line: 1, column: 1 },
+          lastSavedLineCount: content.split('\n').length,
         };
 
         set(state => ({
@@ -170,7 +171,14 @@ export const useEditorStore = create<EditorState>()(
         }));
       },
 
-      updateCursorPosition: (tabId, line, column) => {
+      updateTabSavedLineCount: (tabId: string, count: number) => {
+        set(state => ({
+          tabs: state.tabs.map(t =>
+            t.id === tabId ? { ...t, lastSavedLineCount: count } : t
+          ),
+        }));
+      },
+      updateCursorPosition: (tabId: string, line: number, column: number) => {
         set(state => ({
           tabs: state.tabs.map(t =>
             t.id === tabId ? { ...t, cursorPosition: { line, column } } : t

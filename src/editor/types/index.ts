@@ -7,6 +7,7 @@ export interface EditorTab {
   language: string;
   isDirty: boolean;
   cursorPosition: { line: number; column: number };
+  lastSavedLineCount?: number;
 }
 
 export interface FileNode {

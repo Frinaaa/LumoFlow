@@ -21,17 +21,18 @@ interface AnalysisState {
   currentFrameIndex: number;
   isPlaying: boolean;
   visualMode: VisualMode;
-  
+
   // Actions
   togglePanel: () => void;
   setAnalyzing: (val: boolean) => void;     // 🟢 Fixes: "setAnalyzing does not exist"
   setAnalysisData: (data: any) => void;     // 🟢 Fixes: "setAnalysisData does not exist"
-  
+
   // 🟢 Fixes: "Expected 1 arguments, but got 2" error
-  setTraceFrames: (frames: TraceFrame[], mode?: VisualMode) => void; 
-  
+  setTraceFrames: (frames: TraceFrame[], mode?: VisualMode) => void;
+
   setFrameIndex: (index: number | ((prev: number) => number)) => void;
   togglePlay: () => void;
+  setLiveVisual: (result: any) => void;
 }
 
 // 4. Implementation
@@ -48,16 +49,43 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   setAnalyzing: (val) => set({ isAnalyzing: val }),
   setAnalysisData: (data) => set({ data }),
 
-  setTraceFrames: (frames, mode = 'UNIVERSAL') => set({ 
-    traceFrames: frames, 
-    currentFrameIndex: 0, 
-    visualMode: mode,
-    isVisible: true 
-  }),
+  setTraceFrames: (frames, mode = 'UNIVERSAL') => {
+    set({
+      traceFrames: frames,
+      currentFrameIndex: 0,
+      visualMode: mode,
+      isVisible: true
+    });
+
+    // Track concept visualization
+    import('../../utils/statsTracker').then(({ trackStats, trackActivity }) => {
+      trackStats({ conceptsVisualized: 1 });
+      trackActivity({
+        title: mode + " Visualization",
+        type: "Algorithm Visualization",
+        xp: 50,
+        color: "#bc13fe",
+        icon: "fa-eye"
+      });
+    });
+  },
 
   setFrameIndex: (input) => set((state) => ({
     currentFrameIndex: typeof input === 'function' ? input(state.currentFrameIndex) : input
   })),
 
   togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
+
+  setLiveVisual: (result) => {
+    set({
+      traceFrames: result.frames || [],
+      visualMode: result.type || 'UNIVERSAL',
+      isVisible: true
+    });
+
+    // Track concept visualization
+    import('../../utils/statsTracker').then(({ trackStats }) => {
+      trackStats({ conceptsVisualized: 1 });
+    });
+  },
 }));

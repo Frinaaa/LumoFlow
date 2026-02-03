@@ -4,6 +4,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer
 } from 'recharts';
 import authService from '../services/authService';
+import { useUserStore } from '../stores/userStore';
 import SimpleTitlebar from '../components/SimpleTitlebar';
 import '../styles/DashboardScreen.css';
 
@@ -16,51 +17,58 @@ interface UserProfile {
 
 const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  // 🟢 OPTIMIZED: Check cache immediately to skip loading screen
+  const {
+    stats: storeStats,
+    recentActivity: storeActivity,
+    fetchUserData,
+    user: storeUser,
+    skillMatrix: storeSkills,
+    isSyncing
+  } = useUserStore();
+
+  // 🟢 OPTIMIZED: Check cache immediately 
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
       const cached = localStorage.getItem('user_info');
-      return cached ? JSON.parse(cached) : null;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return parsed;
+      }
+      return null;
     } catch { return null; }
   });
 
+  const currentUser = storeUser || user;
+
+  // Stats derived from store for UI mapping
+  const stats = {
+    lines: storeStats.linesWritten,
+    bugs: storeStats.bugsDetected,
+    concepts: storeStats.conceptsVisualized,
+    score: storeStats.totalScore,
+    level: storeStats.level
+  };
+
+  const recentActivity = storeActivity;
   const [loading, setLoading] = useState(!user);
 
-  // MOCK DATA FOR VISUALS
-  const [stats] = useState({
-    lines: 0,
-    bugs: 0,
-    concepts: 0,
-    score: 0,
-    level: "LVL 0: DETECTING..."
-  });
-
-  const skillData = [
-    { subject: 'LOGIC', A: 120, fullMark: 150 },
-    { subject: 'SYNTAX', A: 98, fullMark: 150 },
-    { subject: 'SPEED', A: 86, fullMark: 150 },
-    { subject: 'DEBUG', A: 99, fullMark: 150 },
-    { subject: 'VISUALS', A: 85, fullMark: 150 },
-  ];
-
-  const recentActivity = [
-    { id: 1, title: 'Loops & Arrays', type: 'Terminal Practice • 2h ago', xp: 150, color: '#00f2ff', icon: 'fa-terminal' },
-    { id: 2, title: 'Debug Race', type: 'Rank S • 5h ago', xp: 300, color: '#ff0055', icon: 'fa-triangle-exclamation' },
-    { id: 3, title: 'Memory Heap', type: 'Visual Guide • Yesterday', xp: 50, color: '#bc13fe', icon: 'fa-code-branch' },
-    { id: 4, title: 'Logic Builder', type: 'Level 5 • 2d ago', xp: 200, color: '#00ff88', icon: 'fa-puzzle-piece' },
+  const skillData = storeSkills && storeSkills.length > 0 ? storeSkills : [
+    { subject: 'Logic', A: 50, fullMark: 150 },
+    { subject: 'Syntax', A: 40, fullMark: 150 },
+    { subject: 'Speed', A: 30, fullMark: 150 },
+    { subject: 'Debug', A: 20, fullMark: 150 },
+    { subject: 'Visuals', A: 10, fullMark: 150 },
   ];
 
   // 🟢 FETCH LOGIC: Gets latest data from backend
   const fetchUser = async () => {
     try {
-      const res = await authService.getProfile();
-      if (res.success && res.user) {
-        setUser({
-          name: res.user.name,
-          email: res.user.email,
-          avatar: res.user.avatar
-        });
-      }
+      const userString = localStorage.getItem('user_info');
+      if (!userString) return;
+      const cachedUser = JSON.parse(userString);
+      const userId = cachedUser._id || cachedUser.id;
+
+      await fetchUserData();
     } catch (e) {
       console.error("Failed to load user");
     } finally {
@@ -75,11 +83,13 @@ const DashboardScreen: React.FC = () => {
 
     // Listen for the 'profile-updated' event from SettingsScreen
     window.addEventListener('profile-updated', fetchUser);
+    window.addEventListener('stats-updated', fetchUser);
 
     // Cleanup listener when leaving dashboard
     return () => {
       console.log('❌ DashboardScreen UNMOUNTED');
       window.removeEventListener('profile-updated', fetchUser);
+      window.removeEventListener('stats-updated', fetchUser);
     };
   }, []);
 
@@ -131,8 +141,40 @@ const DashboardScreen: React.FC = () => {
           {/* HEADER */}
           <header className="dashboard-header">
             <div className="header-text">
-              <h1>Hello, <span style={{ color: 'white' }}>{user?.name || "User"}</span></h1>
+              <h1>Hello, <span style={{ color: 'white' }}>{currentUser?.name || "User"}</span></h1>
               <p>Your neural network is expanding. Keep flowing.</p>
+              {(!currentUser?._id || currentUser?._id.includes('demo')) ? (
+                <div className="demo-warning-pill" style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'rgba(255, 170, 0, 0.1)',
+                  color: '#ffaa00',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  marginTop: '8px',
+                  border: '1px solid rgba(255, 170, 0, 0.2)'
+                }}>
+                  <i className="fa-solid fa-triangle-exclamation"></i> 🛠️ DEMO MODE: Progress not saved to cloud.
+                </div>
+              ) : (
+                <div className={`sync-status-pill ${isSyncing ? 'syncing' : 'synced'}`} style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: isSyncing ? 'rgba(0, 242, 255, 0.1)' : 'rgba(74, 222, 128, 0.1)',
+                  color: isSyncing ? '#00f2ff' : '#4ade80',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  marginTop: '12px',
+                  border: `1px solid ${isSyncing ? 'rgba(0, 242, 255, 0.2)' : 'rgba(74, 222, 128, 0.2)'}`
+                }}>
+                  <i className={`fa-solid ${isSyncing ? 'fa-sync fa-spin' : 'fa-cloud-check'}`}></i>
+                  {isSyncing ? 'SYNCING PROGRESS...' : 'CONNECTED TO CLOUD'}
+                </div>
+              )}
             </div>
 
             <div className="dashboard-right-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -141,7 +183,7 @@ const DashboardScreen: React.FC = () => {
               <div className="dashboard-avatar-container">
                 {/* 🟢 FIX: Uses 'user.avatar' instead of 'userData' (which was undefined) */}
                 <img
-                  src={user?.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'}
+                  src={currentUser?.avatar || 'https://cdn-icons-png.flaticon.com/512/4140/4140048.png'}
                   alt="Profile"
                   className="dash-avatar-img"
                 />
@@ -222,9 +264,9 @@ const DashboardScreen: React.FC = () => {
                     </div>
                     <div className="activity-info">
                       <h4>{item.title}</h4>
-                      <p>{item.type}</p>
+                      <p>{item.type} {item.time ? `• ${item.time}` : ''}</p>
                     </div>
-                    <div className="xp-badge">+{item.xp} XP</div>
+                    <div className="xp-badge">+{item.xp || 0} XP</div>
                   </div>
                 ))}
               </div>
@@ -232,7 +274,7 @@ const DashboardScreen: React.FC = () => {
 
           </section>
         </main>
-      </div>
+      </div >
     </>
   );
 };

@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld('api', {
   // User Management
   getDashboardStats: (userId) => ipcRenderer.invoke('user:getDashboardStats', userId).catch(err => ({ success: false, msg: err.message })),
   updateProfile: (data) => ipcRenderer.invoke('user:updateProfile', data).catch(err => ({ success: false, msg: err.message })),
+  updateStats: (data) => ipcRenderer.invoke('user:updateStats', data).catch(err => ({ success: false, msg: err.message })),
+  addActivity: (data) => ipcRenderer.invoke('user:addActivity', data).catch(err => ({ success: false, msg: err.message })),
+  saveGameProgress: (data) => ipcRenderer.invoke('user:saveGameProgress', data).catch(err => ({ success: false, msg: err.message })),
 
   // File System
   readProjectFiles: () => ipcRenderer.invoke('files:readProject').catch(err => []),

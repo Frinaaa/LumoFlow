@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { getNextBug, BugLevel, reshuffleBugs } from '../utils/generators';
+import { trackGameProgress, trackActivity } from '../utils/statsTracker';
 import '../styles/DebugRace.css';
 
 interface LogEntry {
@@ -21,7 +22,7 @@ const DebugRaceScreen: React.FC = () => {
   const [gameState, setGameState] = useState<'playing' | 'won' | 'timeout'>('playing');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showSolution, setShowSolution] = useState(false);
-  const [attemptsLeft, setAttemptsLeft] = useState(2);
+  const [attemptsLeft, setAttemptsLeft] = useState(999); // Unlimited attempts
 
   // Load Level Function
   const loadLevel = (lvl: number) => {
@@ -37,12 +38,11 @@ const DebugRaceScreen: React.FC = () => {
       setIsRunning(true);
       setGameState('playing');
       setShowSolution(false); // Reset solution display
-      setAttemptsLeft(2); // Reset attempts to 2
+      setAttemptsLeft(999);
       setLogs([
         { msg: `> Level ${lvl} Initialized...`, type: 'info' },
-        { msg: `> Analyzing code...`, type: 'info' },
-        { msg: `> ERROR DETECTED: ${newBug.description}`, type: 'error' },
-        { msg: `> Attempts remaining: 2`, type: 'info' }
+        { msg: `> System Ready for Patching.`, type: 'info' },
+        { msg: `> ERROR DETECTED: ${newBug.description} `, type: 'error' }
       ]);
     }
   };
@@ -103,36 +103,31 @@ const DebugRaceScreen: React.FC = () => {
       if (isFixed) {
         setLogs(prev => [...prev,
         { msg: "> SUCCESS: Bug Patched.", type: 'success' },
-        { msg: `> ${bugData.explanation}`, type: 'info' }
+        { msg: `> ${bugData.explanation} `, type: 'info' }
         ]);
         setGameState('won');
         setIsRunning(false);
         setShowSolution(true);
-      } else {
-        const newAttemptsLeft = attemptsLeft - 1;
-        setAttemptsLeft(newAttemptsLeft);
 
-        if (newAttemptsLeft > 0) {
-          // Still have attempts left
-          setLogs(prev => [...prev,
-          { msg: "> ERROR: Issue persists.", type: 'error' },
-          { msg: `> Attempts remaining: ${newAttemptsLeft}`, type: 'info' },
-          { msg: "> Hint: " + bugData.hint, type: 'info' }
-          ]);
-        } else {
-          // No attempts left, show solution if time is remaining
-          if (timeLeft > 0) {
-            setLogs(prev => [...prev,
-            { msg: "> ERROR: Maximum attempts reached.", type: 'error' },
-            { msg: "> Revealing solution...", type: 'info' }
-            ]);
-            setShowSolution(true);
-          } else {
-            setLogs(prev => [...prev,
-            { msg: "> ERROR: Time expired.", type: 'error' }
-            ]);
-          }
-        }
+        // 🟢 TRACK PROGRESS & SCORE
+        trackGameProgress({
+          gameName: 'Debug Race',
+          score: 200,
+          level: bugData.id
+        });
+
+        trackActivity({
+          title: 'Bug Patched',
+          type: `Debug Race - Bug #${bugData.id} `,
+          xp: 200,
+          color: '#00f2ff',
+          icon: 'fa-bolt'
+        });
+      } else {
+        setLogs(prev => [...prev,
+        { msg: "> ERROR: Issue persists. Analyzing code...", type: 'error' },
+        { msg: "> Hint: " + bugData.hint, type: 'info' }
+        ]);
       }
     }, 500);
   };
@@ -140,7 +135,7 @@ const DebugRaceScreen: React.FC = () => {
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
     const s = t % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
+    return `${m}:${s < 10 ? '0' : ''}${s} `;
   };
 
   if (!bugData) return <div style={{ color: 'white', padding: 50 }}>Loading Neural Interface...</div>;
@@ -163,7 +158,7 @@ const DebugRaceScreen: React.FC = () => {
       </header>
 
       <div className="progress-line">
-        <div className="debug-progress-fill" style={{ width: `${(timeLeft / DURATION) * 100}%` }}></div>
+        <div className="debug-progress-fill" style={{ width: `${(timeLeft / DURATION) * 100}% ` }}></div>
       </div>
 
       <div className="interface-container">
@@ -176,13 +171,13 @@ const DebugRaceScreen: React.FC = () => {
           </div>
           <div style={{ flex: 1 }}>
             <Editor
-              key={`editor-level-${level}`}
+              key={`editor - level - ${level} `}
               height="100%"
               theme="vs-dark"
               language="javascript"
               value={userCode}
               onChange={(val) => setUserCode(val || '')}
-             options={{
+              options={{
                 fontSize: 16,
                 minimap: { enabled: false },
                 fontFamily: "'JetBrains Mono', monospace",
@@ -213,7 +208,7 @@ const DebugRaceScreen: React.FC = () => {
             <div className="status-header"><i className="fa-solid fa-terminal"></i> Console</div>
             <div className="console-box" style={{ flex: 1, overflow: 'auto' }}>
               {logs.map((log, idx) => (
-                <div key={idx} className={`log-entry ${log.type === 'error' ? 'log-err' : log.type === 'success' ? 'log-ok' : ''}`}>{log.msg}</div>
+                <div key={idx} className={`log - entry ${log.type === 'error' ? 'log-err' : log.type === 'success' ? 'log-ok' : ''} `}>{log.msg}</div>
               ))}
             </div>
           </div>
@@ -231,8 +226,24 @@ const DebugRaceScreen: React.FC = () => {
             </div>
           )}
 
-          {/* Show Next Level button after solution is shown */}
-          {showSolution ? (
+          {/* Game Over/Win status in sidebar */}
+          {gameState === 'won' && (
+            <div className="status-card" style={{ background: 'rgba(0, 255, 136, 0.1)', borderColor: 'var(--neon-safe)' }}>
+              <div className="status-header" style={{ color: 'var(--neon-safe)' }}><i className="fa-solid fa-circle-check"></i> BUG ELIMINATED</div>
+              <p>System memory stabilized. You can continue editing or proceed.</p>
+            </div>
+          )}
+
+          {gameState === 'timeout' && (
+            <div className="status-card" style={{ background: 'rgba(255, 0, 60, 0.1)', borderColor: 'var(--neon-alert)' }}>
+              <div className="status-header"><i className="fa-solid fa-clock"></i> TIME EXPIRED</div>
+              <p>The system has timed out. Solution revealed below.</p>
+              <button className="exit-btn" style={{ width: '100%', marginTop: '10px' }} onClick={() => setShowSolution(true)}>Show Solution</button>
+            </div>
+          )}
+
+          {/* Show Next Level button after solution is shown or game won */}
+          {(showSolution || gameState === 'won' || gameState === 'timeout') ? (
             <button
               className="deploy-btn"
               onClick={handleNextLevel}
@@ -244,40 +255,13 @@ const DebugRaceScreen: React.FC = () => {
             <button
               className="deploy-btn"
               onClick={handleExecute}
-              disabled={gameState !== 'playing' || attemptsLeft === 0 || timeLeft === 0}
+              disabled={gameState !== 'playing' || timeLeft === 0}
               style={{ marginTop: 'auto', flexShrink: 0 }}
             >
-              <i className="fa-solid fa-play"></i> EXECUTE FIX ({attemptsLeft} {attemptsLeft === 1 ? 'attempt' : 'attempts'} left)
+              <i className="fa-solid fa-play"></i> EXECUTE FIX
             </button>
           )}
         </div>
-
-        {/* TIMEOUT OVERLAY */}
-        {gameState === 'timeout' && (
-          <div className="overlay-screen" style={{ background: 'rgba(0,0,0,0.98)', display: 'flex' }}>
-            <h1 style={{ color: 'var(--neon-alert)', fontFamily: 'Orbitron', marginBottom: 20 }}>TIME EXPIRED</h1>
-            <div style={{ display: 'flex', gap: 20, width: '90%', height: '400px' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#888', marginBottom: 5 }}>YOUR CODE</div>
-                <div className="solution-box">{userCode}</div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: 'var(--neon-safe)', marginBottom: 5 }}>SOLUTION</div>
-                <div className="solution-box correct">{bugData.fixedCode}</div>
-              </div>
-            </div>
-            <button className="deploy-btn" style={{ marginTop: 30 }} onClick={handleNextLevel}>CONTINUE <i className="fa-solid fa-arrow-right"></i></button>
-          </div>
-        )}
-
-        {/* WIN OVERLAY */}
-        {gameState === 'won' && (
-          <div className="overlay-screen" style={{ display: 'flex' }}>
-            <h1 style={{ color: 'var(--neon-safe)', fontFamily: 'Orbitron' }}>BUG ELIMINATED</h1>
-            <button className="deploy-btn" style={{ marginTop: 30, background: 'var(--neon-safe)', color: 'black' }} onClick={handleNextLevel}>NEXT LEVEL <i className="fa-solid fa-forward"></i></button>
-          </div>
-        )}
-
       </div>
     </div>
   );

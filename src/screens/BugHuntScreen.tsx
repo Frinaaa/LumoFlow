@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNextBugLevel, BugHuntLevel, reshuffleLevels } from '../utils/generators';
+import { trackGameProgress, trackActivity } from '../utils/statsTracker';
 import '../styles/BugHunt.css';
 
 const BugHuntScreen: React.FC = () => {
@@ -46,6 +47,22 @@ const BugHuntScreen: React.FC = () => {
     if (selectedLine.isBug) {
       // Success Logic
       setIsSolved(true);
+
+      // 🟢 TRACK PROGRESS & SCORE
+      trackGameProgress({
+        gameName: 'Bug Hunt',
+        score: 100,
+        level: level
+      });
+
+      trackActivity({
+        title: 'Bug Eliminated',
+        type: `Bug Hunt - Lvl ${level}`,
+        xp: 100,
+        color: '#ff0055',
+        icon: 'fa-bug-slash'
+      });
+
       alert("✅ BUG ELIMINATED! System memory stabilized.");
     } else {
       // Failure Logic

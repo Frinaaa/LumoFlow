@@ -17,10 +17,13 @@ const authController = {
 
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
+      console.log(`👤 NEW SIGNUP: ${email} (${name})`);
       user = new User({ name, email: email.toLowerCase().trim(), password: hashedPassword, role: 'student' });
       await user.save();
+      console.log(`✅ SIGNUP SUCCESS: ${user._id}`);
       return { success: true, msg: 'User registered successfully' };
     } catch (err) {
+      console.error(`❌ SIGNUP ERROR:`, err);
       return { success: false, msg: 'Signup error' };
     }
   },
@@ -29,23 +32,32 @@ const authController = {
   async login(event, data) {
     try {
       const { email, password } = data;
+      console.log(`🔑 LOGIN ATTEMPT: ${email}`);
       const user = await User.findOne({ email: email.toLowerCase().trim() });
-      if (!user) return { success: false, msg: 'Invalid credentials' };
+      if (!user) {
+        console.warn(`❌ LOGIN FAIL: User not found - ${email}`);
+        return { success: false, msg: 'Invalid credentials' };
+      }
       const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return { success: false, msg: 'Invalid credentials' };
+      if (!isMatch) {
+        console.warn(`❌ LOGIN FAIL: Password mismatch - ${email}`);
+        return { success: false, msg: 'Invalid credentials' };
+      }
       const token = jwt.sign({ user: { id: user._id } }, JWT_SECRET, { expiresIn: '7d' });
-      return { 
-        success: true, 
-        token, 
-        user: { 
-          _id: user._id.toString(), 
-          name: user.name, 
-          email: user.email, 
+      console.log(`✅ LOGIN SUCCESS: ${user.email} (${user._id})`);
+      return {
+        success: true,
+        token,
+        user: {
+          _id: user._id.toString(),
+          name: user.name,
+          email: user.email,
           avatar: user.avatar || '',
           bio: user.bio || ''
-        } 
+        }
       };
     } catch (err) {
+      console.error(`❌ LOGIN ERROR:`, err);
       return { success: false, msg: 'Login error' };
     }
   },
@@ -54,14 +66,14 @@ const authController = {
     try {
       const { email, name, sub: googleId, picture } = payload;
       const cleanEmail = email.toLowerCase().trim();
-      
+
       let user = await User.findOne({ email: cleanEmail });
 
       if (!user) {
         user = new User({
           name: name,
           email: cleanEmail,
-          password: googleId, 
+          password: googleId,
           avatar: picture,
           role: 'student',
           isVerified: true
@@ -80,9 +92,9 @@ const authController = {
       return {
         success: true,
         token,
-        user: { 
+        user: {
           _id: user._id.toString(),
-          name: user.name, 
+          name: user.name,
           email: user.email,
           avatar: user.avatar || '',
           bio: user.bio || ''
@@ -99,7 +111,7 @@ const authController = {
       const email = typeof data === 'string' ? data : data.email;
       const cleanEmail = email.toLowerCase().trim();
       console.log('\n📧 FORGOT PASSWORD REQUEST for:', cleanEmail);
-      
+
       const user = await User.findOne({ email: cleanEmail });
       if (!user) {
         console.log('❌ User not found:', cleanEmail);
@@ -107,12 +119,12 @@ const authController = {
       }
 
       console.log('✅ User found:', user.email);
-      
+
       const resetToken = crypto.randomBytes(3).toString('hex').toUpperCase();
       user.resetPasswordCode = resetToken;
       user.resetPasswordExpires = Date.now() + 600000; // 10 mins
       await user.save();
-      
+
       console.log('✅ Reset code generated:', resetToken);
       console.log('✅ Reset code saved to database');
 
@@ -131,11 +143,11 @@ const authController = {
         console.error('Error code:', emailErr.code);
         console.error('Full error:', emailErr);
         console.log('✅ BUT: Reset code was generated and saved. User can still use it.\n');
-        
+
         // Return success because code was generated, even if email failed
-        return { 
-          success: true, 
-          msg: 'Code generated! Email delivery failed - check spam folder or contact support.' 
+        return {
+          success: true,
+          msg: 'Code generated! Email delivery failed - check spam folder or contact support.'
         };
       }
     } catch (err) {
@@ -150,10 +162,10 @@ const authController = {
   async resetPassword(event, data) {
     try {
       const { email, code, newPassword } = data;
-      const user = await User.findOne({ 
+      const user = await User.findOne({
         email: email.toLowerCase().trim(),
         resetPasswordCode: code,
-        resetPasswordExpires: { $gt: Date.now() } 
+        resetPasswordExpires: { $gt: Date.now() }
       });
 
       if (!user) return { success: false, msg: 'Invalid or expired code.' };

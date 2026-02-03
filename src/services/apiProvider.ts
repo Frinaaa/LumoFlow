@@ -29,6 +29,9 @@ const API_ENDPOINT_MAP: Record<string, { method: string; endpoint: string }> = {
     'updateProfile': { method: 'PUT', endpoint: '/api/user/profile' },
     'getDashboardStats': { method: 'GET', endpoint: '/api/user/dashboard' },
     'getProfile': { method: 'GET', endpoint: '/api/user/profile' },
+    'updateStats': { method: 'POST', endpoint: '/api/user/stats' },
+    'addActivity': { method: 'POST', endpoint: '/api/user/activity' },
+    'saveGameProgress': { method: 'POST', endpoint: '/api/user/game-progress' },
 };
 
 interface ApiResponse<T = any> {

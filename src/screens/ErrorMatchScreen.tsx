@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNextErrorCard, ErrorCardData, reshuffleErrors } from '../utils/generators';
+import { trackGameProgress, trackActivity } from '../utils/statsTracker';
 import '../styles/ErrorMatch.css';
 
 const ErrorMatchScreen: React.FC = () => {
@@ -51,6 +52,22 @@ const ErrorMatchScreen: React.FC = () => {
       // Correct - move to next card
       setScore(s => s + 1);
       setFeedback({ text: "MATCHED!", type: "success" });
+
+      // 🟢 TRACK PROGRESS & SCORE
+      trackGameProgress({
+        gameName: 'Error Match',
+        score: 20,
+        level: score + 1
+      });
+
+      trackActivity({
+        title: 'Error Classified',
+        type: `Error Match - Card ${score + 1}`,
+        xp: 20,
+        color: '#ffaa00',
+        icon: 'fa-triangle-exclamation'
+      });
+
       setTimeout(() => {
         spawnCard();
       }, 800);

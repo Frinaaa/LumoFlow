@@ -76,9 +76,13 @@ class AuthService {
     try {
       localStorage.removeItem('authToken');
       localStorage.removeItem('user_info');
+
+      // Clear Zustand store
+      import('../stores/userStore').then(m => m.useUserStore.getState().clearStore());
+
       return await apiProvider.execute('logout');
     } catch (error) {
-      return { success: true }; // Still successful locally
+      return { success: true };
     }
   }
 
@@ -130,9 +134,33 @@ class AuthService {
 
   async getDashboardData(userId: string) {
     try {
-      return await apiProvider.execute('getDashboardStats', userId, { urlParam: userId });
+      return await apiProvider.execute('getDashboardStats', userId);
     } catch (error) {
       return { success: false, msg: "Failed to load stats" };
+    }
+  }
+
+  async updateStats(data: { userId: string, linesWritten?: number, bugsDetected?: number, conceptsVisualized?: number, totalScore?: number }) {
+    try {
+      return await apiProvider.execute('updateStats', data);
+    } catch (error) {
+      return { success: false, msg: "Failed to update stats" };
+    }
+  }
+
+  async addActivity(data: { userId: string, activity: { title: string, type: string, xp: number, color: string, icon: string } }) {
+    try {
+      return await apiProvider.execute('addActivity', data);
+    } catch (error) {
+      return { success: false, msg: "Failed to add activity" };
+    }
+  }
+
+  async saveGameProgress(data: { userId: string, gameName: string, score: number, level: string | number }) {
+    try {
+      return await apiProvider.execute('saveGameProgress', data);
+    } catch (error) {
+      return { success: false, msg: "Failed to save game progress" };
     }
   }
 

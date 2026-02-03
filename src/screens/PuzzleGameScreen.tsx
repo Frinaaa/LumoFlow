@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNextPuzzle, PuzzleData, reshufflePuzzles } from '../utils/generators';
+import { trackGameProgress, trackActivity } from '../utils/statsTracker';
 import '../styles/LogicPuzzle.css';
 
 const LogicPuzzleScreen: React.FC = () => {
@@ -88,6 +89,21 @@ const LogicPuzzleScreen: React.FC = () => {
 
     if (isCorrect) {
       setIsSuccess(true);
+
+      // 🟢 TRACK PROGRESS & SCORE
+      trackGameProgress({
+        gameName: 'Logic Puzzle',
+        score: 150,
+        level: level
+      });
+
+      trackActivity({
+        title: 'Algo Reconstructed',
+        type: `Logic Puzzle - Lvl ${level}`,
+        xp: 150,
+        color: '#bc13fe',
+        icon: 'fa-puzzle-piece'
+      });
     } else {
       alert("⚠️ Syntax Error: Blocks are missing or in the wrong order.");
     }

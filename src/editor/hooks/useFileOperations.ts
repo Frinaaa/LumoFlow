@@ -17,7 +17,7 @@ export const useFileOperations = () => {
       console.log('Reading file:', filePath);
       const content = await fileSystemApi.readFile(filePath);
       console.log('File content read, length:', content.length);
-      
+
       const fileName = filePath.split(/[\\/]/).pop() || 'untitled';
       const language = getLanguageFromFile(fileName);
 
@@ -43,6 +43,7 @@ export const useFileOperations = () => {
       const userId = user?._id || user?.id || '';
 
       await fileSystemApi.saveAtomic(tab.filePath, tab.content, userId);
+
       editorStore.markTabDirty(tabId, false);
       editorStore.appendOutputData(`✅ Saved & Synced: ${tab.fileName}\n`);
       return true;
@@ -65,10 +66,10 @@ export const useFileOperations = () => {
       }
 
       console.log('Creating file:', fullPath);
-      
+
       const newFilePath = await fileSystemApi.createFile(fullPath, '');
       console.log('File created at:', newFilePath);
-      
+
       await refreshFiles();
       await openFile(newFilePath);
       editorStore.appendOutputData(`✅ Created: ${fileName}\n`);
@@ -149,25 +150,25 @@ export const useFileOperations = () => {
       console.log('Opening folder dialog...');
       const result = await fileSystemApi.openFolderDialog();
       console.log('Folder dialog result:', result);
-      
+
       if (result && !result.canceled && result.folderPath) {
         console.log('Setting workspace to:', result.folderPath);
         const folderName = result.folderPath.split(/[\\/]/).pop() || 'Workspace';
         fileStore.setWorkspace(result.folderPath, folderName);
-        
+
         console.log('Refreshing files...');
         const filesRefreshed = await refreshFiles();
         console.log('Files refreshed:', filesRefreshed);
-        
+
         editorStore.setWorkspaceStatus('Folder Opened');
         editorStore.appendOutputData(`✅ Opened: ${folderName}\n`);
-        
+
         // Ensure sidebar is visible to show the files
         if (!editorStore.sidebarVisible) {
           editorStore.toggleSidebar();
         }
         editorStore.setActiveSidebar('Explorer');
-        
+
         console.log('Folder opened successfully');
         return true;
       } else {
@@ -272,7 +273,7 @@ export const useFileOperations = () => {
       console.log('Opening file dialog...');
       const result = await fileSystemApi.openFileDialog();
       console.log('File dialog result:', result);
-      
+
       if (result && !result.canceled && result.filePath) {
         console.log('Opening file:', result.filePath);
         return await openFile(result.filePath);

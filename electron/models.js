@@ -8,15 +8,29 @@ const UserSchema = new Schema({
   password: { type: String, required: true },
   role: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
-  
+
   // 🟢 ADD THESE TWO LINES
   avatar: { type: String, default: '' }, // Stores the Base64 image string
   bio: { type: String, default: '' },    // Stores the user bio
-  
+
+  // Stats tracking
+  linesWritten: { type: Number, default: 0 },
+  bugsDetected: { type: Number, default: 0 },
+  conceptsVisualized: { type: Number, default: 0 },
+  totalScore: { type: Number, default: 0 },
+  recentActivity: [{
+    title: String,
+    type: String,
+    time: { type: Date, default: Date.now },
+    xp: Number,
+    color: String,
+    icon: String
+  }],
+
   resetPasswordCode: { type: String },
   resetPasswordExpires: { type: Date },
-}, { 
-  timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } 
+}, {
+  timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' }
 });
 
 // 2. CODE PROJECTS
@@ -24,8 +38,8 @@ const CodeProjectSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   projectName: { type: String, required: true },
   language: { type: String, required: true }, // e.g., 'python', 'javascript'
-}, { 
-  timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } 
+}, {
+  timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' }
 });
 
 // 3. CODE FILES

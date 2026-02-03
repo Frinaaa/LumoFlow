@@ -4,6 +4,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { useAnalysisStore } from '../../stores/analysisStore';
 import { parseLiveCode } from '../../utils/liveParser';
 import FindReplace from './FindReplace';
+import { trackStats } from '../../../utils/statsTracker';
 
 interface CodeEditorProps {
   code: string;
@@ -28,7 +29,26 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const editorStore = useEditorStore();
   const analysisStore = useAnalysisStore();
   const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
-  
+
+  // Stats tracking refs
+  const lastErrorCount = useRef<number>(0);
+  const lastLineCount = useRef<number>(code.split('\n').length);
+
+  // Sync line count when file changes
+  useEffect(() => {
+    lastLineCount.current = code.split('\n').length;
+  }, [selectedFile]);
+
+  useEffect(() => {
+    const lines = code.split('\n').length;
+    if (lines > lastLineCount.current) {
+      const diff = lines - lastLineCount.current;
+      console.log(`%c📝 LumoFlow: +${diff} Lines Written tracked!`, "color: #00f2ff; font-weight: bold;");
+      trackStats({ linesWritten: diff });
+    }
+    lastLineCount.current = lines;
+  }, [code]);
+
   const language = useMemo(() => {
     if (!fileName) return 'javascript';
     const ext = fileName.split('.').pop()?.toLowerCase();
@@ -43,17 +63,20 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     }
   }, [editorStore.wordWrap]);
 
-  // Add this Effect to listen to code changes
   useEffect(() => {
     const timer = setTimeout(() => {
       const visualResult = parseLiveCode(code);
       if (visualResult.type !== 'NONE') {
         analysisStore.setLiveVisual(visualResult);
       }
-    }, 600);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [code, analysisStore]);
+
+  const handleSave = () => {
+    onSave();
+  };
 
   // Listen for find/replace toggle from menu
   useEffect(() => {
@@ -153,7 +176,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       findController.closeFindWidget();
       // Override the show method to prevent it from appearing
       const originalShow = findController.show;
-      findController.show = function() {
+      findController.show = function () {
         return;
       };
     }
@@ -167,10 +190,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     };
 
     setTimeout(hideFindWidget, 100);
-    
+
     // Monitor and hide find widget if it appears
     const hideInterval = setInterval(hideFindWidget, 500);
-    
+
     // Store interval for cleanup
     (editor as any)._findHideInterval = hideInterval;
 
@@ -178,7 +201,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     const monacoCommandListener = (e: any) => {
       const { action, value, column } = e.detail;
       editor.focus();
-      
+
       switch (action) {
         case 'revealLine':
           editor.revealLineInCenter(value);
@@ -381,6 +404,14 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
       const handleDiagnosticsChange = () => {
         const diagnostics = monaco.editor.getModelMarkers({ resource: model.uri });
+        const errorCount = diagnostics.filter(d => d.severity === 8).length;
+
+        if (errorCount < lastErrorCount.current) {
+          const diff = lastErrorCount.current - errorCount;
+          console.log(`%c🎉 LumoFlow: ${diff} Bug(s) Squashed tracked!`, "color: #ff00ff; font-weight: bold;");
+          trackStats({ bugsDetected: diff });
+        }
+        lastErrorCount.current = errorCount;
 
         if (onProblemsDetected) {
           const problems = diagnostics.map(d => ({
@@ -417,7 +448,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
     // Keyboard shortcuts
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      onSave();
+      handleSave();
     });
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
@@ -543,8 +574,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             }
           }}
         />
-        <FindReplace 
-          editorRef={internalEditorRef} 
+        <FindReplace
+          editorRef={internalEditorRef}
           isVisible={showFindReplace}
           onClose={() => setShowFindReplace(false)}
         />
