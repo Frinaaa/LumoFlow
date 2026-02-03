@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer
@@ -23,7 +23,8 @@ const DashboardScreen: React.FC = () => {
     fetchUserData,
     user: storeUser,
     skillMatrix: storeSkills,
-    isSyncing
+    isSyncing,
+    loading: storeLoading
   } = useUserStore();
 
   // 🟢 OPTIMIZED: Check cache immediately 
@@ -59,6 +60,20 @@ const DashboardScreen: React.FC = () => {
     { subject: 'Debug', A: 20, fullMark: 150 },
     { subject: 'Visuals', A: 10, fullMark: 150 },
   ];
+
+  const focusArea = useMemo(() => {
+    if (!skillData || skillData.length === 0) return 'Analyzing...';
+    const sorted = [...skillData].sort((a, b) => a.A - b.A);
+    const lowest = sorted[0];
+    const map: any = {
+      'Logic': 'Algorithmic Reasoning',
+      'Syntax': 'Code Precision',
+      'Speed': 'Reaction Velocity',
+      'Debug': 'Bug Recognition',
+      'Visuals': 'Flow Visualization'
+    };
+    return map[lowest.subject] || lowest.subject;
+  }, [skillData]);
 
   // 🟢 FETCH LOGIC: Gets latest data from backend
   const fetchUser = async () => {
@@ -143,43 +158,9 @@ const DashboardScreen: React.FC = () => {
             <div className="header-text">
               <h1>Hello, <span style={{ color: 'white' }}>{currentUser?.name || "User"}</span></h1>
               <p>Your neural network is expanding. Keep flowing.</p>
-              {(!currentUser?._id || currentUser?._id.includes('demo')) ? (
-                <div className="demo-warning-pill" style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(255, 170, 0, 0.1)',
-                  color: '#ffaa00',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '0.8rem',
-                  marginTop: '8px',
-                  border: '1px solid rgba(255, 170, 0, 0.2)'
-                }}>
-                  <i className="fa-solid fa-triangle-exclamation"></i> 🛠️ DEMO MODE: Progress not saved to cloud.
-                </div>
-              ) : (
-                <div className={`sync-status-pill ${isSyncing ? 'syncing' : 'synced'}`} style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: isSyncing ? 'rgba(0, 242, 255, 0.1)' : 'rgba(74, 222, 128, 0.1)',
-                  color: isSyncing ? '#00f2ff' : '#4ade80',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '0.8rem',
-                  marginTop: '12px',
-                  border: `1px solid ${isSyncing ? 'rgba(0, 242, 255, 0.2)' : 'rgba(74, 222, 128, 0.2)'}`
-                }}>
-                  <i className={`fa-solid ${isSyncing ? 'fa-sync fa-spin' : 'fa-cloud-check'}`}></i>
-                  {isSyncing ? 'SYNCING PROGRESS...' : 'CONNECTED TO CLOUD'}
-                </div>
-              )}
             </div>
 
             <div className="dashboard-right-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div className="level-badge">{stats.level}</div>
-
               <div className="dashboard-avatar-container">
                 {/* 🟢 FIX: Uses 'user.avatar' instead of 'userData' (which was undefined) */}
                 <img
@@ -243,7 +224,7 @@ const DashboardScreen: React.FC = () => {
                 </ResponsiveContainer>
               </div>
               <div className="focus-area" style={{ marginTop: '10px', fontSize: '0.9rem', color: '#888' }}>
-                Focus Area: <span style={{ color: '#bc13fe' }}>Debugging Efficiency</span>
+                Focus Area: <span style={{ color: '#bc13fe' }}>{focusArea}</span>
               </div>
             </div>
 
@@ -251,7 +232,21 @@ const DashboardScreen: React.FC = () => {
             <div className="dashboard-panel">
               <div className="panel-header">
                 <h3>RECENT FLOW</h3>
-                <i className="fa-solid fa-clock-rotate-left" style={{ color: '#666' }}></i>
+                <button
+                  className={`refresh-btn ${(storeLoading || isSyncing) ? 'spinning' : ''}`}
+                  onClick={fetchUser}
+                  title="Refresh Activity"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#666',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    transition: 'color 0.3s ease'
+                  }}
+                >
+                  <i className={`fa-solid fa-sync ${(storeLoading || isSyncing) ? 'fa-spin' : ''}`}></i>
+                </button>
               </div>
               <div className="activity-list">
                 {recentActivity.map((item) => (

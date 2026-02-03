@@ -20,6 +20,15 @@ const PredictGameScreen: React.FC = () => {
   useEffect(() => {
     reshuffleChallenges();
     loadQuestion(1);
+
+    // Track Screen Entry
+    trackActivity({
+      title: 'Predict Challenge Started',
+      type: 'Logic',
+      xp: 0,
+      color: '#00ccff',
+      icon: 'fa-crystal-ball'
+    });
   }, []);
 
   const loadQuestion = (lvl: number) => {

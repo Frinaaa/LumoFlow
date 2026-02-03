@@ -51,6 +51,15 @@ const DebugRaceScreen: React.FC = () => {
   useEffect(() => {
     reshuffleBugs(); // Shuffle bugs for new game session
     loadLevel(1);
+
+    // Track Screen Entry
+    trackActivity({
+      title: 'Debug Race Started',
+      type: 'Speed',
+      xp: 0,
+      color: '#00f2ff',
+      icon: 'fa-bolt'
+    });
   }, []);
 
   const handleNextLevel = () => {

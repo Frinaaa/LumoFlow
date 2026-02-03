@@ -19,6 +19,15 @@ const BugHuntScreen: React.FC = () => {
   useEffect(() => {
     reshuffleLevels();
     loadLevel(1);
+
+    // Track Screen Entry
+    trackActivity({
+      title: 'Bug Hunt Session',
+      type: 'Terminal',
+      xp: 0,
+      color: '#ff0055',
+      icon: 'fa-bug'
+    });
   }, []);
 
   const loadLevel = (lvl: number) => {

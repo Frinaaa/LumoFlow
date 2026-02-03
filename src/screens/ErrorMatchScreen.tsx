@@ -14,6 +14,15 @@ const ErrorMatchScreen: React.FC = () => {
   useEffect(() => {
     reshuffleErrors();
     spawnCard();
+
+    // Track Screen Entry
+    trackActivity({
+      title: 'Error Match Started',
+      type: 'Syntax',
+      xp: 0,
+      color: '#ffaa00',
+      icon: 'fa-shapes'
+    });
   }, []);
 
   const spawnCard = () => {

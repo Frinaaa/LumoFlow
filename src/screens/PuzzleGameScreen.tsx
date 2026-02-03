@@ -23,6 +23,15 @@ const LogicPuzzleScreen: React.FC = () => {
   useEffect(() => {
     reshufflePuzzles(); // Shuffle puzzles for new game session
     loadLevel(1);
+
+    // Track Screen Entry
+    trackActivity({
+      title: 'Logic Puzzle Started',
+      type: 'Algorithm',
+      xp: 0,
+      color: '#bc13fe',
+      icon: 'fa-puzzle-piece'
+    });
   }, []);
 
   const loadLevel = (lvl: number) => {

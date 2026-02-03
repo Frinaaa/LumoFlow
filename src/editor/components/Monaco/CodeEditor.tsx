@@ -4,7 +4,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { useAnalysisStore } from '../../stores/analysisStore';
 import { parseLiveCode } from '../../utils/liveParser';
 import FindReplace from './FindReplace';
-import { trackStats } from '../../../utils/statsTracker';
+import { trackStats, trackActivity } from '../../../utils/statsTracker';
 
 interface CodeEditorProps {
   code: string;
@@ -29,6 +29,17 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const editorStore = useEditorStore();
   const analysisStore = useAnalysisStore();
   const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
+
+  // Track Editor Session Start
+  useEffect(() => {
+    trackActivity({
+      title: 'Integrated Editor Session',
+      type: 'Development',
+      xp: 0,
+      color: '#00ccff',
+      icon: 'fa-code'
+    });
+  }, []);
 
   // Stats tracking refs
   const lastErrorCount = useRef<number>(0);

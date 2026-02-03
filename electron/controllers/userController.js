@@ -88,14 +88,14 @@ const userController = {
 
       // 🟢 DYNAMIC SKILL MATRIX (Calculated from real stats)
       const skillMatrix = [
-        { subject: 'Logic', A: Math.min(150, (user.totalScore || 0) / 10 + 60), fullMark: 150 },
-        { subject: 'Syntax', A: Math.min(150, (user.linesWritten || 0) / 5 + 50), fullMark: 150 },
-        { subject: 'Speed', A: 86, fullMark: 150 },
-        { subject: 'Debug', A: Math.min(150, (user.bugsDetected || 0) * 15 + 40), fullMark: 150 },
-        { subject: 'Visuals', A: Math.min(150, (user.conceptsVisualized || 0) * 20 + 30), fullMark: 150 },
+        { subject: 'Logic', A: Math.min(150, Math.max(30, (user.totalScore || 0) / 25 + 45)), fullMark: 150 },
+        { subject: 'Syntax', A: Math.min(150, Math.max(30, (user.linesWritten || 0) / 8 + 40)), fullMark: 150 },
+        { subject: 'Speed', A: Math.min(150, Math.max(30, (user.totalScore || 0) / 50 + 60)), fullMark: 150 }, // Dynamic Speed
+        { subject: 'Debug', A: Math.min(150, Math.max(30, (user.bugsDetected || 0) * 10 + 50)), fullMark: 150 },
+        { subject: 'Visuals', A: Math.min(150, Math.max(30, (user.conceptsVisualized || 0) * 15 + 35)), fullMark: 150 },
       ];
 
-      // Format recent activity for frontend
+      // Format recent activity for frontend (Latest first, limit 10)
       const recentActivity = (user.recentActivity || []).map((act, index) => ({
         id: act._id || index,
         title: act.title,
@@ -104,7 +104,7 @@ const userController = {
         xp: act.xp,
         color: act.color,
         icon: act.icon
-      })).reverse().slice(0, 5); // Show latest 5
+      })).reverse().slice(0, 10); // Show latest 10 first
 
       console.log(`📋 SENDING ACTIVITY: ${recentActivity.length} items`);
 
