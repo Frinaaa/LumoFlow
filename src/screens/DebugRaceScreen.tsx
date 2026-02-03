@@ -22,7 +22,7 @@ const DebugRaceScreen: React.FC = () => {
   const [gameState, setGameState] = useState<'playing' | 'won' | 'timeout'>('playing');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showSolution, setShowSolution] = useState(false);
-  const [attemptsLeft, setAttemptsLeft] = useState(999); // Unlimited attempts
+  const [attemptsLeft, setAttemptsLeft] = useState(2); // 2 attempts to fix the bug
 
   // Load Level Function
   const loadLevel = (lvl: number) => {
@@ -38,7 +38,7 @@ const DebugRaceScreen: React.FC = () => {
       setIsRunning(true);
       setGameState('playing');
       setShowSolution(false); // Reset solution display
-      setAttemptsLeft(999);
+      setAttemptsLeft(2); // Reset to 2 attempts
       setLogs([
         { msg: `> Level ${lvl} Initialized...`, type: 'info' },
         { msg: `> System Ready for Patching.`, type: 'info' },
@@ -133,10 +133,27 @@ const DebugRaceScreen: React.FC = () => {
           icon: 'fa-bolt'
         });
       } else {
-        setLogs(prev => [...prev,
-        { msg: "> ERROR: Issue persists. Analyzing code...", type: 'error' },
-        { msg: "> Hint: " + bugData.hint, type: 'info' }
-        ]);
+        // Decrement attempts
+        const newAttempts = attemptsLeft - 1;
+        setAttemptsLeft(newAttempts);
+
+        // If no attempts left, end the game
+        if (newAttempts <= 0) {
+          setLogs(prev => [...prev,
+          { msg: `> ERROR: Issue persists. Analyzing code...`, type: 'error' },
+          { msg: "> SYSTEM FAILURE: Out of attempts.", type: 'error' },
+          { msg: "> Displaying solution...", type: 'info' }
+          ]);
+          setGameState('timeout');
+          setIsRunning(false);
+          setShowSolution(true);
+        } else {
+          setLogs(prev => [...prev,
+          { msg: `> ERROR: Issue persists. Analyzing code...`, type: 'error' },
+          { msg: `> Attempts remaining: ${newAttempts}`, type: 'info' },
+          { msg: "> Hint: " + bugData.hint, type: 'info' }
+          ]);
+        }
       }
     }, 500);
   };
@@ -214,26 +231,29 @@ const DebugRaceScreen: React.FC = () => {
             <p style={{ color: '#ccc', fontSize: '0.9rem' }}>{bugData.description}</p>
           </div>
           <div className="status-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className="status-header"><i className="fa-solid fa-terminal"></i> Console</div>
-            <div className="console-box" style={{ flex: 1, overflow: 'auto' }}>
-              {logs.map((log, idx) => (
-                <div key={idx} className={`log - entry ${log.type === 'error' ? 'log-err' : log.type === 'success' ? 'log-ok' : ''} `}>{log.msg}</div>
-              ))}
-            </div>
+            {showSolution ? (
+              <>
+                <div className="status-header"><i className="fa-solid fa-lightbulb"></i> Solution</div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '10px' }}>
+                  <div style={{ background: '#1a1a1a', padding: '10px', borderRadius: '5px', fontSize: '0.85rem', fontFamily: 'monospace', color: '#4ade80', marginBottom: '10px', whiteSpace: 'pre-wrap' }}>
+                    {bugData.fixedCode}
+                  </div>
+                  <div style={{ padding: '8px', background: 'rgba(74,222,128,0.1)', borderRadius: '5px', fontSize: '0.85rem', color: '#86efac' }}>
+                    <strong>Explanation:</strong> {bugData.explanation}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="status-header"><i className="fa-solid fa-terminal"></i> Console</div>
+                <div className="console-box" style={{ flex: 1, overflow: 'auto' }}>
+                  {logs.map((log, idx) => (
+                    <div key={idx} className={`log - entry ${log.type === 'error' ? 'log-err' : log.type === 'success' ? 'log-ok' : ''} `}>{log.msg}</div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-
-          {/* Solution Panel - Shows after execute */}
-          {showSolution && (
-            <div className="status-card" style={{ maxHeight: '250px', overflow: 'auto' }}>
-              <div className="status-header"><i className="fa-solid fa-lightbulb"></i> Solution</div>
-              <div style={{ background: '#1a1a1a', padding: '10px', borderRadius: '5px', fontSize: '0.85rem', fontFamily: 'monospace', color: '#4ade80', maxHeight: '150px', overflow: 'auto', whiteSpace: 'pre-wrap' }}>
-                {bugData.fixedCode}
-              </div>
-              <div style={{ marginTop: '10px', padding: '8px', background: 'rgba(74,222,128,0.1)', borderRadius: '5px', fontSize: '0.85rem', color: '#86efac' }}>
-                <strong>Explanation:</strong> {bugData.explanation}
-              </div>
-            </div>
-          )}
 
           {/* Game Over/Win status in sidebar */}
           {gameState === 'won' && (
@@ -245,9 +265,8 @@ const DebugRaceScreen: React.FC = () => {
 
           {gameState === 'timeout' && (
             <div className="status-card" style={{ background: 'rgba(255, 0, 60, 0.1)', borderColor: 'var(--neon-alert)' }}>
-              <div className="status-header"><i className="fa-solid fa-clock"></i> TIME EXPIRED</div>
-              <p>The system has timed out. Solution revealed below.</p>
-              <button className="exit-btn" style={{ width: '100%', marginTop: '10px' }} onClick={() => setShowSolution(true)}>Show Solution</button>
+              <div className="status-header"><i className="fa-solid fa-exclamation-triangle"></i> MISSION FAILED</div>
+              <p>{attemptsLeft <= 0 ? 'Out of attempts.' : 'Time expired.'} Check the solution above.</p>
             </div>
           )}
 
