@@ -1,4 +1,5 @@
-import { VisualType } from "../stores/analysisStore";
+// Define VisualType for live code parsing
+type VisualType = 'ARRAY_PUSH' | 'VARIABLE_BOX' | 'CSS_FLEX' | 'NONE';
 
 export const parseLiveCode = (code: string): { type: VisualType; params: any } => {
   const cleanCode = code.trim();
@@ -14,7 +15,7 @@ export const parseLiveCode = (code: string): { type: VisualType; params: any } =
         arrayName: pushMatch[1],
         value: pushMatch[3],
         // Generate mock previous items for the visual
-        prevItems: ['4', '10', '5'] 
+        prevItems: ['4', '10', '5']
       }
     };
   }
@@ -35,7 +36,7 @@ export const parseLiveCode = (code: string): { type: VisualType; params: any } =
   if (cleanCode.includes('display: flex') || cleanCode.includes('display:flex')) {
     const justify = cleanCode.match(/justify-content:\s*(\w+)/);
     const align = cleanCode.match(/align-items:\s*(\w+)/);
-    
+
     return {
       type: 'CSS_FLEX',
       params: {
