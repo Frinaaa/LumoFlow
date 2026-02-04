@@ -33,7 +33,6 @@ export const EditorLayout: React.FC = () => {
 
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
-  const [quickOpenVisible, setQuickOpenVisible] = useState(false);
   const errorStates = useRef<Record<string, boolean>>({});
 
   const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
@@ -123,7 +122,7 @@ export const EditorLayout: React.FC = () => {
       const { path } = e.detail;
       if (path) fileOps.openFile(path);
     };
-    const handleQuickOpenToggle = () => setQuickOpenVisible(prev => !prev);
+    const handleQuickOpenToggle = () => editorStore.toggleQuickOpen();
 
     const handleCreateNewFile = async () => {
       console.log('🔥 Create new file event received (Ctrl+N)');
@@ -278,7 +277,7 @@ export const EditorLayout: React.FC = () => {
         editorStore.toggleCommandPalette();
       } else if (isMod && e.key === 'p' && !e.shiftKey) {
         e.preventDefault();
-        setQuickOpenVisible(true);
+        editorStore.toggleQuickOpen();
       } else if (isMod && e.key === 's') {
         e.preventDefault();
         if (e.shiftKey) { // Ctrl+Shift+S -> Save As
@@ -386,7 +385,7 @@ export const EditorLayout: React.FC = () => {
     <div className="ide-grid-master">
       <CustomTitlebar workspaceFolderName={fileStore.workspaceName} />
       <CommandPalette />
-      <QuickOpen visible={quickOpenVisible} onClose={() => setQuickOpenVisible(false)} />
+      <QuickOpen visible={editorStore.quickOpenVisible} onClose={() => editorStore.toggleQuickOpen()} />
 
       <div className="ide-main-body">
         {/* Activity Bar */}

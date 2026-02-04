@@ -27,10 +27,10 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
 
     // 1. Open the panel immediately
     if (!analysisStore.isVisible) analysisStore.togglePanel();
-    
+
     // The VisualizeTab will automatically detect the code and generate frames
     // No need to manually generate frames here anymore
-    
+
     // 2. Optional: Run background AI analysis if available
     try {
       if ((window as any).api?.analyzeCode) {
@@ -62,25 +62,25 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
           <MenuBar
             onNewFile={async () => {
               console.log('🔥 NEW FILE CLICKED - AUTO CREATE');
-              
+
               // Check if workspace is set
               const fileStoreModule = await import('../../stores/fileStore');
               const fileStore = fileStoreModule.useFileStore.getState();
-              
+
               try {
                 // Auto-generate filename with incrementing number
                 let fileName = 'Untitled-1';
                 let counter = 1;
-                
+
                 // Check existing tabs for untitled files
                 const existingTabs = editorStore.tabs.map(t => t.fileName.toLowerCase());
                 while (existingTabs.includes(fileName.toLowerCase())) {
                   counter++;
                   fileName = `Untitled-${counter}`;
                 }
-                
+
                 console.log('🔥 Creating untitled file:', fileName);
-                
+
                 // If no workspace, create an in-memory file (unsaved tab)
                 if (!fileStore.workspacePath) {
                   // Create a new tab without a file path (in-memory)
@@ -92,14 +92,14 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
                   let fileCounter = 1;
                   const existingFiles = fileStore.files.map(f => f.name.toLowerCase());
                   let finalFileName = jsFileName;
-                  
+
                   while (existingFiles.includes(finalFileName.toLowerCase())) {
                     finalFileName = `Untitled-${fileCounter}.js`;
                     fileCounter++;
                   }
-                  
+
                   const result = await fileOps.createFile(finalFileName);
-                  
+
                   if (!result) {
                     console.error('🔥 File creation failed!');
                     // Fallback to in-memory file
@@ -117,16 +117,16 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
             }}
             onNewFolder={async () => {
               console.log('🔥 NEW FOLDER CLICKED');
-              
+
               // Check if workspace is set
               const fileStoreModule = await import('../../stores/fileStore');
               const fileStore = fileStoreModule.useFileStore.getState();
-              
+
               if (!fileStore.workspacePath) {
                 alert('Please open a folder first before creating folders.');
                 return;
               }
-              
+
               // Use DOM input for folder name
               const folderName = await new Promise<string | null>((resolve) => {
                 const input = document.createElement('input');
@@ -137,13 +137,13 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
                 document.body.appendChild(input);
                 input.focus();
                 input.select();
-                
+
                 const handleSubmit = () => {
                   const value = input.value;
                   document.body.removeChild(input);
                   resolve(value || null);
                 };
-                
+
                 input.addEventListener('keydown', (e) => {
                   if (e.key === 'Enter') handleSubmit();
                   if (e.key === 'Escape') {
@@ -151,7 +151,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
                     resolve(null);
                   }
                 });
-                
+
                 setTimeout(() => {
                   if (document.body.contains(input)) {
                     document.body.removeChild(input);
@@ -159,7 +159,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
                   }
                 }, 30000);
               });
-              
+
               if (folderName && folderName.trim()) {
                 const result = await fileOps.createFolder(folderName.trim());
                 if (!result) {
@@ -213,16 +213,15 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
         </div>
       </div>
 
-      {/* 2. CENTER SECTION: Search / Command Palette */}
       <div className="titlebar-section center">
-        <div className="titlebar-search" onClick={toggleCommandPalette} title="Search files (Ctrl+P)">
+        <div className="titlebar-search" onClick={() => editorStore.toggleQuickOpen()} title="Search files (Ctrl+P)">
           <i className="fa-solid fa-magnifying-glass"></i>
           <span>
             {activeTab ? (
               <span className="active-file">{activeTab.fileName}</span>
             ) : null}
             <span className="search-placeholder">
-              {activeTab ? ' — ' : ''}Search files and commands (Ctrl+P)
+              {activeTab ? ' — ' : ''}Search files by name (Ctrl+P)
             </span>
           </span>
         </div>

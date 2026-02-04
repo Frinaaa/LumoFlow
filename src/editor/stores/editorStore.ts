@@ -20,6 +20,7 @@ interface EditorState {
   activeSidebar: SidebarView;
   activeBottomTab: BottomPanelTab;
   commandPaletteVisible: boolean;
+  quickOpenVisible: boolean;
 
   // Settings
   theme: Theme;
@@ -57,6 +58,7 @@ interface EditorState {
   setActiveSidebar: (sidebar: SidebarView) => void;
   setActiveBottomTab: (tab: BottomPanelTab) => void;
   toggleCommandPalette: () => void;
+  toggleQuickOpen: () => void;
 
   // Settings Actions
   setTheme: (theme: Theme) => void;
@@ -96,6 +98,7 @@ export const useEditorStore = create<EditorState>()(
       activeSidebar: 'Explorer',
       activeBottomTab: 'Terminal',
       commandPaletteVisible: false,
+      quickOpenVisible: false,
       theme: 'dark',
       fontSize: 14,
       wordWrap: 'off',
@@ -208,6 +211,7 @@ export const useEditorStore = create<EditorState>()(
       setActiveSidebar: (sidebar) => set({ activeSidebar: sidebar }),
       setActiveBottomTab: (tab) => set({ activeBottomTab: tab }),
       toggleCommandPalette: () => set(state => ({ commandPaletteVisible: !state.commandPaletteVisible })),
+      toggleQuickOpen: () => set(state => ({ quickOpenVisible: !state.quickOpenVisible })),
 
       // Settings Actions
       setTheme: (theme) => {
