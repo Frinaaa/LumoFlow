@@ -154,13 +154,13 @@ const DashboardScreen: React.FC = () => {
         <main className="main-content">
 
           {/* HEADER */}
-          <header className="dashboard-header">
+          <header className="dashboard-header" style={{ alignItems: 'flex-start', paddingTop: '15px' }}>
             <div className="header-text">
               <h1>Hello, <span style={{ color: 'white' }}>{currentUser?.name || "User"}</span></h1>
               <p>Your neural network is expanding. Keep flowing.</p>
             </div>
 
-            <div className="dashboard-right-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="dashboard-right-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '20px' }}>
               <div className="dashboard-avatar-container">
                 {/* 🟢 FIX: Uses 'user.avatar' instead of 'userData' (which was undefined) */}
                 <img
@@ -190,7 +190,7 @@ const DashboardScreen: React.FC = () => {
               <p>CONCEPTS VISUALIZED</p>
             </div>
             <div className="stat-card">
-              <div className="stat-icon green"><i className="fa-solid fa-trophy"></i></div>
+              <div className="stat-icon"><i className="fa-solid fa-trophy"></i></div>
               <h3>{stats.score}</h3>
               <p>ARCADE SCORE</p>
             </div>
@@ -206,8 +206,12 @@ const DashboardScreen: React.FC = () => {
                 <span className="live-tag">Live Analysis</span>
               </div>
 
+              <div className="focus-area" style={{ marginTop: '8px', marginBottom: '10px', fontSize: '0.9rem', color: '#888' }}>
+                Focus Area: <span style={{ color: '#bc13fe' }}>{focusArea}</span>
+              </div>
+
               {/* Added fixed height to prevent Recharts warning */}
-              <div className="chart-container" style={{ height: 300 }}>
+              <div className="chart-container" style={{ height: 270 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="70%" data={skillData}>
                     <PolarGrid stroke="#222" />
@@ -222,9 +226,6 @@ const DashboardScreen: React.FC = () => {
                     />
                   </RadarChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="focus-area" style={{ marginTop: '10px', fontSize: '0.9rem', color: '#888' }}>
-                Focus Area: <span style={{ color: '#bc13fe' }}>{focusArea}</span>
               </div>
             </div>
 
