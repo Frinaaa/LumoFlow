@@ -2,19 +2,18 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from './stores/editorStore';
 import { useFileStore } from './stores/fileStore';
-import { useGitStore } from './stores/gitStore';
 import { useFileOperations } from './hooks/useFileOperations';
 // 🟢 ADD THIS IMPORT at the top of the file
 import { useEditor } from '../context/EditorContext';
 
 // ... rest of imports ...
 // Components
-import { StatusBar } from './components/Layout';
+import { StatusBar, ActivityBar } from './components/Layout';
 import { CodeEditor } from './components/Monaco';
 import { Terminal } from './components/Terminal';
 import { CommandPalette } from './components/CommandPalette';
 import { FileExplorerSidebar } from './components/Explorer/FileExplorerSidebar';
-import { GitSidebar } from './components/Explorer/GitSidebar';
+import { GitHubSidebar } from './components/Explorer/GitHubSidebar';
 import { SearchSidebar } from './components/Explorer/SearchSidebar';
 import { QuickOpen } from './components/QuickOpen';
 import CustomTitlebar from './components/Layout/CustomTitlebar';
@@ -30,7 +29,6 @@ export const EditorLayout: React.FC = () => {
   const navigate = useNavigate();
   const editorStore = useEditorStore();
   const fileStore = useFileStore();
-  const gitStore = useGitStore();
   const fileOps = useFileOperations();
 
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
@@ -49,7 +47,7 @@ export const EditorLayout: React.FC = () => {
       } catch (e) {
         console.error('Error refreshing files:', e);
       }
-      
+
       if ((window as any).api?.getWorkspace) {
         try {
           const workspace = await (window as any).api.getWorkspace();
@@ -60,23 +58,9 @@ export const EditorLayout: React.FC = () => {
           console.error('Error loading workspace:', e);
         }
       }
-
-      // Load git status
-      try {
-        if ((window as any).api?.gitStatus) {
-          const gitStatus = await (window as any).api.gitStatus();
-          gitStore.setGitStatus({
-            branch: gitStatus.branch || 'main',
-            changes: gitStatus.changes || [],
-            isRepo: !!gitStatus.branch,
-          });
-        }
-      } catch (e) {
-        console.error('Error loading git status:', e);
-      }
     };
     init();
-  }, []);
+  }, [fileOps, fileStore]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', editorStore.theme);
@@ -140,24 +124,24 @@ export const EditorLayout: React.FC = () => {
       if (path) fileOps.openFile(path);
     };
     const handleQuickOpenToggle = () => setQuickOpenVisible(prev => !prev);
-    
+
     const handleCreateNewFile = async () => {
       console.log('🔥 Create new file event received (Ctrl+N)');
-      
+
       try {
         // Auto-generate filename with incrementing number
         let fileName = 'Untitled-1';
         let counter = 1;
-        
+
         // Check existing tabs for untitled files
         const existingTabs = editorStore.tabs.map(t => t.fileName.toLowerCase());
         while (existingTabs.includes(fileName.toLowerCase())) {
           counter++;
           fileName = `Untitled-${counter}`;
         }
-        
+
         console.log('🔥 Creating untitled file:', fileName);
-        
+
         // If no workspace, create an in-memory file (unsaved tab)
         if (!fileStore.workspacePath) {
           // Create a new tab without a file path (in-memory)
@@ -169,14 +153,14 @@ export const EditorLayout: React.FC = () => {
           let fileCounter = 1;
           const existingFiles = fileStore.files.map(f => f.name.toLowerCase());
           let finalFileName = jsFileName;
-          
+
           while (existingFiles.includes(finalFileName.toLowerCase())) {
             finalFileName = `Untitled-${fileCounter}.js`;
             fileCounter++;
           }
-          
+
           const result = await fileOps.createFile(finalFileName);
-          
+
           if (!result) {
             console.error('🔥 File creation failed, creating in-memory file');
             // Fallback to in-memory file
@@ -192,16 +176,16 @@ export const EditorLayout: React.FC = () => {
         editorStore.addTab('', fileName, '', 'javascript');
       }
     };
-    
+
     const handleCreateNewFolder = async () => {
       console.log('🔥 Create new folder event received (Ctrl+Alt+N)');
-      
+
       // Check if workspace is set
       if (!fileStore.workspacePath) {
         alert('Please open a folder first before creating folders.');
         return;
       }
-      
+
       // Use DOM input for folder name
       const folderName = await new Promise<string | null>((resolve) => {
         const input = document.createElement('input');
@@ -212,13 +196,13 @@ export const EditorLayout: React.FC = () => {
         document.body.appendChild(input);
         input.focus();
         input.select();
-        
+
         const handleSubmit = () => {
           const value = input.value;
           document.body.removeChild(input);
           resolve(value || null);
         };
-        
+
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') handleSubmit();
           if (e.key === 'Escape') {
@@ -226,7 +210,7 @@ export const EditorLayout: React.FC = () => {
             resolve(null);
           }
         });
-        
+
         setTimeout(() => {
           if (document.body.contains(input)) {
             document.body.removeChild(input);
@@ -234,7 +218,7 @@ export const EditorLayout: React.FC = () => {
           }
         }, 30000);
       });
-      
+
       if (folderName && folderName.trim()) {
         const result = await fileOps.createFolder(folderName.trim());
         if (!result) {
@@ -318,9 +302,9 @@ export const EditorLayout: React.FC = () => {
         e.preventDefault();
         editorStore.setActiveSidebar('Search');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-      } else if (isMod && e.shiftKey && e.key === 'g') {
+      } else if (isMod && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
         e.preventDefault();
-        editorStore.setActiveSidebar('Git');
+        editorStore.setActiveSidebar('GitHub');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
       } else if (isMod && e.shiftKey && e.key === 'e') {
         e.preventDefault();
@@ -391,8 +375,8 @@ export const EditorLayout: React.FC = () => {
         return <FileExplorerSidebar />;
       case 'Search':
         return <SearchSidebar />;
-      case 'Git':
-        return <GitSidebar />;
+      case 'GitHub':
+        return <GitHubSidebar />;
       default:
         return null;
     }
@@ -406,98 +390,11 @@ export const EditorLayout: React.FC = () => {
 
       <div className="ide-main-body">
         {/* Activity Bar */}
-        <div
-          style={{
-            width: '48px',
-            background: '#333',
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            paddingTop: '10px',
-            paddingBottom: '10px',
-            gap: '10px',
-            borderRight: '1px solid #1e1e1e',
-          }}
-        >
-          <i
-            className="fa-solid fa-house activity-icon"
-            onClick={() => navigate('/dashboard')}
-            style={{
-              cursor: 'pointer',
-              fontSize: '20px',
-              color: '#888',
-              transition: 'color 0.2s',
-            }}
-            title="Dashboard"
-          />
-          <i
-            className={`fa-solid fa-copy activity-icon ${editorStore.activeSidebar === 'Explorer' ? 'active' : ''}`}
-            onClick={() => {
-              if (editorStore.activeSidebar === 'Explorer' && editorStore.sidebarVisible) {
-                editorStore.toggleSidebar();
-              } else {
-                editorStore.setActiveSidebar('Explorer');
-                if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-              }
-            }}
-            style={{
-              cursor: 'pointer',
-              fontSize: '20px',
-              color: editorStore.activeSidebar === 'Explorer' ? '#00f2ff' : '#888',
-              transition: 'color 0.2s',
-            }}
-            title="Explorer"
-          />
-          <i
-            className={`fa-solid fa-magnifying-glass activity-icon ${editorStore.activeSidebar === 'Search' ? 'active' : ''}`}
-            onClick={() => {
-              if (editorStore.activeSidebar === 'Search' && editorStore.sidebarVisible) {
-                editorStore.toggleSidebar();
-              } else {
-                editorStore.setActiveSidebar('Search');
-                if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-              }
-            }}
-            style={{
-              cursor: 'pointer',
-              fontSize: '20px',
-              color: editorStore.activeSidebar === 'Search' ? '#00f2ff' : '#888',
-              transition: 'color 0.2s',
-            }}
-            title="Search"
-          />
-          <i
-            className={`fa-solid fa-code-branch activity-icon ${editorStore.activeSidebar === 'Git' ? 'active' : ''}`}
-            onClick={() => {
-              if (editorStore.activeSidebar === 'Git' && editorStore.sidebarVisible) {
-                editorStore.toggleSidebar();
-              } else {
-                editorStore.setActiveSidebar('Git');
-                if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-              }
-            }}
-            style={{
-              cursor: 'pointer',
-              fontSize: '20px',
-              color: editorStore.activeSidebar === 'Git' ? '#00f2ff' : '#888',
-              transition: 'color 0.2s',
-            }}
-            title="Git"
-          />
-          <i
-            className="fa-solid fa-gear activity-icon"
-            onClick={() => navigate('/settings')}
-            style={{
-              marginTop: 'auto',
-              cursor: 'pointer',
-              fontSize: '20px',
-              color: '#888',
-              transition: 'color 0.2s',
-            }}
-            title="Settings"
-          />
-        </div>
+        <ActivityBar
+          activeSidebar={editorStore.activeSidebar}
+          onSidebarChange={(s: any) => editorStore.setActiveSidebar(s)}
+          onNavigate={navigate}
+        />
 
         {/* Sidebar */}
         {editorStore.sidebarVisible && (
@@ -620,7 +517,7 @@ export const EditorLayout: React.FC = () => {
               <CodeEditor
                 code={activeTab.content}
                 selectedFile={activeTab.filePath}
-        
+
                 onRun={() => fileOps.runCode(activeTab.id)}
                 onChange={(content) => editorStore.updateTabContent(activeTab.id, content)}
                 onCursorChange={(line, col) => editorStore.updateCursorPosition(activeTab.id, line, col)}

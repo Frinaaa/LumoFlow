@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useFileStore } from '../../stores/fileStore';
 import { useEditorStore } from '../../stores/editorStore';
-import { useGitStore } from '../../stores/gitStore';
 import { useFileOperations } from '../../hooks/useFileOperations';
 import { buildFolderTree, getFileIcon } from '../../../utils/utils';
 import { FileTreeItem } from './FileTreeItem';
@@ -10,7 +9,6 @@ import '../../styles/Explorer.css';
 export const FileExplorerSidebar = () => {
   const fileStore = useFileStore();
   const editorStore = useEditorStore();
-  const gitStore = useGitStore(); // Assuming gitStore is available
   const { files, workspaceName, collapseAllFolders } = fileStore;
   const { refreshFiles } = useFileOperations();
   const [isSectionExpanded, setIsSectionExpanded] = useState(true);
@@ -256,18 +254,6 @@ export const FileExplorerSidebar = () => {
                   </div>
                 </div>
 
-                {/* Git / History State */}
-                {gitStore.isRepo && gitStore.changes.some(c => c.file.includes(activeTab.fileName)) ? (
-                  <div className="timeline-item" style={{ display: 'flex', gap: '10px', marginBottom: '15px', position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: '7px', top: '16px', bottom: '-20px', width: '1px', background: '#333' }}></div>
-                    <div className="timeline-dot" style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#ff0055', border: '2px solid #252526', zIndex: 1 }}></div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '12px', color: '#ccc' }}>Working Tree</span>
-                      <span style={{ fontSize: '11px', color: '#888' }}>Modified</span>
-                      <span style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>Pending Commit</span>
-                    </div>
-                  </div>
-                ) : null}
 
                 {/* Baseline */}
                 <div className="timeline-item" style={{ display: 'flex', gap: '10px', position: 'relative' }}>

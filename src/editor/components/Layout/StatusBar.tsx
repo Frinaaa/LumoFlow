@@ -1,10 +1,8 @@
 import React from 'react';
-import { useGitStore } from '../../stores/gitStore';
 import { useEditorStore } from '../../stores/editorStore';
 import { useFileStore } from '../../stores/fileStore';
 
 export const StatusBar = () => {
-  const { branch, isRepo } = useGitStore();
   const { workspaceName } = useFileStore();
   const editorStore = useEditorStore();
   const { activeTabId, tabs, problems, setActiveBottomTab, toggleTerminal, setActiveSidebar, toggleSidebar } = editorStore;
@@ -20,10 +18,6 @@ export const StatusBar = () => {
     if (!editorStore.terminalVisible) toggleTerminal();
   };
 
-  const handleGitClick = () => {
-    setActiveSidebar('Git');
-    if (!editorStore.sidebarVisible) toggleSidebar();
-  };
 
   return (
     <div className="vs-status-bar" style={{
@@ -55,17 +49,6 @@ export const StatusBar = () => {
           {workspaceName || 'NO FOLDER OPENED'}
         </div>
 
-        {isRepo && (
-          <div
-            className="status-item clickable"
-            onClick={handleGitClick}
-            style={{ ...statusItemStyle, flexShrink: 0 }}
-            title={`${branch}*`}
-          >
-            <i className="fa-solid fa-code-branch" style={{ marginRight: '4px' }}></i>
-            <span>{branch}</span>
-          </div>
-        )}
 
         <div
           className="status-item clickable"

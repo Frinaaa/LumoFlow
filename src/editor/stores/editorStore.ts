@@ -41,6 +41,7 @@ interface EditorState {
   // Tab Actions
   addTab: (filePath: string, fileName: string, content: string, language: string) => void;
   removeTab: (tabId: string) => void;
+  setActiveTab: (tabId: string) => void;
   updateTabContent: (tabId: string, content: string) => void;
   markTabDirty: (tabId: string, isDirty: boolean) => void;
   updateTabSavedLineCount: (tabId: string, count: number) => void;

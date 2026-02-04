@@ -50,7 +50,7 @@ export interface ApiResponse<T = any> {
 // Settings Types
 export type Theme = 'dark' | 'light';
 export type WordWrap = 'on' | 'off';
-export type SidebarView = 'Explorer' | 'Search' | 'Git' | 'NPM' | 'Extensions';
+export type SidebarView = 'Explorer' | 'Search' | 'GitHub' | 'NPM' | 'Extensions';
 export type BottomPanelTab = 'Terminal' | 'Output' | 'Debug' | 'Problems';
 
 export interface TerminalSession {
