@@ -2560,13 +2560,13 @@ const styles = `
     box-shadow: 0 6px 16px rgba(188, 19, 254, 0.4);
   }
   .play-pause-btn.playing {
-    background: linear-gradient(135deg, #ffaa00, #ff6600);
-    color: #fff;
+    background: linear-gradient(135deg, #00f2ff, #0099cc);
+    color: #000;
   }
   .play-pause-btn.playing:hover {
-    background: linear-gradient(135deg, #ff6600, #cc4400);
+    background: linear-gradient(135deg, #00ccff, #0077aa);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(255, 170, 0, 0.4);
+    box-shadow: 0 6px 16px rgba(0, 242, 255, 0.5);
   }
   .play-pause-btn i {
     font-size: 14px;
