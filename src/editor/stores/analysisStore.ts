@@ -21,11 +21,13 @@ interface AnalysisState {
   currentFrameIndex: number;
   isPlaying: boolean;
   visualMode: VisualMode;
+  isReplaying: boolean;
 
   // Actions
   togglePanel: () => void;
   setAnalyzing: (val: boolean) => void;     // 🟢 Fixes: "setAnalyzing does not exist"
   setAnalysisData: (data: any) => void;     // 🟢 Fixes: "setAnalysisData does not exist"
+  setReplaying: (val: boolean) => void;
 
   // 🟢 Fixes: "Expected 1 arguments, but got 2" error
   setTraceFrames: (frames: TraceFrame[], mode?: VisualMode) => void;
@@ -44,10 +46,12 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   currentFrameIndex: 0,
   isPlaying: false,
   visualMode: 'UNIVERSAL',
+  isReplaying: false,
 
   togglePanel: () => set((state) => ({ isVisible: !state.isVisible })),
   setAnalyzing: (val) => set({ isAnalyzing: val }),
   setAnalysisData: (data) => set({ data }),
+  setReplaying: (val) => set({ isReplaying: val }),
 
   setTraceFrames: (frames, mode = 'UNIVERSAL') => {
     set({

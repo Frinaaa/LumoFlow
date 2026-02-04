@@ -11,11 +11,17 @@ interface SavedVisualization {
     date: Date;
 }
 
+import VisualPlaybackModal from '../components/Visualization/VisualPlaybackModal';
+
 const VisualsScreen: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useUserStore();
     const [visualizations, setVisualizations] = useState<SavedVisualization[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // --- MODAL STATE ---
+    const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+    const [selectedVizData, setSelectedVizData] = useState<any>(null);
 
     useEffect(() => {
         fetchVisualizations();
@@ -41,8 +47,7 @@ const VisualsScreen: React.FC = () => {
         if (!user?._id) return;
 
         try {
-            // Show loading state
-            console.log('Loading visualization:', vizId);
+            console.log('🎬 Playing visualization in-place:', vizId);
 
             // Fetch the full visualization data including trace frames
             const result = await (window as any).api.getVisualization({
@@ -53,16 +58,14 @@ const VisualsScreen: React.FC = () => {
             if (result.success && result.visualization) {
                 const viz = result.visualization;
 
-                // Store the visualization data in sessionStorage for the editor to pick up
-                sessionStorage.setItem('replayVisualization', JSON.stringify({
+                // Set data and open modal
+                setSelectedVizData({
+                    title: viz.title,
                     code: viz.code,
                     frames: viz.frames,
-                    title: viz.title,
                     type: viz.type
-                }));
-
-                // Navigate to the editor
-                navigate('/editor');
+                });
+                setIsPlayerOpen(true);
             } else {
                 alert('Failed to load visualization: ' + (result.msg || 'Unknown error'));
             }
@@ -153,40 +156,84 @@ const VisualsScreen: React.FC = () => {
                             </button>
                         </div>
                     ) : (
-                        visualizations.map((viz) => (
-                            <div
-                                key={viz.id}
-                                className="viz-card"
-                                onClick={() => handleVisualizationClick(viz.id)}
-                            >
-                                <div className="viz-card-header">
-                                    <div className="viz-type-badge">{viz.type}</div>
-                                    <button
-                                        className="delete-btn"
-                                        onClick={(e) => handleDelete(viz.id, e)}
-                                        title="Delete"
-                                    >
-                                        <i className="fa-solid fa-trash"></i>
-                                    </button>
+                        visualizations.map((viz) => {
+                            // Determine if it's a visual type (has animations)
+                            const isVisualType = viz.type !== 'UNIVERSAL';
+
+                            return (
+                                <div
+                                    key={viz.id}
+                                    className="viz-card"
+                                    onClick={() => handleVisualizationClick(viz.id)}
+                                >
+                                    <div className="viz-card-header">
+                                        <div className="viz-type-badge">{viz.type}</div>
+                                        <button
+                                            className="delete-btn"
+                                            onClick={(e) => handleDelete(viz.id, e)}
+                                            title="Delete"
+                                        >
+                                            <i className="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+
+                                    <h3>{viz.title}</h3>
+
+                                    {/* Visual indicator for animation-based visualizations */}
+                                    {isVisualType && (
+                                        <div className="viz-animation-preview">
+                                            <div className="preview-bars">
+                                                {[40, 70, 50, 90, 30].map((height, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="preview-bar"
+                                                        style={{
+                                                            height: `${height}%`,
+                                                            animationDelay: `${idx * 0.1}s`
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div className="preview-label">
+                                                <i className="fa-solid fa-play-circle"></i>
+                                                Animated Visualization
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Code preview for all types */}
+                                    <div className="viz-code-preview">
+                                        <div className="code-header">
+                                            <i className="fa-solid fa-code"></i>
+                                            <span>Code Preview</span>
+                                        </div>
+                                        <pre><code>{viz.code}</code></pre>
+                                    </div>
+
+                                    <div className="viz-card-footer">
+                                        <span className="viz-date">
+                                            <i className="fa-regular fa-clock"></i>
+                                            {new Date(viz.date).toLocaleDateString()}
+                                        </span>
+                                        <span className="play-indicator">
+                                            <i className="fa-solid fa-play"></i> Replay
+                                        </span>
+                                    </div>
                                 </div>
-                                <h3>{viz.title}</h3>
-                                <div className="viz-code-preview">
-                                    <code>{viz.code}</code>
-                                </div>
-                                <div className="viz-card-footer">
-                                    <span className="viz-date">
-                                        <i className="fa-regular fa-clock"></i>
-                                        {new Date(viz.date).toLocaleDateString()}
-                                    </span>
-                                    <span className="play-indicator">
-                                        <i className="fa-solid fa-play"></i> Replay
-                                    </span>
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </section>
             </main>
+
+            {/* In-page Replay Modal */}
+            {selectedVizData && (
+                <VisualPlaybackModal
+                    isOpen={isPlayerOpen}
+                    onClose={() => setIsPlayerOpen(false)}
+                    viz={selectedVizData}
+                />
+            )}
         </div>
     );
 };

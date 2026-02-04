@@ -1518,7 +1518,7 @@ This transformation is UNIQUE to this code's logic. Getting closer to the final 
 };
 
 const VisualizeTab: React.FC = () => {
-  const { traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames, isPlaying, togglePlay } = useAnalysisStore();
+  const { traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames, isPlaying, togglePlay, isReplaying, setReplaying } = useAnalysisStore();
   const editorStore = useEditorStore();
   const { tabs, activeTabId, outputData, debugData } = editorStore;
   const { user } = useUserStore();
@@ -1673,8 +1673,8 @@ const VisualizeTab: React.FC = () => {
         console.log('✅ ADAPTIVE: Creating UNIQUE Variable visualization for THIS code');
         generateVariableTrace(code, frames);
       }
-      // PRIORITY 13: Smart Universal Execution (AI-like analysis)
-      else {
+      // PRIORITY 13: Smart Universal Execution (AI-like analysis) - Only for meaningful code
+      else if (code.length > 10 && (hasVariable || hasFunction || hasLoop || hasConditional || hasArithmetic || consoleOutputs.length > 0)) {
         console.log('✅ ADAPTIVE: Using Smart AI Analyzer for THIS code');
         generateSmartUniversalTrace(code, frames);
       }
@@ -1682,15 +1682,7 @@ const VisualizeTab: React.FC = () => {
       console.log(`📊 RESULT: Generated ${frames.length} UNIQUE frames for this specific code`);
 
       if (frames.length === 0) {
-        console.log('⚠️ No frames generated, creating helpful message');
-        // Create a helpful frame if nothing was generated
-        frames.push({
-          id: 0,
-          memory: {},
-          activeVariable: null,
-          action: 'EXECUTE',
-          desc: 'Analyzing code... Try adding variables, arrays, or functions to see visualization.'
-        });
+        console.log('⚠️ No meaningful patterns found for visualization');
       }
 
       console.log('✅ Setting trace frames for visualization');
@@ -1710,11 +1702,26 @@ const VisualizeTab: React.FC = () => {
 
   // --- 1. REAL-TIME OBSERVER (Watches Editor Changes) ---
   useEffect(() => {
+    // If we are replaying, we don't want the real-time observer to clear our frames
+    if (isReplaying) {
+      console.log('⏭️ Replay active, skipping real-time analysis');
+      setIsAutoPlaying(true);
+      return;
+    }
+
     if (!activeTab?.content) {
       console.log('No active tab content');
       setTraceFrames([]); // Clear frames when no content
       return;
     }
+
+    // Check if the file is JavaScript or TypeScript
+    const fileName = activeTab.fileName.toLowerCase();
+    const isJS = fileName.endsWith('.js') ||
+      fileName.endsWith('.jsx') ||
+      fileName.endsWith('.ts') ||
+      fileName.endsWith('.tsx') ||
+      fileName.endsWith('.mjs');
 
     // CRITICAL: Clear previous frames immediately when file changes
     console.log('🔄 File changed! Clearing previous visualization...');
@@ -1722,6 +1729,12 @@ const VisualizeTab: React.FC = () => {
     setFrameIndex(0);
     setIsAutoPlaying(false);
     stopSpeaking();
+
+    // If not a JS file, don't generate visuals
+    if (!isJS) {
+      console.log('ℹ️ Visualization restricted to JS/TS files. Language not supported for animations.');
+      return;
+    }
 
     console.log('🎬 Building NEW trace for file:', activeTab.fileName);
     console.log('📝 Code preview:', activeTab.content.substring(0, 100));
@@ -1735,7 +1748,7 @@ const VisualizeTab: React.FC = () => {
       clearTimeout(timeout);
       stopSpeaking();
     };
-  }, [activeTab?.content, activeTabId, buildAdvancedTrace]);
+  }, [activeTab?.content, activeTabId, buildAdvancedTrace, isReplaying]);
 
   // --- 2. PLAY/PAUSE ENGINE (Wait for speech to complete) ---
   useEffect(() => {
@@ -1898,30 +1911,6 @@ const VisualizeTab: React.FC = () => {
     return () => stopSpeaking();
   }, [activeTabId]);
 
-  // Check for replay visualization on mount
-  useEffect(() => {
-    const replayData = sessionStorage.getItem('replayVisualization');
-    if (replayData) {
-      try {
-        const viz = JSON.parse(replayData);
-        console.log('🎬 Loading saved visualization for replay:', viz.title);
-
-        // Load the trace frames
-        if (viz.frames && Array.isArray(viz.frames)) {
-          setTraceFrames(viz.frames);
-          setFrameIndex(0);
-          console.log(`✅ Loaded ${viz.frames.length} frames for replay`);
-        }
-
-        // Clear the replay data so it doesn't load again
-        sessionStorage.removeItem('replayVisualization');
-      } catch (err) {
-        console.error('Failed to parse replay data:', err);
-        sessionStorage.removeItem('replayVisualization');
-      }
-    }
-  }, []); // Only run once on mount
-
   // --- 4. THE RENDERER ---
   const currentFrame = traceFrames[currentFrameIndex];
 
@@ -1929,8 +1918,72 @@ const VisualizeTab: React.FC = () => {
   const hasOutput = outputData && outputData.trim().length > 0;
   const hasDebugData = debugData && debugData.trim().length > 0;
 
-  // Fix for Black Screen: Show Output if no visual frames but code has been run
-  if (!currentFrame || traceFrames.length === 0) {
+  // STRICT LANGUAGE CHECK (Only for generation)
+  const fileName = activeTab?.fileName.toLowerCase() || '';
+  const isJS = fileName.endsWith('.js') ||
+    fileName.endsWith('.jsx') ||
+    fileName.endsWith('.ts') ||
+    fileName.endsWith('.tsx') ||
+    fileName.endsWith('.mjs');
+
+  // 🟢 RENDER LOGIC FLOW:
+  // 1. If we have frames (from Replay or Live JS), show the VISUALIZER!
+  // 2. If no frames & not JS, show "Not Supported"
+  // 3. If no frames & is JS, show "Scanning" or "No Meaningful Code"
+
+  const code = activeTab?.content || '';
+  const isMeaningfulCode = code.length > 5 && /\b(let|const|var|function|if|for|while|return|console|\[|\]|\{|\})\b/.test(code);
+
+  if (traceFrames.length === 0 || !currentFrame) {
+    // 🔴 CASE A: NOT A JS FILE (Unsupported language)
+    if (!isJS) {
+      return (
+        <div className="universal-viz" style={{ padding: '24px', textAlign: 'center' }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            padding: '40px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px'
+          }}>
+            <i className="fa-solid fa-code" style={{ fontSize: '40px', color: '#888' }}></i>
+            <h3 style={{ color: '#fff', margin: 0 }}>Visuals not supported</h3>
+            <p style={{ color: '#888', fontSize: '14px', maxWidth: '300px', lineHeight: '1.6' }}>
+              Interactive visualizations and step-by-step animations are currently restricted to <strong>JavaScript</strong> and <strong>TypeScript</strong>.
+            </p>
+
+            {(hasOutput || hasDebugData) && (
+              <div style={{ marginTop: '20px', width: '100%', textAlign: 'left' }}>
+                <div style={{ color: '#00f2ff', fontSize: '11px', fontWeight: 'bold', marginBottom: '8px' }}>
+                  <i className="fa-solid fa-terminal"></i> PROGRAM OUTPUT:
+                </div>
+                <pre style={{
+                  background: '#000',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: '#fff',
+                  fontFamily: 'monospace',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {outputData || debugData}
+                </pre>
+              </div>
+            )}
+          </div>
+          <style>{styles}</style>
+        </div>
+      );
+    }
+
+    // 🟡 CASE B: IS JS BUT NO FRAMES (Empty, "dump code", or still analyzing)
+    // If we're here, it means frames are missing. We show either output or instructions.
+    
     // If code has been executed and produced output, show it
     if (hasOutput || hasDebugData) {
       return (
@@ -1966,7 +2019,9 @@ const VisualizeTab: React.FC = () => {
               <span style={{ color: '#00f2ff', fontSize: '12px', fontWeight: 'bold' }}>CONSOLE OUTPUT</span>
             </div>
             <div style={{ fontSize: '10px', color: '#aaa' }}>
-              This code doesn't have a visual representation, but here's what it outputs:
+              {isJS
+                ? "This code doesn't have a visual representation, but here's what it outputs:"
+                : "Animations are only supported for JavaScript/TypeScript files. Viewing standard output:"}
             </div>
           </div>
 
@@ -2070,12 +2125,25 @@ const VisualizeTab: React.FC = () => {
     return (
       <div className="universal-viz empty">
         <div className="loader-box">
-          <div className="spinner-neon"></div>
-          <p>SCANNING CODE...</p>
-          <span>Write code with arrays or variables to visualize</span>
-          <span style={{ marginTop: '10px', fontSize: '11px', color: '#555' }}>
-            Try: let arr = [5, 2, 8, 1, 9]
-          </span>
+          {!isJS ? (
+            <>
+              <i className="fa-solid fa-code" style={{ fontSize: '30px', color: '#ffaa00', marginBottom: '15px' }}></i>
+              <p>STATIC CODE VIEW</p>
+              <span>Visual animations are restricted to JS/TS files.</span>
+              <span style={{ marginTop: '10px', fontSize: '11px', color: '#555' }}>
+                Run your code to see results here.
+              </span>
+            </>
+          ) : (
+            <>
+              <div className="spinner-neon"></div>
+              <p>SCANNING CODE...</p>
+              <span>Write code with arrays or variables to visualize</span>
+              <span style={{ marginTop: '10px', fontSize: '11px', color: '#555' }}>
+                Try: let arr = [5, 2, 8, 1, 9]
+              </span>
+            </>
+          )}
         </div>
         <style>{styles}</style>
       </div>

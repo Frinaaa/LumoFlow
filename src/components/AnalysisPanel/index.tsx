@@ -7,8 +7,38 @@ import GamesTab from './GamesTab';
 import { analysisPanelStyles } from './styles';
 
 const AnalysisPanel: React.FC = () => {
-    const { isVisible, data, isAnalyzing, togglePanel } = useAnalysisStore();
+    const { isVisible, data, isAnalyzing, togglePanel, setTraceFrames, setFrameIndex, setReplaying } = useAnalysisStore();
     const [activeTab, setActiveTab] = useState<'visualize' | 'explain' | 'interact' | 'games'>('visualize');
+
+    // Handle replay visualization from sessionStorage
+    React.useEffect(() => {
+        const replayData = sessionStorage.getItem('replayVisualization');
+        if (replayData) {
+            try {
+                const viz = JSON.parse(replayData);
+                console.log('🎬 Replaying visualization:', viz.title);
+
+                if (viz.frames && Array.isArray(viz.frames)) {
+                    // This sets isVisible: true in the store!
+                    // And we set a flag so VisualizeTab doesn't overwrite these frames
+                    setReplaying(true);
+                    setTraceFrames(viz.frames, viz.type || 'UNIVERSAL');
+                    setFrameIndex(0);
+                    setActiveTab('visualize');
+                }
+
+                // Clear the trigger
+                sessionStorage.removeItem('replayVisualization');
+            } catch (err) {
+                console.error('Failed to parse replay data:', err);
+                sessionStorage.removeItem('replayVisualization');
+                setReplaying(false);
+            }
+        } else {
+            // Not replaying, ensure replay mode is off
+            setReplaying(false);
+        }
+    }, [setTraceFrames, setFrameIndex, setActiveTab, setReplaying]);
 
     if (!isVisible) return null;
 
