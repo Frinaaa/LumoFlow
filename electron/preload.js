@@ -28,6 +28,13 @@ contextBridge.exposeInMainWorld('api', {
   addActivity: (data) => ipcRenderer.invoke('user:addActivity', data).catch(err => ({ success: false, msg: err.message })),
   saveGameProgress: (data) => ipcRenderer.invoke('user:saveGameProgress', data).catch(err => ({ success: false, msg: err.message })),
 
+  // Visualizations
+  saveVisualization: (data) => ipcRenderer.invoke('viz:save', data).catch(err => ({ success: false, msg: err.message })),
+  getAllVisualizations: (userId) => ipcRenderer.invoke('viz:getAll', userId).catch(err => ({ success: false, visualizations: [] })),
+  getVisualization: (data) => ipcRenderer.invoke('viz:get', data).catch(err => ({ success: false, msg: err.message })),
+  deleteVisualization: (data) => ipcRenderer.invoke('viz:delete', data).catch(err => ({ success: false, msg: err.message })),
+
+
   // File System
   readProjectFiles: () => ipcRenderer.invoke('files:readProject').catch(err => []),
   readFile: (filePath) => ipcRenderer.invoke('files:readFile', filePath).catch(err => ''),

@@ -80,7 +80,7 @@ const userController = {
         bugsDetected: user.bugsDetected || 0,
         conceptsVisualized: user.conceptsVisualized || 0,
         totalScore: user.totalScore || 0,
-        level: this.calculateLevel(user.totalScore || 0),
+        level: userController.calculateLevel(user.totalScore || 0),
         xp: user.totalScore || 0
       };
 
@@ -100,7 +100,7 @@ const userController = {
         id: act._id || index,
         title: act.title,
         type: act.type,
-        time: this.formatTimeAgo(act.time),
+        time: userController.formatTimeAgo(act.time),
         xp: act.xp,
         color: act.color,
         icon: act.icon

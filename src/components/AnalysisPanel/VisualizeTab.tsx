@@ -1,35 +1,36 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAnalysisStore, TraceFrame } from '../../editor/stores/analysisStore';
 import { useEditorStore } from '../../editor/stores/editorStore';
+import { useUserStore } from '../../stores/userStore';
 
 // Helper functions defined outside component for better performance
 const generateSortingTrace = (code: string, frames: TraceFrame[]) => {
   try {
     // Detect if it's selection sort
     const isSelectionSort = /selection/i.test(code) || (/min/.test(code) && /for.*for/.test(code));
-    
+
     // Find array initialization
     const arrayMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[\s\S]*?\])/);
     if (!arrayMatch) return;
 
     const varName = arrayMatch[1];
     let arrayData;
-    
+
     try {
       arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
     } catch (e) {
       // If parsing fails, try to evaluate it
       arrayData = eval(arrayMatch[2]);
     }
-    
+
     if (!Array.isArray(arrayData)) return;
-    
+
     // If it's selection sort, use different visualization
     if (isSelectionSort) {
       generateSelectionSortTrace(code, arrayData, varName, frames);
       return;
     }
-    
+
     frames.push({
       id: 0,
       memory: { [varName]: [...arrayData] },
@@ -41,7 +42,7 @@ const generateSortingTrace = (code: string, frames: TraceFrame[]) => {
     // Actually execute the sorting algorithm
     const arr = [...arrayData];
     const n = arr.length;
-    
+
     for (let i = 0; i < n - 1; i++) {
       frames.push({
         id: frames.length,
@@ -89,7 +90,7 @@ const generateSortingTrace = (code: string, frames: TraceFrame[]) => {
           });
         }
       }
-      
+
       frames.push({
         id: frames.length,
         memory: { [varName]: [...arr], sorted: n - i - 1 },
@@ -106,7 +107,7 @@ const generateSortingTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `Perfect! We're all done! The array is now completely sorted from smallest to largest: ${arr.join(', ')}. Every number is in its correct position!`
     });
-    
+
     // Show final result
     frames.push({
       id: frames.length,
@@ -132,7 +133,7 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
 
   const arr = [...arrayData];
   const n = arr.length;
-  
+
   for (let i = 0; i < n - 1; i++) {
     frames.push({
       id: frames.length,
@@ -141,10 +142,10 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
       action: 'EXECUTE',
       desc: `Position ${i}: We need to find the smallest number in the remaining unsorted part [${arr.slice(i).join(', ')}] and put it here.`
     });
-    
+
     let minIndex = i;
     let minValue = arr[i];
-    
+
     frames.push({
       id: frames.length,
       memory: { [varName]: [...arr], minIndex, checking: i },
@@ -152,7 +153,7 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
       action: 'READ',
       desc: `Starting with ${arr[i]} at position ${i} as our current minimum. Now let's check if there's anything smaller in the rest of the array.`
     });
-    
+
     for (let j = i + 1; j < n; j++) {
       frames.push({
         id: frames.length,
@@ -161,11 +162,11 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
         action: 'READ',
         desc: `Checking position ${j}: Found ${arr[j]}. Is ${arr[j]} smaller than our current minimum ${minValue}? ${arr[j] < minValue ? `YES! ${arr[j]} < ${minValue}, so ${arr[j]} is our new minimum.` : `No, ${arr[j]} >= ${minValue}, so ${minValue} is still the smallest.`}`
       });
-      
+
       if (arr[j] < arr[minIndex]) {
         minIndex = j;
         minValue = arr[j];
-        
+
         frames.push({
           id: frames.length,
           memory: { [varName]: [...arr], minIndex, newMin: minValue },
@@ -175,7 +176,7 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
         });
       }
     }
-    
+
     if (minIndex !== i) {
       frames.push({
         id: frames.length,
@@ -184,10 +185,10 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
         action: 'WRITE',
         desc: `The smallest number in the unsorted part is ${arr[minIndex]} at position ${minIndex}. Let's swap it with position ${i} (which has ${arr[i]}). WHY? Because ${arr[minIndex]} is the smallest, it belongs at the front!`
       });
-      
+
       // Perform swap
       [arr[i], arr[minIndex]] = [arr[minIndex], arr[i]];
-      
+
       frames.push({
         id: frames.length,
         memory: { [varName]: [...arr], sorted: i + 1 },
@@ -205,7 +206,7 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
       });
     }
   }
-  
+
   frames.push({
     id: frames.length,
     memory: { [varName]: [...arr], sorted: n },
@@ -213,7 +214,7 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
     action: 'EXECUTE',
     desc: `Selection Sort complete! Every position now has the correct number. Final sorted array: ${arr.join(', ')}.`
   });
-  
+
   frames.push({
     id: frames.length,
     memory: { [varName]: [...arr], sorted: n, result: arr },
@@ -226,13 +227,13 @@ const generateSelectionSortTrace = (code: string, arrayData: any[], varName: str
 const generateSearchingTrace = (code: string, frames: TraceFrame[]) => {
   const arrayMatch = code.match(/(?:let|const|var)\s+(\w+)\s*=\s*(\[[\s\S]*?\])/);
   const targetMatch = code.match(/(?:find|search|indexOf)\s*\(\s*(\w+|\d+)\s*\)/i);
-  
+
   if (!arrayMatch) return;
 
   const varName = arrayMatch[1];
   const arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
   const target = targetMatch ? targetMatch[1] : arrayData[Math.floor(arrayData.length / 2)];
-  
+
   frames.push({
     id: 0,
     memory: { [varName]: [...arrayData], target },
@@ -277,7 +278,7 @@ const generateStringTrace = (code: string, frames: TraceFrame[]) => {
 
   const varName = strMatch[1];
   const strValue = strMatch[2];
-  
+
   frames.push({
     id: 0,
     memory: { [varName]: strValue },
@@ -335,7 +336,7 @@ const generateArrayOperationTrace = (code: string, frames: TraceFrame[]) => {
 
   const varName = arrayMatch[1];
   const arrayData = JSON.parse(arrayMatch[2].replace(/'/g, '"'));
-  
+
   frames.push({
     id: 0,
     memory: { [varName]: [...arrayData] },
@@ -360,7 +361,7 @@ const generateArrayOperationTrace = (code: string, frames: TraceFrame[]) => {
 
       const transformed = val * 2;
       result.push(transformed);
-      
+
       frames.push({
         id: frames.length,
         memory: { [varName]: [...arrayData], result: [...result], currentIndex: idx },
@@ -377,7 +378,7 @@ const generateArrayOperationTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `All done! We transformed every number. Our original array was ${arrayData.join(', ')}, and our new array is ${result.join(', ')}. Each number was doubled!`
     });
-    
+
     // FINAL RESULT - Show clearly
     frames.push({
       id: frames.length,
@@ -422,7 +423,7 @@ Every element was processed and the final array is ready!`
       action: 'EXECUTE',
       desc: `Filtering complete! We started with ${arrayData.join(', ')}, and after keeping only numbers greater than 5, we got ${result.join(', ')}. ${result.length === 0 ? 'No numbers passed the test.' : `${result.length} ${result.length === 1 ? 'number' : 'numbers'} passed the test!`}`
     });
-    
+
     // FINAL RESULT - Show clearly
     frames.push({
       id: frames.length,
@@ -455,7 +456,7 @@ ${result.length} element${result.length !== 1 ? 's' : ''} met the criteria and m
       action: 'EXECUTE',
       desc: `✓ Processed all ${arrayData.length} elements`
     });
-    
+
     // FINAL RESULT
     frames.push({
       id: frames.length,
@@ -471,12 +472,12 @@ All ${arrayData.length} elements have been processed!`
 
 const generateLoopTrace = (code: string, frames: TraceFrame[]) => {
   const forMatch = code.match(/for\s*\(\s*let\s+(\w+)\s*=\s*(\d+)\s*;\s*\w+\s*<\s*(\d+)/);
-  
+
   if (forMatch) {
     const varName = forMatch[1];
     const start = parseInt(forMatch[2]);
     const end = parseInt(forMatch[3]);
-    
+
     frames.push({
       id: 0,
       memory: {},
@@ -520,11 +521,11 @@ const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
   varMatches.forEach(match => {
     const varName = match[1];
     const value = match[2].trim();
-    
+
     try {
       const evalValue = new Function(`return ${value}`)();
       memory[varName] = evalValue;
-      
+
       frames.push({
         id: frames.length,
         memory: { ...memory },
@@ -574,7 +575,7 @@ const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
       });
     }
   }
-  
+
   // Add final frame
   if (frames.length > 1) {
     frames.push({
@@ -589,11 +590,11 @@ const generateConditionalTrace = (code: string, frames: TraceFrame[]) => {
 
 const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
   const funcMatch = code.match(/function\s+(\w+)\s*\(([^)]*)\)/);
-  
+
   if (funcMatch) {
     const funcName = funcMatch[1];
     const params = funcMatch[2];
-    
+
     frames.push({
       id: 0,
       memory: {},
@@ -606,7 +607,7 @@ const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
     const callMatch = code.match(new RegExp(`${funcName}\\s*\\(([^)]+)\\)`));
     if (callMatch && callMatch[1]) {
       const args = callMatch[1].split(',').map(a => a.trim());
-      
+
       frames.push({
         id: 1,
         memory: { [funcName]: 'calling', input: args },
@@ -614,7 +615,7 @@ const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
         action: 'READ',
         desc: `Calling ${funcName} with input: ${args.join(', ')}. These values will be passed into the function.`
       });
-      
+
       // Show parameters receiving values
       const paramList = params.split(',').map(p => p.trim()).filter(p => p);
       paramList.forEach((param, idx) => {
@@ -629,12 +630,12 @@ const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
         }
       });
     }
-    
+
     // Look for return statement
     const returnMatch = code.match(/return\s+([^;\n]+)/);
     if (returnMatch) {
       const returnExpr = returnMatch[1].trim();
-      
+
       frames.push({
         id: frames.length,
         memory: { [funcName]: 'processing', expression: returnExpr },
@@ -642,7 +643,7 @@ const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
         action: 'EXECUTE',
         desc: `Processing: ${returnExpr}. The function is calculating the result using this expression.`
       });
-      
+
       // Try to evaluate if possible
       if (callMatch && callMatch[1]) {
         try {
@@ -652,9 +653,9 @@ const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
           paramList.forEach((param, idx) => {
             evalContext[param] = isNaN(Number(args[idx])) ? args[idx] : Number(args[idx]);
           });
-          
+
           const result = new Function(...Object.keys(evalContext), `return ${returnExpr}`)(...Object.values(evalContext));
-          
+
           frames.push({
             id: frames.length,
             memory: { [funcName]: 'complete', result, input: args },
@@ -673,7 +674,7 @@ const generateFunctionTrace = (code: string, frames: TraceFrame[]) => {
         }
       }
     }
-    
+
     if (frames.length === 1) {
       frames.push({
         id: frames.length,
@@ -691,14 +692,14 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
   try {
     const funcMatch = code.match(/function\s+(\w+)\s*\(([^)]*)\)/);
     if (!funcMatch) return false;
-    
+
     const funcName = funcMatch[1];
     const params = funcMatch[2];
-    
+
     // Check if it's actually recursive
     const isRecursive = code.includes(funcName + '(') && code.indexOf(funcName + '(') !== code.indexOf('function ' + funcName);
     if (!isRecursive) return false;
-    
+
     frames.push({
       id: 0,
       memory: {},
@@ -706,7 +707,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `Let's understand RECURSION! Function "${funcName}" calls itself to solve a problem by breaking it into smaller pieces.`
     });
-    
+
     frames.push({
       id: 1,
       memory: { [funcName]: 'defined' },
@@ -714,7 +715,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `Defining recursive function "${funcName}"${params ? ` with parameter: ${params}` : ''}. Think of recursion like Russian nesting dolls - each doll contains a smaller version of itself.`
     });
-    
+
     // Try to find base case
     const baseCase = code.match(/if\s*\([^)]*\)\s*{\s*return\s+([^;]+)/);
     if (baseCase) {
@@ -726,7 +727,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
         desc: `Found BASE CASE! This is the stopping condition. Without it, the function would call itself forever. The base case returns: ${baseCase[1]}`
       });
     }
-    
+
     // Recursive case
     frames.push({
       id: frames.length,
@@ -735,7 +736,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `RECURSIVE CASE: The function calls itself with a smaller problem. Each call gets closer to the base case.`
     });
-    
+
     // Simulate a few recursive calls
     for (let i = 1; i <= 3; i++) {
       frames.push({
@@ -746,7 +747,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
         desc: `Recursive call #${i}: Function calls itself. We go deeper into the recursion stack.`
       });
     }
-    
+
     frames.push({
       id: frames.length,
       memory: { [funcName]: 'base case reached' },
@@ -754,7 +755,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `Base case reached! Now we start returning back up the call stack.`
     });
-    
+
     for (let i = 3; i >= 1; i--) {
       frames.push({
         id: frames.length,
@@ -764,7 +765,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
         desc: `Returning from call #${i}: Each function call returns its result to the previous call.`
       });
     }
-    
+
     frames.push({
       id: frames.length,
       memory: { [funcName]: 'complete' },
@@ -772,7 +773,7 @@ const generateRecursionTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `✅ Recursion complete! All calls have returned. The final result is built from combining all the recursive calls.`
     });
-    
+
     return true;
   } catch (e) {
     console.error('Error in recursion trace:', e);
@@ -806,11 +807,11 @@ const generateVariableTrace = (code: string, frames: TraceFrame[]) => {
   varMatches.forEach(match => {
     const varName = match[1];
     const value = match[2].trim();
-    
+
     try {
       const evalValue = new Function(`return ${value}`)();
       memory[varName] = evalValue;
-      
+
       frames.push({
         id: frames.length,
         memory: { ...memory },
@@ -854,7 +855,7 @@ const generateArithmeticTrace = (code: string, frames: TraceFrame[]) => {
   varMatches.forEach(match => {
     const varName = match[1];
     const expression = match[2].trim();
-    
+
     try {
       // Check if it's an arithmetic expression
       if (/[\+\-\*\/\%]/.test(expression)) {
@@ -867,10 +868,10 @@ const generateArithmeticTrace = (code: string, frames: TraceFrame[]) => {
           desc: `Evaluating: ${varName} = ${expression}`
         });
       }
-      
+
       const evalValue = new Function(...Object.keys(memory), `return ${expression}`)(...Object.values(memory));
       memory[varName] = evalValue;
-      
+
       frames.push({
         id: frames.length,
         memory: { ...memory },
@@ -912,7 +913,7 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
   try {
     // Try to extract any meaningful information
     const lines = code.split('\n').filter(line => line.trim() && !line.trim().startsWith('//'));
-    
+
     if (lines.length === 0) {
       frames.push({
         id: frames.length,
@@ -923,7 +924,7 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
       });
       return;
     }
-    
+
     lines.forEach((line, idx) => {
       if (line.trim()) {
         frames.push({
@@ -931,15 +932,14 @@ const generateUniversalTrace = (code: string, frames: TraceFrame[]) => {
           memory: { line: line.trim() },
           activeVariable: null,
           action: 'EXECUTE',
-          desc: `Line ${idx + 1}: ${line.trim().substring(0, 80)}${line.length > 80 ? '...' : ''} - This line ${
-            line.includes('function') ? 'defines a function' :
+          desc: `Line ${idx + 1}: ${line.trim().substring(0, 80)}${line.length > 80 ? '...' : ''} - This line ${line.includes('function') ? 'defines a function' :
             line.includes('return') ? 'returns a value' :
-            line.includes('console.log') ? 'prints output to console' :
-            line.includes('if') ? 'checks a condition' :
-            line.includes('for') || line.includes('while') ? 'creates a loop' :
-            line.includes('=') ? 'assigns a value' :
-            'executes an operation'
-          }.`
+              line.includes('console.log') ? 'prints output to console' :
+                line.includes('if') ? 'checks a condition' :
+                  line.includes('for') || line.includes('while') ? 'creates a loop' :
+                    line.includes('=') ? 'assigns a value' :
+                      'executes an operation'
+            }.`
         });
       }
     });
@@ -969,20 +969,20 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
   const hasEnqueue = /enqueue/i.test(code);
   const hasDequeue = /dequeue/i.test(code);
   const isQueue = hasQueueKeyword || hasEnqueue || hasDequeue;
-  
+
   // Detect stack operations - be more specific
   const hasStackKeyword = /stack/i.test(code);
   const hasPush = /\.push\(/.test(code);
   const hasPop = /\.pop\(/.test(code);
   const hasShift = /\.shift\(/.test(code);
   const isStack = hasStackKeyword || (hasPush && hasPop && !isQueue);
-  
+
   if (!isQueue && !isStack) return false;
-  
+
   try {
     const dataStructure: any[] = [];
     const type = isQueue ? 'queue' : 'stack';
-    
+
     frames.push({
       id: 0,
       memory: { [type]: [] },
@@ -990,19 +990,19 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `Let's learn about ${type === 'queue' ? 'Queues' : 'Stacks'}! ${isQueue ? 'A Queue is like a line of people. First person in line is first to leave (FIFO - First In First Out).' : 'A Stack is like a pile of plates. Last plate added is first to be removed (LIFO - Last In First Out).'}`
     });
-    
+
     // Execute the code line by line and capture operations
     const lines = code.split('\n');
-    
+
     for (const line of lines) {
       const trimmedLine = line.trim();
-      
+
       // Match enqueue/push operations
       const enqueueMatch = trimmedLine.match(/(?:enqueue|push)\s*\(\s*["']?([^"')]+)["']?\s*\)/);
       if (enqueueMatch) {
         const value = enqueueMatch[1];
         dataStructure.push(value);
-        
+
         frames.push({
           id: frames.length,
           memory: { [type]: [...dataStructure], adding: value },
@@ -1010,7 +1010,7 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
           action: 'WRITE',
           desc: `Adding "${value}" to the ${type === 'queue' ? 'Queue' : 'Stack'}. ${isQueue ? `It joins at the back of the line. Now the Queue has: ${dataStructure.join(', ')}.` : `It goes on top of the stack. Now the Stack has: ${dataStructure.join(', ')}.`}`
         });
-        
+
         frames.push({
           id: frames.length,
           memory: { [type]: [...dataStructure] },
@@ -1019,12 +1019,12 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
           desc: `Current ${type === 'queue' ? 'Queue' : 'Stack'}: ${dataStructure.join(', ')}`
         });
       }
-      
+
       // Match dequeue/pop/shift operations
       const dequeueMatch = trimmedLine.match(/(?:dequeue|pop|shift)\s*\(\s*\)/);
       if (dequeueMatch && dataStructure.length > 0) {
         const removed = isQueue ? dataStructure.shift() : dataStructure.pop();
-        
+
         frames.push({
           id: frames.length,
           memory: { [type]: [...dataStructure], removing: removed },
@@ -1032,7 +1032,7 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
           action: 'WRITE',
           desc: `Removing "${removed}" from the ${type === 'queue' ? 'Queue' : 'Stack'}. ${isQueue ? `It was at the front of the line, so it leaves first.` : `It was on top, so it comes off first.`} ${dataStructure.length > 0 ? `Remaining: ${dataStructure.join(', ')}.` : `The ${type === 'queue' ? 'Queue' : 'Stack'} is now empty!`}`
         });
-        
+
         if (dataStructure.length > 0) {
           frames.push({
             id: frames.length,
@@ -1043,7 +1043,7 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
           });
         }
       }
-      
+
       // Match console.log to show output
       const consoleMatch = trimmedLine.match(/console\.log\s*\(/);
       if (consoleMatch) {
@@ -1056,7 +1056,7 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
         });
       }
     }
-    
+
     frames.push({
       id: frames.length,
       memory: { [type]: [...dataStructure] },
@@ -1064,7 +1064,7 @@ const generateQueueStackTrace = (code: string, frames: TraceFrame[]) => {
       action: 'EXECUTE',
       desc: `${type === 'queue' ? 'Queue' : 'Stack'} operations complete! ${dataStructure.length > 0 ? `Final ${type === 'queue' ? 'Queue' : 'Stack'}: ${dataStructure.join(', ')}.` : `The ${type === 'queue' ? 'Queue' : 'Stack'} is empty.`} ${isQueue ? 'Remember: First In, First Out!' : 'Remember: Last In, First Out!'}`
     });
-    
+
     return true;
   } catch (e) {
     console.error('Error generating queue/stack trace:', e);
@@ -1085,11 +1085,11 @@ const generateObjectTrace = (code: string, frames: TraceFrame[]) => {
 
     // Find object literals with better parsing
     const objectMatches = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*\{([^}]+)\}/gs));
-    
+
     objectMatches.forEach((match, objIdx) => {
       const varName = match[1];
       const objContent = match[2];
-      
+
       frames.push({
         id: frames.length,
         memory: { [varName]: 'object' },
@@ -1097,22 +1097,22 @@ const generateObjectTrace = (code: string, frames: TraceFrame[]) => {
         action: 'WRITE',
         desc: `Creating object "${varName}". This object will store related data together, like a container with labeled compartments.`
       });
-      
+
       // Parse properties more carefully
       const props = objContent.split(',').map(p => p.trim()).filter(p => p);
       const objData: Record<string, any> = {};
-      
+
       props.forEach((prop, propIdx) => {
         const colonIndex = prop.indexOf(':');
         if (colonIndex > 0) {
           const key = prop.substring(0, colonIndex).trim();
           let value = prop.substring(colonIndex + 1).trim();
-          
+
           // Remove quotes from strings
           value = value.replace(/["']/g, '');
-          
+
           objData[key] = value;
-          
+
           frames.push({
             id: frames.length,
             memory: { [varName]: { ...objData } },
@@ -1122,7 +1122,7 @@ const generateObjectTrace = (code: string, frames: TraceFrame[]) => {
           });
         }
       });
-      
+
       // Show complete object
       frames.push({
         id: frames.length,
@@ -1174,7 +1174,7 @@ const generateSmartUniversalTrace = (code: string, frames: TraceFrame[]) => {
   try {
     // Create unique identifier for this code
     const codeFingerprint = code.substring(0, 50).replace(/\s+/g, '_');
-    
+
     frames.push({
       id: 0,
       memory: { codeId: codeFingerprint },
@@ -1193,7 +1193,7 @@ const generateSmartUniversalTrace = (code: string, frames: TraceFrame[]) => {
     // STEP 1: Analyze what makes THIS code unique
     lines.forEach(line => {
       const trimmed = line.trim();
-      
+
       // Track unique operations in THIS specific code
       if (trimmed.includes('.map(')) uniqueOperations.push('map transformation');
       if (trimmed.includes('.filter(')) uniqueOperations.push('filter operation');
@@ -1245,7 +1245,7 @@ const generateSmartUniversalTrace = (code: string, frames: TraceFrame[]) => {
     // STEP 3: Process each line and create UNIQUE visualizations
     lines.forEach((line, idx) => {
       const trimmed = line.trim();
-      
+
       // Variable declarations with evaluation
       const varMatch = trimmed.match(/(?:let|const|var)\s+(\w+)\s*=\s*(.+?);?$/);
       if (varMatch) {
@@ -1253,7 +1253,7 @@ const generateSmartUniversalTrace = (code: string, frames: TraceFrame[]) => {
         const valueStr = varMatch[2];
         let actualValue = valueStr;
         let visualType = '📦';
-        
+
         // Try to evaluate the value
         try {
           // Handle object literals
@@ -1288,19 +1288,19 @@ const generateSmartUniversalTrace = (code: string, frames: TraceFrame[]) => {
         } catch (e) {
           actualValue = valueStr;
         }
-        
+
         memory[varName] = actualValue;
         stepCount++;
-        
+
         // Create UNIQUE visual representation for THIS specific value
-        const visualDesc = Array.isArray(actualValue) 
+        const visualDesc = Array.isArray(actualValue)
           ? `${visualType} Array with ${actualValue.length} elements: [${actualValue.join(', ')}]`
           : typeof actualValue === 'number'
-          ? `${visualType} Number: ${actualValue}`
-          : typeof actualValue === 'string'
-          ? `${visualType} Text: "${actualValue}"`
-          : `${visualType} Value: ${JSON.stringify(actualValue)}`;
-        
+            ? `${visualType} Number: ${actualValue}`
+            : typeof actualValue === 'string'
+              ? `${visualType} Text: "${actualValue}"`
+              : `${visualType} Value: ${JSON.stringify(actualValue)}`;
+
         frames.push({
           id: frames.length,
           memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1 },
@@ -1313,7 +1313,7 @@ ${visualDesc}
 This variable is UNIQUE to this code and will be used to calculate the final result.`
         });
       }
-      
+
       // Function definitions
       const funcDefMatch = trimmed.match(/function\s+(\w+)\s*\(([^)]*)\)/);
       if (funcDefMatch) {
@@ -1321,7 +1321,7 @@ This variable is UNIQUE to this code and will be used to calculate the final res
         const params = funcDefMatch[2];
         stepCount++;
         memory[funcName] = 'function';
-        
+
         frames.push({
           id: frames.length,
           memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1 },
@@ -1332,14 +1332,14 @@ This variable is UNIQUE to this code and will be used to calculate the final res
 This is a custom tool created specifically for THIS code. It's not a generic function - it's designed for this exact purpose!`
         });
       }
-      
+
       // Function calls (not definitions)
       const funcCallMatch = trimmed.match(/(\w+)\s*\(([^)]*)\)/);
       if (funcCallMatch && !varMatch && !funcDefMatch && !trimmed.startsWith('function') && !trimmed.startsWith('console')) {
         const funcName = funcCallMatch[1];
         const args = funcCallMatch[2];
         stepCount++;
-        
+
         frames.push({
           id: frames.length,
           memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1, callingFunc: funcName },
@@ -1350,14 +1350,14 @@ This is a custom tool created specifically for THIS code. It's not a generic fun
 This function call is SPECIFIC to this code's logic. It processes data in a way that's unique to this file!`
         });
       }
-      
+
       // Console.log - extract what's being logged and show the UNIQUE journey
       if (trimmed.includes('console.log')) {
         stepCount++;
         hasOutput = true;
         const logMatch = trimmed.match(/console\.log\s*\((.*)\)/);
         const logContent = logMatch ? logMatch[1] : 'output';
-        
+
         // Try to evaluate the output
         let evaluatedOutput = logContent;
         try {
@@ -1365,13 +1365,13 @@ This function call is SPECIFIC to this code's logic. It processes data in a way 
         } catch (e) {
           // Keep original if can't evaluate
         }
-        
+
         // Create UNIQUE visual journey for THIS code
         const inputVars = Object.entries(memory)
           .filter(([k, v]) => k !== 'output' && k !== 'returnValue' && k !== 'goal' && k !== 'currentStep' && k !== 'lineNumber' && k !== 'codeId' && k !== 'uniqueOps' && k !== 'targetOutput' && k !== 'callingFunc')
           .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
           .join(', ');
-        
+
         frames.push({
           id: frames.length,
           memory: { ...memory, output: evaluatedOutput, FINAL_OUTPUT: evaluatedOutput },
@@ -1391,12 +1391,12 @@ ${inputVars ? `📥 Starting values: ${inputVars}` : '📥 No input values'}
 This is how THIS specific code transforms its inputs into outputs. Every file has a different journey!`
         });
       }
-      
+
       // Return statements
       if (trimmed.includes('return')) {
         stepCount++;
         const returnValue = trimmed.replace('return', '').trim().replace(';', '');
-        
+
         // Try to evaluate
         let evaluatedReturn = returnValue;
         try {
@@ -1404,9 +1404,9 @@ This is how THIS specific code transforms its inputs into outputs. Every file ha
         } catch (e) {
           // Keep original
         }
-        
+
         memory['returnValue'] = evaluatedReturn;
-        
+
         frames.push({
           id: frames.length,
           memory: { ...memory, FINAL_OUTPUT: evaluatedReturn },
@@ -1417,14 +1417,14 @@ This is how THIS specific code transforms its inputs into outputs. Every file ha
 This is the UNIQUE final result that THIS code produces. It's calculated specifically by this code's logic!`
         });
       }
-      
+
       // Assignments (not declarations)
       const assignMatch = trimmed.match(/^(\w+)\s*=\s*(.+?);?$/);
       if (assignMatch && !varMatch) {
         const varName = assignMatch[1];
         const valueStr = assignMatch[2];
         let actualValue = valueStr;
-        
+
         // Try to evaluate
         try {
           if (/[\+\-\*\/]/.test(valueStr)) {
@@ -1433,11 +1433,11 @@ This is the UNIQUE final result that THIS code produces. It's calculated specifi
         } catch (e) {
           actualValue = valueStr;
         }
-        
+
         const oldValue = memory[varName];
         memory[varName] = actualValue;
         stepCount++;
-        
+
         frames.push({
           id: frames.length,
           memory: { ...memory, currentStep: stepCount, lineNumber: idx + 1 },
@@ -1459,7 +1459,7 @@ This transformation is UNIQUE to this code's logic. Getting closer to the final 
       .filter(([k]) => !['output', 'returnValue', 'goal', 'currentStep', 'lineNumber', 'codeId', 'uniqueOps', 'targetOutput', 'callingFunc'].includes(k))
       .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`)
       .join(', ');
-    
+
     // Create UNIQUE visual summary for THIS code
     let visualSummary = `✅ Analysis complete for THIS unique code!
 
@@ -1469,7 +1469,7 @@ This transformation is UNIQUE to this code's logic. Getting closer to the final 
 • Variables created: ${varCount}
 • Unique operations: ${uniqueOperations.length > 0 ? uniqueOperations.join(', ') : 'basic operations'}
 • Code fingerprint: ${codeFingerprint.substring(0, 30)}...`;
-    
+
     if (hasOutput) {
       visualSummary += `\n\n🎯 UNIQUE DATA FLOW FOR THIS CODE:
 ┌─ INPUT ─────────────────────┐`;
@@ -1490,14 +1490,14 @@ This transformation is UNIQUE to this code's logic. Getting closer to the final 
     } else if (finalValues) {
       visualSummary += `\n\n📦 FINAL STATE: ${finalValues}`;
     }
-    
+
     visualSummary += `\n\n💡 This visualization is UNIQUE to this code. Switch to another file to see a completely different visualization!`;
-    
+
     frames.push({
       id: frames.length,
-      memory: { 
-        ...memory, 
-        FINAL_RESULT: finalValues || 'Complete', 
+      memory: {
+        ...memory,
+        FINAL_RESULT: finalValues || 'Complete',
         VISUAL_SUMMARY: visualSummary,
         UNIQUE_ID: codeFingerprint
       },
@@ -1521,17 +1521,19 @@ const VisualizeTab: React.FC = () => {
   const { traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames, isPlaying, togglePlay } = useAnalysisStore();
   const editorStore = useEditorStore();
   const { tabs, activeTabId, outputData, debugData } = editorStore;
+  const { user } = useUserStore();
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false); // Track if auto-playing
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // --- 3. ADAPTIVE AI CODE ANALYZER (Creates Unique Visualizations) ---
   const buildAdvancedTrace = React.useCallback((code: string) => {
     const frames: TraceFrame[] = [];
-    
+
     try {
       const cleanCode = code.trim();
       if (!cleanCode) {
@@ -1549,7 +1551,7 @@ const VisualizeTab: React.FC = () => {
       const extractedNumbers = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*(\d+)/g));
       const extractedStrings = Array.from(code.matchAll(/(?:let|const|var)\s+(\w+)\s*=\s*["']([^"']+)["']/g));
       const consoleOutputs = Array.from(code.matchAll(/console\.log\s*\(([^)]+)\)/g));
-      
+
       console.log('🔍 AI Analysis Results:');
       console.log('  - Arrays found:', extractedArrays.length);
       console.log('  - Numbers found:', extractedNumbers.length);
@@ -1569,7 +1571,7 @@ const VisualizeTab: React.FC = () => {
       const hasComparison = /[<>]=?|===?|!==?/.test(code);
       const hasObject = /\{[\s\S]*\}/.test(code) && !/function/.test(code);
       const hasClass = /class\s+\w+/.test(code);
-      
+
       // Detect Queue/Stack operations - ULTRA SPECIFIC
       const hasQueueKeyword = /queue/i.test(code);
       const hasStackKeyword = /stack/i.test(code);
@@ -1578,17 +1580,17 @@ const VisualizeTab: React.FC = () => {
       const hasPush = /\.push\(/.test(code);
       const hasPop = /\.pop\(/.test(code);
       const hasShift = /\.shift\(/.test(code);
-      const isQueueStack = hasQueueKeyword || hasStackKeyword || hasEnqueue || hasDequeue || 
-                          (hasPush && (hasPop || hasShift));
-      
+      const isQueueStack = hasQueueKeyword || hasStackKeyword || hasEnqueue || hasDequeue ||
+        (hasPush && (hasPop || hasShift));
+
       // Check for recursion - ULTRA SPECIFIC (must have function calling itself AND base case)
       const funcMatch = code.match(/function\s+(\w+)\s*\(/);
       const hasBaseCase = /if\s*\([^)]*\)\s*{\s*return/.test(code);
-      const isRecursive = funcMatch && 
-                         code.includes(funcMatch[1] + '(') && 
-                         code.indexOf(funcMatch[1] + '(') !== code.indexOf('function ' + funcMatch[1]) &&
-                         hasBaseCase &&
-                         !isQueueStack; // NOT a queue/stack operation
+      const isRecursive = funcMatch &&
+        code.includes(funcMatch[1] + '(') &&
+        code.indexOf(funcMatch[1] + '(') !== code.indexOf('function ' + funcMatch[1]) &&
+        hasBaseCase &&
+        !isQueueStack; // NOT a queue/stack operation
 
       console.log('🎯 Pattern Detection:');
       console.log('  - Queue/Stack:', isQueueStack);
@@ -1678,7 +1680,7 @@ const VisualizeTab: React.FC = () => {
       }
 
       console.log(`📊 RESULT: Generated ${frames.length} UNIQUE frames for this specific code`);
-      
+
       if (frames.length === 0) {
         console.log('⚠️ No frames generated, creating helpful message');
         // Create a helpful frame if nothing was generated
@@ -1713,22 +1715,22 @@ const VisualizeTab: React.FC = () => {
       setTraceFrames([]); // Clear frames when no content
       return;
     }
-    
+
     // CRITICAL: Clear previous frames immediately when file changes
     console.log('🔄 File changed! Clearing previous visualization...');
     setTraceFrames([]);
     setFrameIndex(0);
     setIsAutoPlaying(false);
     stopSpeaking();
-    
+
     console.log('🎬 Building NEW trace for file:', activeTab.fileName);
     console.log('📝 Code preview:', activeTab.content.substring(0, 100));
-    
+
     // Build trace with slight delay to ensure clean state
     const timeout = setTimeout(() => {
       buildAdvancedTrace(activeTab.content);
     }, 300);
-    
+
     return () => {
       clearTimeout(timeout);
       stopSpeaking();
@@ -1754,7 +1756,7 @@ const VisualizeTab: React.FC = () => {
       utterance.rate = 0.65; // Very slow for complete understanding
       utterance.pitch = 1;
       utterance.volume = 1;
-      
+
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => {
         setIsSpeaking(false);
@@ -1785,7 +1787,7 @@ const VisualizeTab: React.FC = () => {
           }, 800);
         }
       };
-      
+
       speechRef.current = utterance;
       window.speechSynthesis.speak(utterance);
     } else if (shouldAutoAdvance && isAutoPlaying) {
@@ -1830,11 +1832,95 @@ const VisualizeTab: React.FC = () => {
     }
   }, [currentFrameIndex, isAutoPlaying]);
 
+  // Handle saving visualization
+  const handleSaveVisualization = async () => {
+    // Check if the API exists
+    if (!(window as any).api?.saveVisualization) {
+      alert('Save feature not available. Please restart the app completely (close and reopen).');
+      console.error('window.api.saveVisualization is not defined. Available methods:', Object.keys((window as any).api || {}));
+      return;
+    }
+
+    if (!user?._id || !activeTab || traceFrames.length === 0) {
+      alert('Cannot save: No user or visualization data');
+      console.error('Save blocked:', { hasUser: !!user?._id, hasTab: !!activeTab, framesLength: traceFrames.length });
+      return;
+    }
+
+    setSaveStatus('saving');
+    console.log('🎬 Attempting to save visualization...');
+
+    try {
+      // Detect visualization type
+      const code = activeTab.content;
+      let visualType = 'UNIVERSAL';
+      if (/bubble|sort/i.test(code)) visualType = 'SORTING';
+      else if (/search|find/i.test(code)) visualType = 'SEARCHING';
+      else if (/map|filter/i.test(code)) visualType = 'ARRAY_OPERATION';
+      else if (/queue|stack/i.test(code)) visualType = 'QUEUE_STACK';
+
+      // Generate title from filename or code
+      const title = activeTab.fileName.replace(/\.(js|ts|py)$/, '') || 'Untitled Visualization';
+
+      console.log('📦 Saving data:', { userId: user._id, title, visualType, framesCount: traceFrames.length });
+
+      const result = await (window as any).api.saveVisualization({
+        userId: user._id,
+        title,
+        codeSnippet: code,
+        visualType,
+        traceFrames
+      });
+
+      console.log('📬 Save result:', result);
+
+      if (result.success) {
+        console.log('✅ Visualization saved successfully!');
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000); // Reset after 2s
+      } else {
+        console.error('❌ Save failed:', result.msg);
+        alert(`Failed to save: ${result.msg || 'Unknown error'}`);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      }
+    } catch (err) {
+      console.error('💥 Exception while saving visualization:', err);
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }
+  };
+
   // Stop speech when switching files
   useEffect(() => {
     setIsAutoPlaying(false);
     return () => stopSpeaking();
   }, [activeTabId]);
+
+  // Check for replay visualization on mount
+  useEffect(() => {
+    const replayData = sessionStorage.getItem('replayVisualization');
+    if (replayData) {
+      try {
+        const viz = JSON.parse(replayData);
+        console.log('🎬 Loading saved visualization for replay:', viz.title);
+
+        // Load the trace frames
+        if (viz.frames && Array.isArray(viz.frames)) {
+          setTraceFrames(viz.frames);
+          setFrameIndex(0);
+          console.log(`✅ Loaded ${viz.frames.length} frames for replay`);
+        }
+
+        // Clear the replay data so it doesn't load again
+        sessionStorage.removeItem('replayVisualization');
+      } catch (err) {
+        console.error('Failed to parse replay data:', err);
+        sessionStorage.removeItem('replayVisualization');
+      }
+    }
+  }, []); // Only run once on mount
 
   // --- 4. THE RENDERER ---
   const currentFrame = traceFrames[currentFrameIndex];
@@ -2047,10 +2133,10 @@ const VisualizeTab: React.FC = () => {
                 const isAdding = val === adding;
                 const isRemoving = val === removing;
                 const position = isQueue ? idx : array.length - 1 - idx;
-                
+
                 return (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     className={`queue-stack-box ${isAdding ? 'adding' : ''} ${isRemoving ? 'removing' : ''}`}
                     style={{
                       animationDelay: `${idx * 0.1}s`
@@ -2085,17 +2171,17 @@ const VisualizeTab: React.FC = () => {
               const isComparing = comparing.includes(idx);
               const isSwapping = swapping.includes(idx);
               const isSorted = idx >= array.length - sorted;
-              
+
               const bubbleSize = Math.max(val * 6 + 40, 50);
-              
+
               return (
                 <div key={idx} className="bubble-wrapper" style={{
-                  animation: isSwapping ? 'bubbleSwap 0.6s ease-in-out' : 
-                            isComparing ? 'bubbleCompare 0.4s ease-in-out' : 'none'
+                  animation: isSwapping ? 'bubbleSwap 0.6s ease-in-out' :
+                    isComparing ? 'bubbleCompare 0.4s ease-in-out' : 'none'
                 }}>
-                  <div 
+                  <div
                     className={`bubble ${isSorted ? 'bubble-sorted' : ''} ${isComparing ? 'bubble-comparing' : ''} ${isSwapping ? 'bubble-swapping' : ''}`}
-                    style={{ 
+                    style={{
                       width: `${bubbleSize}px`,
                       height: `${bubbleSize}px`,
                     }}
@@ -2126,10 +2212,10 @@ const VisualizeTab: React.FC = () => {
               const isCurrent = idx === currentIndex;
               const isFound = idx === foundIndex;
               const isPassed = currentIndex !== undefined && idx < currentIndex;
-              
+
               return (
                 <div key={idx} className="search-box-wrapper">
-                  <div 
+                  <div
                     className={`search-box ${isCurrent ? 'searching' : ''} ${isFound ? 'found' : ''} ${isPassed ? 'passed' : ''}`}
                   >
                     {isCurrent && <div className="spotlight"></div>}
@@ -2150,7 +2236,7 @@ const VisualizeTab: React.FC = () => {
     if (vizType === 'transform') {
       const result = currentFrame.memory.result || [];
       const processing = currentFrame.memory.processing;
-      
+
       return (
         <div className="array-visualization transform-theme">
           <div className="transform-row">
@@ -2167,7 +2253,7 @@ const VisualizeTab: React.FC = () => {
               })}
             </div>
           </div>
-          
+
           {processing !== undefined && (
             <div className="transform-process">
               <div className="process-box">
@@ -2176,7 +2262,7 @@ const VisualizeTab: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           {result.length > 0 && (
             <div className="transform-row">
               <div className="transform-label">OUTPUT</div>
@@ -2202,7 +2288,7 @@ const VisualizeTab: React.FC = () => {
             const isSwapping = swapping.includes(idx);
             const isSorted = idx >= array.length - sorted;
             const isCurrent = idx === currentIndex;
-            
+
             let className = 'array-bar';
             if (isSwapping) className += ' swapping';
             else if (isComparing) className += ' comparing';
@@ -2211,9 +2297,9 @@ const VisualizeTab: React.FC = () => {
 
             return (
               <div key={idx} className="array-item">
-                <div 
+                <div
                   className={className}
-                  style={{ 
+                  style={{
                     height: `${Math.max(val * 8, 30)}px`,
                     transition: 'all 0.5s ease'
                   }}
@@ -2249,14 +2335,14 @@ const VisualizeTab: React.FC = () => {
           </span>
         </div>
       )}
-      
+
       <div className="hud-header">
         <div className="badge">STEP-BY-STEP VISUALIZATION</div>
         <div className="step">STEP {currentFrameIndex + 1} / {traceFrames.length}</div>
       </div>
       {/* Controls: Play/Pause and Sound Toggle */}
       <div className="control-panel">
-        <button 
+        <button
           onClick={handlePlayPause}
           className={`play-pause-btn ${isAutoPlaying ? 'playing' : 'paused'}`}
           title={isAutoPlaying ? 'Pause' : 'Play'}
@@ -2264,8 +2350,8 @@ const VisualizeTab: React.FC = () => {
           <i className={`fa-solid ${isAutoPlaying ? 'fa-pause' : 'fa-play'}`}></i>
           <span>{isAutoPlaying ? 'Pause' : 'Play'}</span>
         </button>
-        
-        <button 
+
+        <button
           onClick={() => setSoundEnabled(!soundEnabled)}
           className={`sound-toggle-btn ${soundEnabled ? 'sound-on' : 'sound-off'}`}
           title={soundEnabled ? 'Sound On - Click to mute' : 'Sound Off - Click to unmute'}
@@ -2273,7 +2359,7 @@ const VisualizeTab: React.FC = () => {
           <i className={`fa-solid ${soundEnabled ? 'fa-volume-up' : 'fa-volume-xmark'}`}></i>
           <span>{soundEnabled ? 'Sound On' : 'Sound Off'}</span>
         </button>
-        
+
         {isSpeaking && soundEnabled && (
           <div className="speaking-indicator">
             <div className="sound-wave"></div>
@@ -2314,12 +2400,39 @@ const VisualizeTab: React.FC = () => {
       </div>
 
       <div className="explanation-hud">
-        <i className={`fa-solid ${
-          currentFrame.action === 'WRITE' ? 'fa-pen-nib' : 
-          currentFrame.action === 'READ' ? 'fa-eye' : 
-          'fa-play'
-        }`}></i>
+        <i className={`fa-solid ${currentFrame.action === 'WRITE' ? 'fa-pen-nib' :
+          currentFrame.action === 'READ' ? 'fa-eye' :
+            'fa-play'
+          }`}></i>
         <span>{currentFrame.desc}</span>
+      </div>
+
+      {/* Save Button at Bottom */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '15px 10px',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <button
+          onClick={handleSaveVisualization}
+          className={`save-viz-btn ${saveStatus}`}
+          disabled={saveStatus === 'saving' || traceFrames.length === 0}
+          title="Save this visualization to view later"
+          style={{ width: '200px' }}
+        >
+          <i className={`fa-solid ${saveStatus === 'saving' ? 'fa-spinner fa-spin' :
+            saveStatus === 'saved' ? 'fa-check' :
+              saveStatus === 'error' ? 'fa-times' :
+                'fa-save'
+            }`}></i>
+          <span>
+            {saveStatus === 'saving' ? 'Saving...' :
+              saveStatus === 'saved' ? 'Saved!' :
+                saveStatus === 'error' ? 'Error' :
+                  'Save Visualization'}
+          </span>
+        </button>
       </div>
 
       <div className="progress-bar-container">
@@ -2327,7 +2440,7 @@ const VisualizeTab: React.FC = () => {
           <span>Step {currentFrameIndex + 1} of {traceFrames.length}</span>
           <span className="progress-percent">{Math.round(((currentFrameIndex + 1) / traceFrames.length) * 100)}%</span>
         </div>
-        <div 
+        <div
           className="progress-bar interactive"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -2335,11 +2448,11 @@ const VisualizeTab: React.FC = () => {
             const percentage = clickX / rect.width;
             const newIndex = Math.floor(percentage * traceFrames.length);
             const clampedIndex = Math.max(0, Math.min(traceFrames.length - 1, newIndex));
-            
+
             setIsAutoPlaying(false);
             stopSpeaking();
             setFrameIndex(clampedIndex);
-            
+
             // Speak the description when jumping to a step
             if (soundEnabled && traceFrames[clampedIndex]?.desc) {
               setTimeout(() => speakDescription(traceFrames[clampedIndex].desc, false), 100);
@@ -2352,29 +2465,29 @@ const VisualizeTab: React.FC = () => {
               const percentage = Math.max(0, Math.min(1, moveX / rect.width));
               const newIndex = Math.floor(percentage * traceFrames.length);
               const clampedIndex = Math.max(0, Math.min(traceFrames.length - 1, newIndex));
-              
+
               setIsAutoPlaying(false);
               stopSpeaking();
               setFrameIndex(clampedIndex);
             };
-            
+
             const handleMouseUp = () => {
               document.removeEventListener('mousemove', handleMouseMove);
               document.removeEventListener('mouseup', handleMouseUp);
-              
+
               // Speak the description when done dragging
               if (soundEnabled && currentFrame?.desc) {
                 setTimeout(() => speakDescription(currentFrame.desc, false), 100);
               }
             };
-            
+
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
           }}
           title="Click or drag to jump to any step"
         >
-          <div 
-            className="progress-fill" 
+          <div
+            className="progress-fill"
             style={{ width: `${((currentFrameIndex + 1) / traceFrames.length) * 100}%` }}
           ></div>
         </div>
@@ -2438,13 +2551,13 @@ const styles = `
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
   .play-pause-btn.paused {
-    background: linear-gradient(135deg, #00ff88, #00cc66);
-    color: #000;
+    background: linear-gradient(135deg, #bc13fe, #9010cc);
+    color: #fff;
   }
   .play-pause-btn.paused:hover {
-    background: linear-gradient(135deg, #00cc66, #009944);
+    background: linear-gradient(135deg, #d01fff, #bc13fe);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 255, 136, 0.4);
+    box-shadow: 0 6px 16px rgba(188, 19, 254, 0.4);
   }
   .play-pause-btn.playing {
     background: linear-gradient(135deg, #ffaa00, #ff6600);
@@ -2491,6 +2604,41 @@ const styles = `
     box-shadow: 0 4px 12px rgba(255, 0, 85, 0.4);
   }
   .sound-toggle-btn i {
+    font-size: 13px;
+  }
+  
+  /* SAVE BUTTON */
+  .save-viz-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #00f2ff, #0099aa);
+    color: #000;
+  }
+  .save-viz-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0099aa, #006677);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 242, 255, 0.4);
+  }
+  .save-viz-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .save-viz-btn.saved {
+    background: linear-gradient(135deg, #00ff88, #00cc66);
+  }
+  .save-viz-btn.error {
+    background: linear-gradient(135deg, #ff0055, #cc0044);
+    color: #fff;
+  }
+  .save-viz-btn i {
     font-size: 13px;
   }
   

@@ -84,6 +84,16 @@ const VisualizationSchema = new Schema({
   generatedAt: { type: Date, default: Date.now }
 });
 
+// 8. SAVED VISUALIZATIONS (User's saved algorithm visualizations)
+const SavedVisualizationSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  title: { type: String, required: true }, // e.g., "Bubble Sort", "Binary Search"
+  codeSnippet: { type: String, required: true }, // The actual code that was visualized
+  visualType: { type: String, required: true }, // e.g., "SORTING", "SEARCHING", "UNIVERSAL"
+  traceFrames: { type: String }, // JSON stringified trace frames for replay
+  createdAt: { type: Date, default: Date.now }
+});
+
 // Export all models
 module.exports = {
   User: mongoose.model('User', UserSchema),
@@ -92,5 +102,6 @@ module.exports = {
   GameProgress: mongoose.model('GameProgress', GameProgressSchema),
   ProgressTracking: mongoose.model('ProgressTracking', ProgressTrackingSchema),
   AnalysisResult: mongoose.model('AnalysisResult', AnalysisResultSchema),
-  Visualization: mongoose.model('Visualization', VisualizationSchema)
+  Visualization: mongoose.model('Visualization', VisualizationSchema),
+  SavedVisualization: mongoose.model('SavedVisualization', SavedVisualizationSchema)
 };

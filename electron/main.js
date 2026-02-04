@@ -9,6 +9,7 @@ const userController = require('./controllers/userController');
 const authController = require('./controllers/authController');
 const codeController = require('./controllers/codeController');
 const analysisController = require('./controllers/analysisController');
+const visualizationController = require('./controllers/visualizationController');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 let mainWindow;
@@ -133,9 +134,10 @@ const createWindow = async () => {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      devTools: false,
+      devTools: isDev, // Enable devTools in development
       enableRemoteModule: false,
-      sandbox: true,
+      sandbox: false, // Disable sandbox to help with preload loading
+      webSecurity: !isDev // Disable web security in dev for easier debugging
     },
     titleBarStyle: 'hidden',
     show: false,
@@ -254,6 +256,20 @@ app.on('ready', () => {
 
     ipcMain.handle('user:saveGameProgress', userController.saveGameProgress);
     console.log('✅ Registered: user:saveGameProgress');
+
+    // Visualizations
+    ipcMain.handle('viz:save', visualizationController.saveVisualization);
+    console.log('✅ Registered: viz:save');
+
+    ipcMain.handle('viz:getAll', visualizationController.getUserVisualizations);
+    console.log('✅ Registered: viz:getAll');
+
+    ipcMain.handle('viz:get', visualizationController.getVisualization);
+    console.log('✅ Registered: viz:get');
+
+    ipcMain.handle('viz:delete', visualizationController.deleteVisualization);
+    console.log('✅ Registered: viz:delete');
+
 
     // File System
     ipcMain.handle('files:readProject', async () => {

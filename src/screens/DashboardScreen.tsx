@@ -134,7 +134,7 @@ const DashboardScreen: React.FC = () => {
             <button className="nav-item" onClick={() => navigate('/editor')}>
               <i className="fa-solid fa-terminal"></i> Code Editor
             </button>
-            <button className="nav-item"><i className="fa-solid fa-eye"></i> Visuals</button>
+            <button className="nav-item" onClick={() => navigate('/visuals')}><i className="fa-solid fa-eye"></i> Visuals</button>
           </nav>
 
           <div className="sidebar-footer">

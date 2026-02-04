@@ -21,6 +21,7 @@ import DebugRaceScreen from './screens/DebugRaceScreen';
 import PredictGameScreen from './screens/PredictGameScreen';
 import BugHuntScreen from './screens/BugHuntScreen';
 import ErrorMatchScreen from './screens/ErrorMatchScreen';
+import VisualsScreen from './screens/VisualsScreen';
 import SimpleTitlebar from './components/SimpleTitlebar';
 
 function AppLayout() {
@@ -137,6 +138,11 @@ function AppLayout() {
           <Route path="/games/bughunt" element={isAuthenticated ? <BugHuntScreen /> : <Navigate to="/login" replace />} />
           <Route path="/games/predict" element={isAuthenticated ? <PredictGameScreen /> : <Navigate to="/login" replace />} />
           <Route path="/games/puzzle" element={isAuthenticated ? <LogicPuzzleScreen /> : <Navigate to="/login" replace />} />
+
+          <Route
+            path="/visuals"
+            element={isAuthenticated ? <VisualsScreen /> : <Navigate to="/login" replace />}
+          />
 
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
