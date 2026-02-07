@@ -795,7 +795,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     tabActive: {
         color: '#ffffff',
-        borderBottomColor: '#007acc'
+        borderBottomColor: '#bc13fe'
     },
     container: {
         flex: 1,
@@ -825,7 +825,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     commitButton: {
         flex: 1,
-        background: '#0e639c',
+        background: '#bc13fe',
         border: 'none',
         borderRadius: '2px',
         color: '#ffffff',
@@ -945,7 +945,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         textAlign: 'center'
     },
     primaryButton: {
-        background: '#0e639c',
+        background: '#bc13fe',
         border: 'none',
         borderRadius: '2px',
         color: '#ffffff',
@@ -986,7 +986,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         flex: 1
     },
     cloneButton: {
-        background: '#0e639c',
+        background: '#bc13fe',
         border: 'none',
         borderRadius: '2px',
         color: '#ffffff',

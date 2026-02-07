@@ -31,6 +31,8 @@ export const EditorLayout: React.FC = () => {
 
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
+  const [isResizingAnalysis, setIsResizingAnalysis] = useState(false);
+  const analysisStore = useAnalysisStore();
   const errorStates = useRef<Record<string, boolean>>({});
 
   const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
@@ -108,12 +110,16 @@ export const EditorLayout: React.FC = () => {
       if (isResizingTerminal) {
         editorStore.setTerminalHeight(Math.max(100, Math.min(600, window.innerHeight - e.clientY - 22)));
       }
+      if (isResizingAnalysis) {
+        analysisStore.setPanelWidth(Math.max(300, Math.min(800, window.innerWidth - e.clientX)));
+      }
     };
     const handleMouseUp = () => {
       setIsResizingSidebar(false);
       setIsResizingTerminal(false);
+      setIsResizingAnalysis(false);
     };
-    if (isResizingSidebar || isResizingTerminal) {
+    if (isResizingSidebar || isResizingTerminal || isResizingAnalysis) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -121,7 +127,7 @@ export const EditorLayout: React.FC = () => {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizingSidebar, isResizingTerminal]);
+  }, [isResizingSidebar, isResizingTerminal, isResizingAnalysis]);
 
   // Auto-run when static errors are resolved
   useEffect(() => {
@@ -620,7 +626,21 @@ export const EditorLayout: React.FC = () => {
         </main>
 
         {/* Analysis Panel (LumoFlow) */}
-        <AnalysisPanel />
+        {analysisStore.isVisible && (
+          <>
+            <div
+              onMouseDown={() => setIsResizingAnalysis(true)}
+              style={{
+                width: '4px',
+                cursor: 'col-resize',
+                background: isResizingAnalysis ? '#bc13fe' : 'transparent',
+                transition: 'background 0.2s',
+                zIndex: 10
+              }}
+            />
+            <AnalysisPanel />
+          </>
+        )}
       </div>
 
       {/* Status Bar */}

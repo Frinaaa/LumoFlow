@@ -35,6 +35,8 @@ interface AnalysisState {
   setFrameIndex: (index: number | ((prev: number) => number)) => void;
   togglePlay: () => void;
   setLiveVisual: (result: any) => void;
+  panelWidth: number;
+  setPanelWidth: (width: number) => void;
 }
 
 // 4. Implementation
@@ -92,4 +94,6 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
       trackStats({ conceptsVisualized: 1 });
     });
   },
+  panelWidth: 400,
+  setPanelWidth: (width) => set({ panelWidth: width }),
 }));
