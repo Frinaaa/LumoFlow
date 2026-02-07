@@ -12,6 +12,18 @@ export const useFileOperations = () => {
   const editorStore = useEditorStore();
   const fileStore = useFileStore();
 
+  // Helper to refresh Git status automatically
+  const refreshGitStatus = async () => {
+    try {
+      const { useGitOperations } = await import('./useGitOperations');
+      const { checkStatus } = useGitOperations();
+      await checkStatus();
+    } catch (e) {
+      // Quietly skip if Git is not initialized or useGitOperations fails
+      console.log('Git auto-refresh skipped (normal for non-git workspaces)');
+    }
+  };
+
   const openFile = async (filePath: string): Promise<boolean> => {
     try {
       console.log('Reading file:', filePath);
@@ -46,6 +58,10 @@ export const useFileOperations = () => {
 
       editorStore.markTabDirty(tabId, false);
       editorStore.appendOutputData(`✅ Saved & Synced: ${tab.fileName}\n`);
+
+      // Auto-refresh Git status after save
+      await refreshGitStatus();
+
       return true;
     } catch (error: any) {
       editorStore.appendOutputData(`❌ Error saving: ${error.message}\n`);
@@ -73,6 +89,10 @@ export const useFileOperations = () => {
       await refreshFiles();
       await openFile(newFilePath);
       editorStore.appendOutputData(`✅ Created: ${fileName}\n`);
+
+      // Auto-refresh Git status to show the new file in Source Control
+      await refreshGitStatus();
+
       return true;
     } catch (error: any) {
       console.error('Create file error:', error);
@@ -90,6 +110,10 @@ export const useFileOperations = () => {
       await refreshFiles();
       editorStore.appendOutputData(`✅ Created folder: ${folderName}\n`);
       editorStore.setWorkspaceStatus('Folder Opened');
+
+      // Auto-refresh Git status for folders
+      await refreshGitStatus();
+
       return true;
     } catch (error: any) {
       editorStore.appendOutputData(`❌ Error: ${error.message}\n`);
@@ -112,6 +136,10 @@ export const useFileOperations = () => {
 
       const fileName = filePath.split(/[\\/]/).pop();
       editorStore.appendOutputData(`✅ Deleted: ${fileName}\n`);
+
+      // Auto-refresh Git status after deletion
+      await refreshGitStatus();
+
       return true;
     } catch (error: any) {
       editorStore.appendOutputData(`❌ Error: ${error.message}\n`);
@@ -153,8 +181,29 @@ export const useFileOperations = () => {
 
       if (result && !result.canceled && result.folderPath) {
         console.log('Setting workspace to:', result.folderPath);
-        const folderName = result.folderPath.split(/[\\/]/).pop() || 'Workspace';
+        const folderName = result.folderPath.split(/[\\\/]/).pop() || 'Workspace';
         fileStore.setWorkspace(result.folderPath, folderName);
+
+        // Save to localStorage for persistence
+        localStorage.setItem('lumoflow_workspace', JSON.stringify({
+          path: result.folderPath,
+          name: folderName
+        }));
+        console.log('💾 Workspace saved to localStorage:', result.folderPath);
+
+        // Sync with backend - update projectDir in main process
+        if ((window as any).api?.setWorkspace) {
+          try {
+            const syncResult = await (window as any).api.setWorkspace(result.folderPath);
+            if (syncResult.success) {
+              console.log('✅ Backend workspace synced:', syncResult.path);
+            } else {
+              console.warn('⚠️ Failed to sync backend workspace:', syncResult.error);
+            }
+          } catch (e) {
+            console.error('Error syncing workspace with backend:', e);
+          }
+        }
 
         console.log('Refreshing files...');
         const filesRefreshed = await refreshFiles();

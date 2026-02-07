@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from './stores/editorStore';
 import { useFileStore } from './stores/fileStore';
 import { useFileOperations } from './hooks/useFileOperations';
-// 🟢 ADD THIS IMPORT at the top of the file
-import { useEditor } from '../context/EditorContext';
 
 // ... rest of imports ...
 // Components
@@ -40,26 +38,57 @@ export const EditorLayout: React.FC = () => {
   // Initialize data on mount
   useEffect(() => {
     const init = async () => {
-      // Load files and sync workspace
-      try {
-        await fileOps.refreshFiles();
-      } catch (e) {
-        console.error('Error refreshing files:', e);
+      // 1. Try to restore workspace from localStorage (like VS Code)
+      const savedWorkspace = localStorage.getItem('lumoflow_workspace');
+      if (savedWorkspace) {
+        try {
+          const { path, name } = JSON.parse(savedWorkspace);
+          console.log('🔄 Restoring workspace from localStorage:', path);
+          fileStore.setWorkspace(path, name);
+
+          // Sync with backend - update projectDir in main process
+          if ((window as any).api?.setWorkspace) {
+            const result = await (window as any).api.setWorkspace(path);
+            if (result.success) {
+              console.log('✅ Backend workspace synced:', result.path);
+            } else {
+              console.warn('⚠️ Failed to sync backend workspace:', result.error);
+            }
+          }
+
+          await fileOps.refreshFiles();
+        } catch (e) {
+          console.error('Error restoring workspace:', e);
+        }
       }
 
-      if ((window as any).api?.getWorkspace) {
+      // 2. Load files and sync workspace from backend (fallback)
+      if (!savedWorkspace) {
         try {
-          const workspace = await (window as any).api.getWorkspace();
-          if (workspace.path) {
-            fileStore.setWorkspace(workspace.path, workspace.name);
-          }
+          await fileOps.refreshFiles();
         } catch (e) {
-          console.error('Error loading workspace:', e);
+          console.error('Error refreshing files:', e);
+        }
+
+        if ((window as any).api?.getWorkspace) {
+          try {
+            const workspace = await (window as any).api.getWorkspace();
+            if (workspace.path) {
+              fileStore.setWorkspace(workspace.path, workspace.name);
+              // Save to localStorage for next time
+              localStorage.setItem('lumoflow_workspace', JSON.stringify({
+                path: workspace.path,
+                name: workspace.name
+              }));
+            }
+          } catch (e) {
+            console.error('Error loading workspace:', e);
+          }
         }
       }
     };
     init();
-  }, [fileOps, fileStore]);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', editorStore.theme);

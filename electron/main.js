@@ -117,7 +117,11 @@ async function handleGitHubOAuth(code) {
       picture: userRes.data.avatar_url
     });
 
-    return result;
+    // Return both the app result and the GitHub token
+    return {
+      ...result,
+      githubAccessToken: accessToken
+    };
   } catch (err) {
     console.error("GitHub OAuth error:", err.message);
     return { success: false, msg: "GitHub authentication failed: " + err.message };
@@ -443,14 +447,6 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: files:moveFile');
 
-    // VERIFICATION: Test if handler is accessible
-    console.log('🔍 Verifying files:moveFile handler...');
-    const handlers = ipcMain._events || {};
-    if (handlers['files:moveFile']) {
-      console.log('✅ files:moveFile handler is accessible!');
-    } else {
-      console.error('❌ files:moveFile handler NOT accessible!');
-    }
 
     ipcMain.handle('files:createFolder', async (event, folderName) => {
       try {
@@ -626,6 +622,21 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: files:getWorkspace');
 
+    // Set workspace directory (for persistence)
+    ipcMain.handle('files:setWorkspace', (event, workspacePath) => {
+      try {
+        if (fs.existsSync(workspacePath)) {
+          projectDir = workspacePath;
+          console.log('📁 Workspace updated to:', projectDir);
+          return { success: true, path: projectDir };
+        }
+        return { success: false, error: 'Path does not exist' };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
+    console.log('✅ Registered: files:setWorkspace');
+
     // Window Controls - Use BrowserWindow.getFocusedWindow() to get current window
     ipcMain.handle('window:minimize', (event) => {
       console.log('🔵 window:minimize handler called');
@@ -798,6 +809,13 @@ app.on('ready', () => {
           if (error) {
             resolve({ success: false, error: stderr || error.message });
           } else {
+            // Extract repo name from URL and update projectDir to the cloned folder
+            const repoName = url.split('/').pop()?.replace('.git', '');
+            if (repoName) {
+              const newProjectDir = path.join(clonePath, repoName);
+              projectDir = newProjectDir;
+              console.log('📁 Updated projectDir after clone:', projectDir);
+            }
             resolve({ success: true, message: 'Repository cloned successfully' });
           }
         });
@@ -1001,6 +1019,25 @@ app.on('ready', () => {
       });
     });
     console.log('✅ Registered: git:remote');
+
+    ipcMain.handle('git:config', async (event, { key, value, repoPath }) => {
+      return new Promise((resolve) => {
+        try {
+          const safePath = resolveSafePath(repoPath);
+          const cmd = `git config ${key} "${value}"`;
+          exec(cmd, { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: `Config ${key} set successfully` });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
+      });
+    });
+    console.log('✅ Registered: git:config');
 
     // Dialog Handlers
     ipcMain.handle('window:new', () => {

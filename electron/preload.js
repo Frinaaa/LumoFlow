@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('api', {
   moveFile: (oldPath, newPath) => ipcRenderer.invoke('files:moveFile', oldPath, newPath).catch(err => ({ success: false, msg: err.message })),
   searchFiles: (payload) => ipcRenderer.invoke('files:search', payload).catch(err => []),
   getWorkspace: () => ipcRenderer.invoke('files:getWorkspace').catch(err => ({ path: '', name: '' })),
+  setWorkspace: (workspacePath) => ipcRenderer.invoke('files:setWorkspace', workspacePath).catch(err => ({ success: false, error: err.message })),
 
   // Terminal
   runCode: (payload) => ipcRenderer.invoke('terminal:runCode', payload).catch(err => ({ stdout: "", stderr: err.message })),
@@ -90,6 +91,7 @@ contextBridge.exposeInMainWorld('api', {
   gitLog: (data) => ipcRenderer.invoke('git:log', data).catch(err => ({ success: false, error: err.message })),
   gitDiff: (data) => ipcRenderer.invoke('git:diff', data).catch(err => ({ success: false, error: err.message })),
   gitRemote: (data) => ipcRenderer.invoke('git:remote', data).catch(err => ({ success: false, error: err.message })),
+  gitConfig: (data) => ipcRenderer.invoke('git:config', data).catch(err => ({ success: false, error: err.message })),
 
   // System
   getAppInfo: () => ipcRenderer.invoke('app:info').catch(err => ({ appVersion: 'unknown', isDev: false })),

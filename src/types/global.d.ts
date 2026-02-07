@@ -8,7 +8,7 @@ interface Window {
     logout: () => Promise<any>;
     forgotPassword: (email: string) => Promise<{ success: boolean; msg: string }>;
     resetPassword: (data: any) => Promise<any>;
-    
+
     // --- OAuth ---
     googleOAuth: (code: string) => Promise<any>;
     githubOAuth: (code: string) => Promise<any>;
@@ -21,7 +21,7 @@ interface Window {
     // --- User Data ---
     getDashboardStats: (userId: string) => Promise<any>;
     updateProfile: (data: any) => Promise<any>;
-    
+
     // --- File System & Terminal ---
     readProjectFiles: () => Promise<Array<{ name: string; path: string }>>;
     readFile: (filePath: string) => Promise<string>;
@@ -32,32 +32,35 @@ interface Window {
     renameFile: (oldPath: string, newName: string) => Promise<any>;
     moveFile: (oldPath: string, newPath: string) => Promise<{ success: boolean; newPath?: string; msg?: string }>;
     searchFiles: (payload: { query: string; rootPath: string }) => Promise<Array<{ filePath: string; line: number; preview: string }>>;
+    getWorkspace: () => Promise<{ path: string; name: string }>;
+    setWorkspace: (workspacePath: string) => Promise<{ success: boolean; path?: string; error?: string }>;
     runCode: (payload: { filePath: string; code: string }) => Promise<{ stdout: string; stderr: string }>;
     executeCommand: (command: string) => Promise<string>;
-    
+
+
     // --- Dialogs ---
     openFileDialog: () => Promise<{ canceled: boolean; filePath: string; fileName: string; content: string }>;
     openFolderDialog: () => Promise<{ canceled: boolean; folderPath: string; files: any[] }>;
     saveFileAs: (content: string) => Promise<{ canceled: boolean; filePath: string; fileName: string }>;
-    
+
     // --- Window Controls ---
     newWindow: () => Promise<void>;
     minimizeWindow: () => Promise<void>;
     maximizeWindow: () => Promise<void>;
     closeWindow: () => Promise<void>;
     toggleDevTools: () => Promise<void>;
-    
+
     // --- Code Management (Database) ---
     saveCodeToDatabase: (data: { filePath: string; content: string; userId?: string }) => Promise<any>;
     loadUserProjects: (userId: string) => Promise<any>;
     loadFileFromDatabase: (fileId: string) => Promise<any>;
     deleteFileFromDatabase: (fileId: string) => Promise<any>;
     createProject: (data: { userId: string; projectName: string; language?: string }) => Promise<any>;
-    
+
     // --- Code Analysis ---
     analyzeCode: (data: { code: string; language: string; userId?: string; fileId?: string }) => Promise<any>;
     getAnalysisHistory: (userId: string) => Promise<any>;
-    
+
     // --- Git/GitHub Operations ---
     gitStatus: (repoPath?: string) => Promise<{ success: boolean; changes?: Array<{ status: string; file: string }>; error?: string }>;
     gitBranch: (repoPath?: string) => Promise<{ success: boolean; branch?: string; error?: string }>;
@@ -73,7 +76,7 @@ interface Window {
     gitLog: (data: { limit?: number; repoPath?: string }) => Promise<{ success: boolean; commits?: Array<{ hash: string; message: string }>; error?: string }>;
     gitDiff: (data: { file?: string; repoPath?: string }) => Promise<{ success: boolean; diff?: string; error?: string }>;
     gitRemote: (data: { action: 'add' | 'remove' | 'list'; name?: string; url?: string; repoPath?: string }) => Promise<{ success: boolean; remotes?: Array<{ name: string; url: string }>; message?: string; error?: string }>;
-    
+
     // --- System ---
     getAppInfo: () => Promise<any>;
     getUserDirectories: () => Promise<{ home: string; documents: string; desktop: string; downloads: string; pictures: string; music: string; videos: string }>;

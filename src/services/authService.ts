@@ -173,6 +173,11 @@ class AuthService {
 
       if (res.success && res.token && res.user) {
         this.setSession(res.token, res.user);
+        if (res.githubAccessToken) {
+          localStorage.setItem('github_token', res.githubAccessToken);
+        }
+        // Update user store
+        import('../stores/userStore').then(m => m.useUserStore.getState().setUser(res.user));
       }
       return res;
     } catch (e) {

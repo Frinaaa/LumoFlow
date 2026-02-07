@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useUserStore } from '../../../stores/userStore';
+import { useGitStore } from '../../stores/gitStore';
 
 interface ActivityBarProps {
   activeSidebar: string;
@@ -13,6 +14,7 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
   const editorStore = useEditorStore();
   const { user } = useUserStore();
+  const changes = useGitStore((state: any) => state.changes);
 
   const menuItemStyle: React.CSSProperties = {
     width: '100%',
@@ -183,10 +185,32 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         onMouseEnter={() => setHoveredIcon('github')}
         onMouseLeave={() => setHoveredIcon(null)}
         style={{
-          color: activeSidebar === 'GitHub' ? '#00f2ff' : hoveredIcon === 'github' ? '#00f2ff' : '#888'
+          color: activeSidebar === 'GitHub' ? '#00f2ff' : hoveredIcon === 'github' ? '#00f2ff' : '#888',
+          position: 'relative'
         }}
       >
         <i className="fa-brands fa-github"></i>
+        {changes.length > 0 && (
+          <span style={{
+            position: 'absolute',
+            top: '4px',
+            right: '4px',
+            background: '#007acc',
+            color: 'white',
+            fontSize: '9px',
+            fontWeight: 'bold',
+            minWidth: '14px',
+            height: '14px',
+            borderRadius: '7px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 2px',
+            pointerEvents: 'none'
+          }}>
+            {changes.length}
+          </span>
+        )}
       </button>
 
       <div style={{ flex: 1 }}></div>

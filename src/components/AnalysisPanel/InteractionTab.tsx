@@ -24,7 +24,6 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  isVoice?: boolean;
 }
 
 const InteractionTab: React.FC<InteractionTabProps> = ({ analysisData }) => {
@@ -612,8 +611,7 @@ Provide clear, helpful, and educational responses. Use examples when helpful.`;
       id: Date.now().toString(),
       role: 'user',
       content: input,
-      timestamp: new Date(),
-      isVoice: isListening
+      timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -858,19 +856,6 @@ Provide clear, helpful, and educational responses. Use examples when helpful.`;
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
                 position: 'relative'
               }}>
-                {msg.isVoice && (
-                  <div style={{
-                    fontSize: '10px',
-                    color: '#00f2ff',
-                    marginBottom: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    opacity: 0.8
-                  }}>
-                    <i className="fa-solid fa-microphone"></i> Transcription
-                  </div>
-                )}
                 {msg.content.split('\n').map((line, i) => (
                   <div key={i} style={{ marginBottom: line ? '6px' : '12px' }}>
                     {line.startsWith('•') || line.startsWith('-') ? (
