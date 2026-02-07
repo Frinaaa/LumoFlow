@@ -7,7 +7,7 @@ import GamesTab from './GamesTab';
 import { analysisPanelStyles } from './styles';
 
 const AnalysisPanel: React.FC = () => {
-    const { isVisible, data, isAnalyzing, togglePanel, setTraceFrames, setFrameIndex, setReplaying, panelWidth } = useAnalysisStore();
+    const { isVisible, data, isAnalyzing, togglePanel, setTraceFrames, setFrameIndex, setReplaying } = useAnalysisStore();
     const [activeTab, setActiveTab] = useState<'visualize' | 'explain' | 'interact' | 'games'>('visualize');
 
     // Handle replay visualization from sessionStorage
@@ -45,7 +45,7 @@ const AnalysisPanel: React.FC = () => {
     return (
         <>
             <style>{analysisPanelStyles}</style>
-            <div className="analysis-panel-wrapper" style={{ width: `${panelWidth}px`, borderLeft: '1px solid #333', display: 'flex', flexDirection: 'column' }}>
+            <div className="analysis-panel-wrapper" style={{ width: '400px', borderLeft: '1px solid #333' }}>
                 {/* Header */}
                 <div
                     style={{

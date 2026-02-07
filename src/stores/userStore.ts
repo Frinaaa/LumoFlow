@@ -105,10 +105,9 @@ export const useUserStore = create<UserState>()(
                         console.log("📥 STORE: Received Stats from DB:", res.stats);
 
                         const currentStats = get().stats;
+                        const currentActivity = get().recentActivity;
 
                         // Merge Strategy: Keep whichever is higher to prevent losing local progress 
-                        // during race conditions with the sync buffer.
-                        // Merge Strategy: Strictly keep whichever is higher
                         const mergedStats = {
                             linesWritten: Math.max(currentStats.linesWritten, res.stats.linesWritten || 0),
                             bugsDetected: Math.max(currentStats.bugsDetected, res.stats.bugsDetected || 0),
@@ -118,11 +117,27 @@ export const useUserStore = create<UserState>()(
                             xp: Math.max(currentStats.xp, res.stats.xp || 0)
                         };
 
+                        // 🟢 Activity Merge Strategy: Don't let local "just now" items vanish
+                        const incomingActivity = res.recentActivity || [];
+                        const mergedActivity = [...incomingActivity];
+
+                        // Keep local activities that are "just now" and not yet in the incoming list
+                        currentActivity.forEach(local => {
+                            if (local.time === 'just now') {
+                                const exists = incomingActivity.find((remote: any) =>
+                                    remote.title === local.title && remote.type === local.type
+                                );
+                                if (!exists) {
+                                    mergedActivity.unshift(local);
+                                }
+                            }
+                        });
+
                         set({
                             user: { ...res.user, ...mergedStats },
                             stats: mergedStats,
-                            recentActivity: res.recentActivity || [],
-                            skillMatrix: res.skillMatrix || []
+                            recentActivity: mergedActivity.slice(0, 10),
+                            skillMatrix: (res.skillMatrix && res.skillMatrix.length > 0) ? res.skillMatrix : get().skillMatrix
                         });
 
                         // Update local cache with merged values
