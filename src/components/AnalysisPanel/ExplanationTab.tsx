@@ -32,7 +32,7 @@ const ExplanationTab: React.FC<ExplanationTabProps> = () => {
     console.log('🔄 Generating explanations for:', activeTab?.fileName);
     const generatedExplanations = generateCodeExplanations(code);
     setExplanations(generatedExplanations);
-    
+
     // Stop any ongoing speech when switching files
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
@@ -145,7 +145,7 @@ const ExplanationTab: React.FC<ExplanationTabProps> = () => {
           <span style={{ color: '#00f2ff', fontSize: '13px', fontWeight: 'bold' }}>Student-Friendly Explanations</span>
         </div>
         <div style={{ fontSize: '11px', color: '#aaa', lineHeight: '1.5' }}>
-          Each section explains what the code does in simple language with examples. 
+          Each section explains what the code does in simple language with examples.
           Click the speaker icon to hear the explanation!
         </div>
       </div>
@@ -326,18 +326,19 @@ function generateCodeExplanations(code: string) {
     }
 
     // Function declarations
-    else if (/^function\s+/.test(trimmedLine) || /^(const|let)\s+\w+\s*=\s*(\(.*\)|function)/.test(trimmedLine)) {
-      const funcMatch = trimmedLine.match(/function\s+(\w+)\s*\((.*?)\)/) || 
-                       trimmedLine.match(/(const|let)\s+(\w+)\s*=\s*\((.*?)\)\s*=>/);
-      if (funcMatch) {
-        const funcName = funcMatch[1] === 'function' ? funcMatch[2] : funcMatch[2];
-        const params = funcMatch[1] === 'function' ? funcMatch[3] : funcMatch[3];
+    else if (/^function\s+/.test(trimmedLine) || /^(const|let|var)\s+\w+\s*=\s*(\(.*\)|function)/.test(trimmedLine)) {
+      const traditionalMatch = trimmedLine.match(/function\s+(\w+)\s*\((.*?)\)/);
+      const arrowMatch = trimmedLine.match(/(const|let|var)\s+(\w+)\s*=\s*\((.*?)\)\s*=>/);
+
+      if (traditionalMatch || arrowMatch) {
+        const funcName = traditionalMatch ? traditionalMatch[1] : arrowMatch![2];
+        const params = traditionalMatch ? traditionalMatch[2] : arrowMatch![3];
         explanations.push({
           line: lineNumber,
           code: trimmedLine,
           title: `Function: ${funcName}`,
-          explanation: `This creates a function called "${funcName}". A function is like a recipe - it's a set of instructions that we can use over and over again. ${params ? `It needs some ingredients (parameters): ${params}` : 'It doesn\'t need any ingredients to work.'}`,
-          example: `Think of "${funcName}" as a machine:\n- You give it inputs${params ? ` (${params})` : ''}\n- It does some work inside\n- It might give you back a result\n\nYou can use this machine whenever you need it by calling: ${funcName}(${params ? '...' : ''})`
+          explanation: `This creates a function called "${funcName}". A function is like a recipe - it's a set of instructions that we can use over and over again. ${params.trim() ? `It needs some ingredients (parameters): ${params}` : 'It doesn\'t need any ingredients to work.'}`,
+          example: `Think of "${funcName}" as a machine:\n- You give it inputs${params.trim() ? ` (${params})` : ''}\n- It does some work inside\n- It might give you back a result\n\nYou can use this machine whenever you need it by calling: ${funcName}(${params.trim() ? '...' : ''})`
         });
       }
     }
