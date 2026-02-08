@@ -110,13 +110,23 @@ const VirtualDebuggerTab: React.FC = () => {
 
         // 🟢 2. REFERENCE / UNDEFINED ERRORS
         if (m.includes('undefined') || m.includes('not found') || m.includes('is not defined') || m.includes('referenceerror')) {
+            // Try to extract variable name from message: "ReferenceError: x is not defined" or "name 'x' is not defined"
+            const nameMatch = msg.match(/(?:name|variable|symbol)?\s*['"]?([a-zA-Z_$][a-zA-Z0-9_$]*)['"]?\s*(?:is not defined|not found|is undefined|undefined)/i);
+            if (nameMatch && nameMatch[1] && nameMatch[1] !== 'not' && nameMatch[1] !== 'is') {
+                return `const ${nameMatch[1]} = "";`;
+            }
+
             if (isSingleWord) return `const ${trimCode} = "";`;
             // If it's something like "hyena = 5" and hyena is undefined
             if (trimCode.includes('=') || trimCode.includes('(')) {
-                const varName = trimCode.split(/[\s=({]/)[0].trim() || 'myVar';
-                return `const ${varName} = 0;`;
+                // If it's a function call like console.log(x), we don't want to declare 'console'
+                // We'd rather declare the first word if it looks like an assignment
+                if (trimCode.includes('=')) {
+                    const varName = trimCode.split(/[\s=({]/)[0].trim() || 'myVar';
+                    return `const ${varName} = 0;`;
+                }
             }
-            return `const ${trimCode.split(' ')[0]} = "";`;
+            return `const ${trimCode.split(/[ \t(]/)[0]} = "";`;
         }
 
         // 🟢 3. BRACKET / SCOPE ERRORS (Improved)
