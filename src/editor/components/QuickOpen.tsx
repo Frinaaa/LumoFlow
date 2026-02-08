@@ -135,7 +135,7 @@ export const QuickOpen: React.FC<QuickOpenProps> = ({ visible, onClose }) => {
                 style={{
                   padding: '10px 15px',
                   color: idx === selectedIndex ? '#fff' : '#ccc',
-                  background: idx === selectedIndex ? '#04395e' : 'transparent',
+                  background: idx === selectedIndex ? '#7c328eff' : 'transparent',
                   cursor: 'pointer',
                   borderBottom: '1px solid #3c3c3c',
                   transition: 'background 0.1s',
