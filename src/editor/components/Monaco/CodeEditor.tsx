@@ -28,7 +28,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const [showFindReplace, setShowFindReplace] = useState(false);
   const editorStore = useEditorStore();
   const analysisStore = useAnalysisStore();
-  const fileName = selectedFile ? selectedFile.split('\\').pop() : 'untitled';
+  const fileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'untitled';
 
   // Track Editor Session Start
   useEffect(() => {

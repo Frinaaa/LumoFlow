@@ -20,6 +20,7 @@ const mockEditorState = (
     (useEditorStore as unknown as jest.Mock).mockImplementation((selector: any) => {
         const state = {
             staticProblems: problems,
+            problems: problems,
             activeTabId: activeTabId,
             tabs: currentTabs
         };

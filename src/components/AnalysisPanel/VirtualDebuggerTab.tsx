@@ -11,17 +11,17 @@ interface FixStep {
 }
 
 const VirtualDebuggerTab: React.FC = () => {
-    const staticProblems = useEditorStore(state => state.staticProblems);
+    const problems = useEditorStore(state => state.problems);
     const activeTabId = useEditorStore(state => state.activeTabId);
     const tabs = useEditorStore(state => state.tabs);
 
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [fixSteps, setFixSteps] = useState<FixStep[]>([]);
 
-    // Group only 'error' type problems by file
+    // Group all problems (errors, warnings, etc.) by file
     const filesWithErrors = useMemo(() => {
         const groups: Record<string, any[]> = {};
-        staticProblems.filter(p => p.type === 'error').forEach(p => {
+        problems.forEach(p => {
             if (!groups[p.source]) groups[p.source] = [];
             groups[p.source].push(p);
         });
@@ -29,7 +29,7 @@ const VirtualDebuggerTab: React.FC = () => {
             fileName,
             problems: groups[fileName]
         }));
-    }, [staticProblems]);
+    }, [problems]);
 
     const activeTab = tabs.find(t => t.id === activeTabId);
 
@@ -110,43 +110,20 @@ const VirtualDebuggerTab: React.FC = () => {
 
         // 🟢 2. REFERENCE / UNDEFINED ERRORS
         if (m.includes('undefined') || m.includes('not found') || m.includes('is not defined') || m.includes('referenceerror')) {
-            // Try to extract variable name from message: "ReferenceError: x is not defined" or "name 'x' is not defined"
-            const nameMatch = msg.match(/(?:name|variable|symbol)?\s*['"]?([a-zA-Z_$][a-zA-Z0-9_$]*)['"]?\s*(?:is not defined|not found|is undefined|undefined)/i);
-            if (nameMatch && nameMatch[1] && nameMatch[1] !== 'not' && nameMatch[1] !== 'is') {
-                return `const ${nameMatch[1]} = "";`;
-            }
-
-            if (isSingleWord) return `const ${trimCode} = "";`;
-            // If it's something like "hyena = 5" and hyena is undefined
-            if (trimCode.includes('=') || trimCode.includes('(')) {
-                // If it's a function call like console.log(x), we don't want to declare 'console'
-                // We'd rather declare the first word if it looks like an assignment
-                if (trimCode.includes('=')) {
-                    const varName = trimCode.split(/[\s=({]/)[0].trim() || 'myVar';
-                    return `const ${varName} = 0;`;
-                }
-            }
-            return `const ${trimCode.split(/[ \t(]/)[0]} = "";`;
+            // Extract the variable name from the error message if possible
+            const varMatch = msg.match(/['"](\w+)['"] is not defined/i) || msg.match(/(\w+) is not defined/i) || msg.match(/variable ['"]?(\w+)['"]?/i);
+            const varName = varMatch ? varMatch[1] : (isSingleWord ? trimCode : 'myVar');
+            return `const ${varName} = "";`;
         }
 
-        // 🟢 3. BRACKET / SCOPE ERRORS (Improved)
-        if (m.includes('bracket') || m.includes('closing') || m.includes('unexpected end') || m.includes('curly') || m.includes('unexpected token')) {
-            // Case: missing opening ( but has closing )
-            if (trimCode.includes(')') && !trimCode.includes('(')) {
-                return trimCode.replace(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\)/, '$1()');
+        // 🟢 3. BRACKET / PARENTHESIS ERRORS
+        if (m.includes('bracket') || m.includes('parenthesis') || m.includes('unexpected token') || m.includes('closing') || m.includes('missing')) {
+            if (m.includes('unexpected token )') || (m.includes('unexpected token') && !msg.includes('(') && msg.includes(')'))) {
+                return trimCode.replace(/\)/g, '').trim(); // Remove the extra closing parenthesis
             }
-            // Case: missing closing ) but has opening (
-            if (trimCode.includes('(') && !trimCode.includes(')')) {
-                return `${trimCode})`;
-            }
-            // Case: missing closing } but has opening {
-            if (trimCode.includes('{') && !trimCode.includes('}')) {
-                return `${trimCode}\n}`;
-            }
-            // Case: generic unexpected closing )
-            if (trimCode.endsWith(');') && !trimCode.includes('(')) {
-                return trimCode.replace(');', '();');
-            }
+            if (trimCode.includes('(') && !trimCode.includes(')')) return `${trimCode})`;
+            if (trimCode.includes('{') && !trimCode.includes('}')) return `${trimCode} }`;
+            if (trimCode.includes('[') && !trimCode.includes(']')) return `${trimCode}]`;
         }
 
         // 🟢 4. SEMICOLON / TERMINATOR ERRORS
