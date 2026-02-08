@@ -13,9 +13,13 @@ interface CustomTitlebarProps {
 const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) => {
   const { minimize, maximize, close } = useWindowControls();
   const editorState = useEditor();
-  const analysisStore = useAnalysisStore();
   const editorStore = useEditorStore();
   const fileOps = useFileOperations();
+  const isAnalyzing = useAnalysisStore(state => state.isAnalyzing);
+  const isVisible = useAnalysisStore(state => state.isVisible);
+  const togglePanel = useAnalysisStore(state => state.togglePanel);
+  const setAnalyzing = useAnalysisStore(state => state.setAnalyzing);
+  const setAnalysisData = useAnalysisStore(state => state.setAnalysisData);
   const { activeTabId, tabs, toggleCommandPalette, toggleSidebar, toggleTerminal } = editorStore;
   const activeTab = tabs.find(t => t.id === activeTabId);
 
@@ -26,7 +30,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
     if (!activeTab) return;
 
     // 1. Open the panel immediately
-    if (!analysisStore.isVisible) analysisStore.togglePanel();
+    if (!isVisible) togglePanel();
 
     // The VisualizeTab will automatically detect the code and generate frames
     // No need to manually generate frames here anymore
@@ -34,19 +38,19 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
     // 2. Optional: Run background AI analysis if available
     try {
       if ((window as any).api?.analyzeCode) {
-        analysisStore.setAnalyzing(true);
+        setAnalyzing(true);
         const result = await (window as any).api.analyzeCode({
           code: activeTab.content,
           language: activeTab.language,
         });
         if (result.success) {
-          analysisStore.setAnalysisData(result.analysis);
+          setAnalysisData(result.analysis);
         }
       }
     } catch (backendErr) {
       console.warn("AI Backend Analysis not available:", backendErr);
     } finally {
-      analysisStore.setAnalyzing(false);
+      setAnalyzing(false);
     }
   };
 
@@ -233,10 +237,10 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
           <button
             className="purple-btn analyze"
             onClick={handleAnalyze}
-            disabled={analysisStore.isAnalyzing || !activeTab}
+            disabled={isAnalyzing || !activeTab}
             title="Analyze current file"
           >
-            {analysisStore.isAnalyzing ? (
+            {isAnalyzing ? (
               <i className="fa-solid fa-spinner fa-spin"></i>
             ) : (
               <i className="fa-solid fa-microchip"></i>
@@ -278,7 +282,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
           <div className="control-btn close" onClick={close} title="Close"><i className="fa-solid fa-xmark"></i></div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

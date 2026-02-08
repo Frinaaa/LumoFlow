@@ -4,11 +4,40 @@ import VisualizeTab from './VisualizeTab';
 import ExplanationTab from './ExplanationTab';
 import InteractionTab from './InteractionTab';
 import GamesTab from './GamesTab';
+import VirtualDebuggerTab from './VirtualDebuggerTab';
+import { useEditorStore } from '../../editor/stores/editorStore';
 import { analysisPanelStyles } from './styles';
 
 const AnalysisPanel: React.FC = () => {
-    const { isVisible, data, isAnalyzing, togglePanel, setTraceFrames, setFrameIndex, setReplaying } = useAnalysisStore();
-    const [activeTab, setActiveTab] = useState<'visualize' | 'explain' | 'interact' | 'games'>('visualize');
+    const isVisible = useAnalysisStore(state => state.isVisible);
+    const data = useAnalysisStore(state => state.data);
+    const isAnalyzing = useAnalysisStore(state => state.isAnalyzing);
+    const togglePanel = useAnalysisStore(state => state.togglePanel);
+    const setTraceFrames = useAnalysisStore(state => state.setTraceFrames);
+    const setFrameIndex = useAnalysisStore(state => state.setFrameIndex);
+    const setReplaying = useAnalysisStore(state => state.setReplaying);
+    const panelWidth = useAnalysisStore(state => state.panelWidth);
+    const storeTabId = useAnalysisStore(state => state.activeTabId);
+    const openTab = useAnalysisStore(state => state.openTab);
+
+    const staticProblems = useEditorStore(state => state.staticProblems);
+    const activeTabId = useEditorStore(state => state.activeTabId);
+    const tabs = useEditorStore(state => state.tabs);
+
+    // Only show Debug tab if there are actual ERRORS (not warnings)
+    const activeFileData = tabs.find(t => t.id === activeTabId);
+    const hasActiveErrors = staticProblems.filter(p => (!activeFileData || p.source === activeFileData.fileName) && p.type === 'error').length > 0;
+    const hasAnyErrors = staticProblems.filter(p => p.type === 'error').length > 0;
+
+    const activeTab = (hasAnyErrors && storeTabId === 'debug') ? 'debug' : storeTabId;
+    const setActiveTab = (tab: any) => openTab(tab);
+
+    // Switch away from debug tab if ALL errors are cleared
+    React.useEffect(() => {
+        if (!hasAnyErrors && activeTab === 'debug') {
+            setActiveTab('visualize');
+        }
+    }, [hasAnyErrors, activeTab]);
 
     // Handle replay visualization from sessionStorage
     React.useEffect(() => {
@@ -45,7 +74,38 @@ const AnalysisPanel: React.FC = () => {
     return (
         <>
             <style>{analysisPanelStyles}</style>
-            <div className="analysis-panel-wrapper" style={{ width: '400px', borderLeft: '1px solid #333' }}>
+            <div
+                className="analysis-panel-wrapper"
+                style={{
+                    width: `${panelWidth}px`,
+                    borderLeft: '1px solid #333',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative'
+                }}
+            >
+                {/* AI Analysis Overlay */}
+                {isAnalyzing && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.85)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        backdropFilter: 'blur(4px)'
+                    }}>
+                        <div className="spinner-neon"></div>
+                        <div style={{ color: '#00f2ff', marginTop: '15px', fontWeight: 'bold', fontSize: '12px' }}>LUMO AI ANALYZING...</div>
+                        <div style={{ color: '#888', marginTop: '8px', fontSize: '10px' }}>Understanding your code journey...</div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div
                     style={{
@@ -103,6 +163,20 @@ const AnalysisPanel: React.FC = () => {
                     >
                         <i className="fa-solid fa-gamepad"></i> Games
                     </button>
+                    {hasAnyErrors && (
+                        <button
+                            className={`analysis-tab-btn ${activeTab === 'debug' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('debug')}
+                            style={{
+                                borderColor: '#f14c4c',
+                                color: activeTab === 'debug' ? '#000' : '#f14c4c',
+                                background: activeTab === 'debug' ? '#f14c4c' : 'transparent',
+                                animation: (hasActiveErrors && activeTab !== 'debug') ? 'pulse 2s infinite' : 'none'
+                            }}
+                        >
+                            <i className="fa-solid fa-bug-slash"></i> Debug
+                        </button>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -135,6 +209,7 @@ const AnalysisPanel: React.FC = () => {
                         )
                     )}
                     {activeTab === 'games' && <GamesTab />}
+                    {activeTab === 'debug' && <VirtualDebuggerTab />}
                 </div>
             </div>
         </>

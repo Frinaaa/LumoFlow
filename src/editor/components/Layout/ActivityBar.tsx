@@ -195,7 +195,7 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
             position: 'absolute',
             top: '4px',
             right: '4px',
-            background: '#007acc',
+            background: '#bc13fe',
             color: 'white',
             fontSize: '9px',
             fontWeight: 'bold',

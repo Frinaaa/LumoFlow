@@ -364,7 +364,7 @@ export const GitHubSidebar: React.FC = () => {
                             outline: '1px solid transparent',
                             minHeight: '80px'
                         }}
-                        onFocus={(e) => e.target.style.outline = '1px solid #007acc'}
+                        onFocus={(e) => e.target.style.outline = '1px solid #bc13fe'}
                         onBlur={(e) => e.target.style.outline = '1px solid transparent'}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -522,7 +522,7 @@ export const GitHubSidebar: React.FC = () => {
                                     borderLeft: '3px solid transparent',
                                     cursor: 'default'
                                 }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#2a2d2e'; e.currentTarget.style.borderLeftColor = '#007acc'; }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#2a2d2e'; e.currentTarget.style.borderLeftColor = '#bc13fe'; }}
                                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderLeftColor = 'transparent'; }}
                                 >
                                     <div style={{ fontSize: '13px', color: '#e0e0e0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
@@ -795,7 +795,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     tabActive: {
         color: '#ffffff',
-        borderBottomColor: '#007acc'
+        borderBottomColor: '#bc13fe'
     },
     container: {
         flex: 1,
@@ -825,7 +825,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     commitButton: {
         flex: 1,
-        background: '#0e639c',
+        background: '#bc13fe',
         border: 'none',
         borderRadius: '2px',
         color: '#ffffff',
@@ -945,7 +945,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         textAlign: 'center'
     },
     primaryButton: {
-        background: '#0e639c',
+        background: '#bc13fe',
         border: 'none',
         borderRadius: '2px',
         color: '#ffffff',
@@ -986,7 +986,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         flex: 1
     },
     cloneButton: {
-        background: '#0e639c',
+        background: '#bc13fe',
         border: 'none',
         borderRadius: '2px',
         color: '#ffffff',

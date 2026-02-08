@@ -31,6 +31,11 @@ export const EditorLayout: React.FC = () => {
 
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
+  const [isResizingAnalysis, setIsResizingAnalysis] = useState(false);
+
+  const openTab = useAnalysisStore(state => state.openTab);
+  const setPanelWidth = useAnalysisStore(state => state.setPanelWidth);
+  const isVisible = useAnalysisStore(state => state.isVisible);
   const errorStates = useRef<Record<string, boolean>>({});
 
   const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
@@ -108,12 +113,16 @@ export const EditorLayout: React.FC = () => {
       if (isResizingTerminal) {
         editorStore.setTerminalHeight(Math.max(100, Math.min(600, window.innerHeight - e.clientY - 22)));
       }
+      if (isResizingAnalysis) {
+        setPanelWidth(Math.max(300, Math.min(800, window.innerWidth - e.clientX)));
+      }
     };
     const handleMouseUp = () => {
       setIsResizingSidebar(false);
       setIsResizingTerminal(false);
+      setIsResizingAnalysis(false);
     };
-    if (isResizingSidebar || isResizingTerminal) {
+    if (isResizingSidebar || isResizingTerminal || isResizingAnalysis) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -121,7 +130,7 @@ export const EditorLayout: React.FC = () => {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizingSidebar, isResizingTerminal]);
+  }, [isResizingSidebar, isResizingTerminal, isResizingAnalysis, setPanelWidth]);
 
   // Auto-run when static errors are resolved
   useEffect(() => {
@@ -142,9 +151,14 @@ export const EditorLayout: React.FC = () => {
       fileOps.runCode(activeTab.id);
     }
 
+    // 🟢 POP UP DEBUG PANEL: If new errors appear, jump to Debug tab
+    if (!hadErrors && hasErrors) {
+      openTab('debug');
+    }
+
     // Update state map
     errorStates.current[activeTab.id] = hasErrors;
-  }, [activeTab?.fileName, activeTab?.id, editorStore.staticProblems, fileOps]);
+  }, [activeTab?.fileName, activeTab?.id, editorStore.staticProblems, fileOps, openTab]);
 
   useEffect(() => {
     const handleOpenFile = (e: any) => {
@@ -620,7 +634,21 @@ export const EditorLayout: React.FC = () => {
         </main>
 
         {/* Analysis Panel (LumoFlow) */}
-        <AnalysisPanel />
+        {isVisible && (
+          <>
+            <div
+              onMouseDown={() => setIsResizingAnalysis(true)}
+              style={{
+                width: '4px',
+                cursor: 'col-resize',
+                background: isResizingAnalysis ? '#bc13fe' : 'transparent',
+                transition: 'background 0.2s',
+                zIndex: 10
+              }}
+            />
+            <AnalysisPanel />
+          </>
+        )}
       </div>
 
       {/* Status Bar */}

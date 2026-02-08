@@ -35,6 +35,11 @@ interface AnalysisState {
   setFrameIndex: (index: number | ((prev: number) => number)) => void;
   togglePlay: () => void;
   setLiveVisual: (result: any) => void;
+  panelWidth: number;
+  setPanelWidth: (width: number) => void;
+  showPanel: (val?: boolean) => void;
+  openTab: (tabId: 'visualize' | 'explain' | 'interact' | 'games' | 'debug') => void;
+  activeTabId: string;
 }
 
 // 4. Implementation
@@ -92,4 +97,9 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
       trackStats({ conceptsVisualized: 1 });
     });
   },
+  panelWidth: 400,
+  setPanelWidth: (width) => set({ panelWidth: width }),
+  showPanel: (val = true) => set({ isVisible: val }),
+  activeTabId: 'visualize',
+  openTab: (tabId) => set({ activeTabId: tabId, isVisible: true }),
 }));

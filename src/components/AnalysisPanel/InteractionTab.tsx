@@ -27,9 +27,13 @@ interface Message {
 }
 
 const InteractionTab: React.FC<InteractionTabProps> = ({ analysisData }) => {
+  const tabs = useEditorStore(state => state.tabs);
+  const activeTabId = useEditorStore(state => state.activeTabId);
   const editorStore = useEditorStore();
-  const { tabs, activeTabId } = editorStore;
-  const activeTab = tabs.find(t => t.id === activeTabId);
+
+  const activeTab = React.useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
+  const cursorLine = activeTab?.cursorPosition?.line || 1;
+  const cursorColumn = activeTab?.cursorPosition?.column || 1;
 
   const [messages, setMessages] = useState<Message[]>([
     {
