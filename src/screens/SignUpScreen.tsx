@@ -28,6 +28,8 @@ const SignUpScreen: React.FC = () => {
 
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // --- 2. REAL-TIME VALIDATION ENGINE ---
   useEffect(() => {
@@ -165,14 +167,20 @@ const SignUpScreen: React.FC = () => {
             {/* PASSWORD FIELD */}
             <div className="form-group">
               <label>Password</label>
-              <input
-                type="password" name="password"
-                className={`signup-input ${getInputClass('password')}`}
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
-              />
+              <div className="input-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"} name="password"
+                  className={`signup-input ${getInputClass('password')}`}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+                <i
+                  className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} input-icon-toggle`}
+                  onClick={() => setShowPassword(!showPassword)}
+                ></i>
+              </div>
               {/* Password Requirements List */}
               <div className="password-criteria">
                 <span className={passwordCriteria.length ? 'valid' : ''}>8+ Chars</span>
@@ -187,13 +195,17 @@ const SignUpScreen: React.FC = () => {
               <label>Confirm Password</label>
               <div className="input-wrapper">
                 <input
-                  type="password" name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"} name="confirmPassword"
                   className={`signup-input ${getInputClass('confirmPassword')}`}
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   onBlur={handleBlur}
                 />
+                <i
+                  className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'} input-icon-toggle confirm`}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                ></i>
                 {touched.confirmPassword && !errors.confirmPassword && formData.confirmPassword && <i className="fa-solid fa-check input-icon-status success"></i>}
               </div>
               {touched.confirmPassword && errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}

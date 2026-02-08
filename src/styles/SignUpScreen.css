@@ -13,16 +13,20 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden; /* Prevents unwanted scrolling */
+  overflow: hidden;
+  /* Prevents unwanted scrolling */
 }
 
 /* --- Background Grid --- */
 .bg-grid {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background-image: 
-      linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 50px 50px;
   z-index: 0;
   pointer-events: none;
@@ -44,9 +48,10 @@
 .about-btn {
   background: transparent;
   color: white;
-  border: 1px solid var(--accent-purple); 
+  border: 1px solid var(--accent-purple);
   padding: 8px 24px;
-  border-radius: 30px; /* Pill-shaped curved boundary */
+  border-radius: 30px;
+  /* Pill-shaped curved boundary */
   font-family: 'Orbitron', sans-serif;
   font-size: 11px;
   font-weight: 600;
@@ -78,20 +83,25 @@
   max-width: 440px;
   background: var(--glass-bg);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px; /* Curved outer boundary */
+  border-radius: 24px;
+  /* Curved outer boundary */
   padding: clamp(20px, 4vh, 35px);
   backdrop-filter: blur(15px);
   text-align: center;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
   position: relative;
-  overflow: hidden; /* Keeps internal elements inside curves */
+  overflow: hidden;
+  /* Keeps internal elements inside curves */
 }
 
 /* Top Neon Gradient Bar */
 .signup-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 4px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
   background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
 }
 
@@ -124,14 +134,22 @@
 
 .signup-input {
   width: 100%;
-  background: rgba(40, 35, 50, 0.6); /* Purple-tinted dark background */
+  background: rgba(40, 35, 50, 0.6);
+  /* Purple-tinted dark background */
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 10px 14px;
+  padding-right: 40px;
+  /* Space for the eye icon */
   border-radius: 10px;
   color: white;
   font-size: 0.9rem;
   outline: none;
   transition: all 0.2s;
+}
+
+/* Specific padding for confirm field which has TWO icons potentially */
+div:has(> .input-icon-toggle.confirm) .signup-input {
+  padding-right: 65px;
 }
 
 .signup-input:focus {
@@ -220,11 +238,23 @@
 
 /* --- Laptop Adjustment (Media Query) --- */
 @media screen and (max-height: 800px) {
-  .signup-card { padding: 20px 30px; }
-  .form-group { margin-bottom: 8px; }
-  .subtitle { margin-bottom: 15px; }
-  .login-redirect { margin-top: 12px; }
+  .signup-card {
+    padding: 20px 30px;
+  }
+
+  .form-group {
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    margin-bottom: 15px;
+  }
+
+  .login-redirect {
+    margin-top: 12px;
+  }
 }
+
 /* Wrapper to position the success icon inside the input */
 .input-wrapper {
   position: relative;
@@ -239,9 +269,34 @@
   transform: translateY(-50%);
   font-size: 14px;
 }
+
 .input-icon-status.success {
-  color: #00ff88; /* Bright Neon Green */
+  color: #00ff88;
+  /* Bright Neon Green */
   text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* Eye Toggle Icon Styling */
+.input-icon-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 5;
+}
+
+.input-icon-toggle:hover {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 8px rgba(0, 242, 255, 0.4);
+}
+
+/* Offset status icon if eye is present on confirm field */
+.input-icon-toggle.confirm~.input-icon-status {
+  right: 40px;
 }
 
 /* Success Input Border */
@@ -258,9 +313,19 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 /* Password Strength Meter */
