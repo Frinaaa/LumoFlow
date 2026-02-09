@@ -276,15 +276,15 @@ export const EditorLayout: React.FC = () => {
       } else if (isMod && e.key === 'b') {
         e.preventDefault();
         editorStore.toggleSidebar();
-      } else if (isMod && e.shiftKey && e.key === 'f') {
+      } else if (isMod && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault();
         editorStore.setActiveSidebar('Search');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-      } else if (isMod && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+      } else if (isMod && e.shiftKey && (e.key === 'g' || e.key === 'G')) {
         e.preventDefault();
         editorStore.setActiveSidebar('GitHub');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
-      } else if (isMod && e.shiftKey && e.key === 'e') {
+      } else if (isMod && e.shiftKey && (e.key === 'e' || e.key === 'E')) {
         e.preventDefault();
         editorStore.setActiveSidebar('Explorer');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();

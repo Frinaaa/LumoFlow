@@ -490,6 +490,22 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, metaKey: true }));
     });
 
+    // Sidebar shortcuts
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyE, () => {
+      editorStore.setActiveSidebar('Explorer');
+      if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF, () => {
+      editorStore.setActiveSidebar('Search');
+      if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyG, () => {
+      editorStore.setActiveSidebar('GitHub');
+      if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
+    });
+
     // Ctrl+N -> New Text File (dispatch to EditorLayout)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, () => {
       console.log('🔥 Monaco: Ctrl+N pressed, dispatching event');
