@@ -12,7 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@github/copilot-sdk": "^0.1.20",
+    "@github/copilot-sdk": "^0.1.22",
     "@monaco-editor/react": "^4.7.0",
     "acorn": "^8.11.3",
     "acorn-walk": "^8.3.4",

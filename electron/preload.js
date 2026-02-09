@@ -93,6 +93,19 @@ contextBridge.exposeInMainWorld('api', {
   gitRemote: (data) => ipcRenderer.invoke('git:remote', data).catch(err => ({ success: false, error: err.message })),
   gitConfig: (data) => ipcRenderer.invoke('git:config', data).catch(err => ({ success: false, error: err.message })),
 
+  // Copilot AI
+  copilotChat: (data) => ipcRenderer.invoke('copilot:chat', data),
+  copilotStreamChat: (data) => ipcRenderer.invoke('copilot:streamChat', data),
+  copilotPing: () => ipcRenderer.invoke('copilot:ping'),
+  onCopilotChunk: (callback) => ipcRenderer.on('copilot:chunk', (event, chunk) => callback(chunk)),
+  onCopilotDone: (callback) => ipcRenderer.on('copilot:done', (event) => callback()),
+  onCopilotError: (callback) => ipcRenderer.on('copilot:error', (event, err) => callback(err)),
+  removeCopilotListeners: () => {
+    ipcRenderer.removeAllListeners('copilot:chunk');
+    ipcRenderer.removeAllListeners('copilot:done');
+    ipcRenderer.removeAllListeners('copilot:error');
+  },
+
   // System
   getAppInfo: () => ipcRenderer.invoke('app:info').catch(err => ({ appVersion: 'unknown', isDev: false })),
   getUserDirectories: () => ipcRenderer.invoke('system:getUserDirectories').catch(err => ({ home: '', documents: '', desktop: '' })),

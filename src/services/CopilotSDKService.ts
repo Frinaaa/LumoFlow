@@ -137,6 +137,26 @@ export class CopilotSDKService {
     }
 
     /**
+     * Get the current GitHub token
+     */
+    getToken(): string {
+        return this.config.githubToken;
+    }
+
+    /**
+     * Update the GitHub token and reset initialization state
+     */
+    updateToken(newToken: string): void {
+        if (this.config.githubToken === newToken) return;
+        this.config.githubToken = newToken;
+        this.isInitialized = false;
+        this.initializationPromise = null;
+        this.session = null;
+        this.client = null;
+        console.log('🔄 Copilot token updated, service reset and ready for re-initialization');
+    }
+
+    /**
      * Initialize the Copilot SDK client
      */
     async initialize(): Promise<void> {
@@ -148,7 +168,15 @@ export class CopilotSDKService {
     }
 
     private async _doInitialize(): Promise<void> {
+        // If in Electron, we rely on the main process for the heavy lifting
+        if (typeof window !== 'undefined' && (window as any).api?.copilotChat) {
+            console.log('🌐 Electron environment detected, using IPC bridge for Copilot');
+            this.isInitialized = true;
+            return;
+        }
+
         try {
+            console.log('📦 Initializing Copilot SDK locally...');
             // Dynamic import to avoid issues in browser environments
             const { CopilotClient, defineTool } = await import('@github/copilot-sdk');
 
@@ -156,8 +184,7 @@ export class CopilotSDKService {
                 githubToken: this.config.githubToken,
                 autoStart: true,
                 autoRestart: true,
-                logLevel: 'info',
-                // Add timeout for starting
+                logLevel: 'info'
             });
 
             // Set a timeout for initialization
@@ -234,6 +261,27 @@ Use markdown formatting for better readability.`
      * Send a message and get a response
      */
     async chat(message: string): Promise<string> {
+        // If in Electron, use the IPC bridge to the main process
+        if (typeof window !== 'undefined' && (window as any).api?.copilotChat) {
+            try {
+                const result = await (window as any).api.copilotChat({
+                    message,
+                    token: this.config.githubToken,
+                    context: this.context
+                });
+
+                if (result.success) {
+                    this.conversationHistory.push({ role: 'user', content: message });
+                    this.conversationHistory.push({ role: 'assistant', content: result.content });
+                    return result.content;
+                }
+                throw new Error(result.error || 'IPC chat failed');
+            } catch (error) {
+                console.error('IPC Copilot chat error:', error);
+                return this.generateFallbackResponse(message);
+            }
+        }
+
         try {
             // Initialize if not already
             await this.initialize();
@@ -311,6 +359,50 @@ The GitHub Copilot API rate limit has been reached. This is temporary and will r
         onChunk: (chunk: string) => void,
         onComplete: (fullResponse: string) => void
     ): Promise<void> {
+        // If in Electron, use the IPC bridge to the main process
+        if (typeof window !== 'undefined' && (window as any).api?.copilotStreamChat) {
+            try {
+                const api = (window as any).api;
+                let fullResponse = '';
+
+                // Clean up any existing listeners
+                api.removeCopilotListeners();
+
+                // Set up listeners for this stream
+                api.onCopilotChunk((chunk: string) => {
+                    fullResponse += chunk;
+                    onChunk(chunk);
+                });
+
+                api.onCopilotDone(() => {
+                    api.removeCopilotListeners();
+                    this.conversationHistory.push({ role: 'user', content: message });
+                    this.conversationHistory.push({ role: 'assistant', content: fullResponse });
+                    onComplete(fullResponse);
+                });
+
+                api.onCopilotError((err: string) => {
+                    api.removeCopilotListeners();
+                    console.error('IPC Copilot stream error:', err);
+                    const fallback = this.generateFallbackResponse(message);
+                    onComplete(fallback);
+                });
+
+                // Start streaming
+                await api.copilotStreamChat({
+                    message,
+                    token: this.config.githubToken,
+                    context: this.context
+                });
+                return;
+            } catch (error) {
+                console.error('IPC Copilot stream setup error:', error);
+                const fallback = this.generateFallbackResponse(message);
+                onComplete(fallback);
+                return;
+            }
+        }
+
         try {
             await this.initialize();
 
@@ -436,7 +528,7 @@ The GitHub Copilot API rate limit has been reached. This is temporary and will r
      */
     async listModels(): Promise<string[]> {
         // Default models supported by Copilot
-        return ['gpt-4o', 'gpt-4', 'claude-sonnet-4.5', 'claude-3.5-sonnet'];
+        return ['gpt-4.1'];
     }
 
     /**
@@ -478,6 +570,10 @@ The GitHub Copilot API rate limit has been reached. This is temporary and will r
      * Check if service is ready
      */
     isReady(): boolean {
+        // If in Electron, we are ready if the bridge exists
+        if (typeof window !== 'undefined' && (window as any).api?.copilotChat) {
+            return this.isInitialized;
+        }
         return this.isInitialized && this.session !== null;
     }
 
@@ -507,12 +603,16 @@ export async function getCopilotSDKService(token?: string): Promise<CopilotSDKSe
         (typeof process !== 'undefined' ? process.env?.GITHUB_TOKEN : undefined) ||
         (typeof localStorage !== 'undefined' ? localStorage.getItem('github_token') : undefined);
 
-    if (!githubToken) {
+    // Token is optional at creation time in Electron
+    if (!githubToken && !(typeof window !== 'undefined' && (window as any).api)) {
         throw new Error('GitHub token is required. Set GITHUB_TOKEN in .env or pass it as parameter.');
     }
 
     if (!serviceInstance) {
-        serviceInstance = new CopilotSDKService({ githubToken });
+        serviceInstance = new CopilotSDKService({ githubToken: githubToken || '' });
+    } else if (githubToken && githubToken !== serviceInstance.getToken()) {
+        // If token has changed, update it or recreate instance
+        serviceInstance.updateToken(githubToken as string);
     }
 
     return serviceInstance;

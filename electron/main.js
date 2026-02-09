@@ -10,6 +10,7 @@ const authController = require('./controllers/authController');
 const codeController = require('./controllers/codeController');
 const analysisController = require('./controllers/analysisController');
 const visualizationController = require('./controllers/visualizationController');
+const copilotController = require('./controllers/copilotController');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 let mainWindow;
@@ -274,6 +275,7 @@ app.on('ready', () => {
     ipcMain.handle('viz:delete', visualizationController.deleteVisualization);
     console.log('✅ Registered: viz:delete');
 
+    
 
     // File System
     ipcMain.handle('files:readProject', async () => {
@@ -1188,6 +1190,24 @@ app.on('ready', () => {
       }
     });
     console.log('✅ Registered: shell:openExternal');
+
+    // GitHub Copilot Handlers
+    ipcMain.handle('copilot:chat', async (event, data) => {
+      return await copilotController.chat(event, data);
+    });
+
+    ipcMain.handle('copilot:streamChat', async (event, data) => {
+      return await copilotController.streamChat(event, data);
+    });
+    ipcMain.handle('copilot:ping', async () => {
+      return await copilotController.ping();
+    });
+    console.log('✅ Registered: copilot:chat, streamChat & ping');
+
+    // Eagerly initialize Copilot on startup
+    copilotController.ensureInitialized().catch(err => {
+      console.error('❌ Eager Copilot initialization failed:', err.message);
+    });
 
     console.log('✅ Registered: dialog:saveAs');
 

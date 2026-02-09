@@ -1251,7 +1251,7 @@ const generateSmartUniversalTrace = (code: string, frames: TraceFrame[]) => {
       if (varMatch) {
         const varName = varMatch[1];
         const valueStr = varMatch[2];
-        let actualValue = valueStr;
+        let actualValue: any = valueStr;
         let visualType = '📦';
 
         // Try to evaluate the value
@@ -1983,7 +1983,7 @@ const VisualizeTab: React.FC = () => {
 
     // 🟡 CASE B: IS JS BUT NO FRAMES (Empty, "dump code", or still analyzing)
     // If we're here, it means frames are missing. We show either output or instructions.
-    
+
     // If code has been executed and produced output, show it
     if (hasOutput || hasDebugData) {
       return (
