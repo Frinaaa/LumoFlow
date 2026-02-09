@@ -384,7 +384,7 @@ export const GitHubSidebar: React.FC = () => {
                                     : 'Commit changes (Ctrl+Enter)'
                         }
                         style={{
-                            background: (changes.length === 0 || !commitMessage.trim()) ? '#3c3c3c' : '#0e639c',
+                            background: (changes.length === 0 || !commitMessage.trim()) ? '#3c3c3c' : '#bc13fe',
                             color: (changes.length === 0 || !commitMessage.trim()) ? '#888888' : '#ffffff',
                             border: 'none',
                             padding: '8px 12px',

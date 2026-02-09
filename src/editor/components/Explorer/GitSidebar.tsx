@@ -183,7 +183,7 @@ export const GitSidebar: React.FC = () => {
           disabled={loading || !commitMsg.trim() || stagedFiles.size === 0}
           style={{
             padding: '6px 12px',
-            background: stagedFiles.size > 0 ? '#0e639c' : '#555',
+            background: stagedFiles.size > 0 ? '#bc13fe' : '#555',
             border: 'none',
             borderRadius: '3px',
             color: '#fff',
