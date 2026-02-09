@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../stores/editorStore';
+import { useFileStore } from '../stores/fileStore';
 import '../styles/MenuBar.css';
 
 interface MenuBarProps {
@@ -53,6 +54,12 @@ const MenuBar: React.FC<MenuBarProps> = ({
   };
 
   const createLaunchJson = async () => {
+    const fileStore = useFileStore.getState();
+    if (!fileStore.workspacePath) {
+      alert('Please open a folder first to manage run configurations.');
+      return;
+    }
+
     const launchJsonContent = {
       version: "0.2.0",
       configurations: [
@@ -68,21 +75,28 @@ const MenuBar: React.FC<MenuBarProps> = ({
 
     try {
       if ((window as any).api?.createFile) {
+        // 1. Ensure .vscode folder exists
         await (window as any).api.createFolder('.vscode');
+
+        // 2. Try to create launch.json with default content
+        // If it exists, createFile in main.js will return { success: false, msg: 'File exists' }
+        // but we still want to open it.
         await (window as any).api.createFile({
           fileName: '.vscode/launch.json',
           content: JSON.stringify(launchJsonContent, null, 2)
         });
-        console.log('✅ Created launch.json');
-        // Dispatch event to open the file
-        window.dispatchEvent(new CustomEvent('open-file-in-editor', { 
-          detail: { path: '.vscode/launch.json' } 
+
+        console.log('✅ launch.json checked/created');
+
+        // 3. Dispatch event to open the file - match listener in EditorLayout.tsx
+        window.dispatchEvent(new CustomEvent('open-file', {
+          detail: { path: '.vscode/launch.json' }
         }));
       } else {
-        console.log('⚠️ File creation not available');
+        console.warn('⚠️ File creation API not available');
       }
     } catch (error) {
-      console.error('Error creating launch.json:', error);
+      console.error('Error managing launch.json:', error);
     }
   };
 
