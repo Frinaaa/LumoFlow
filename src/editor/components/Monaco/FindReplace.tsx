@@ -15,31 +15,26 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
   const [regex, setRegex] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const decorationsRef = useRef<string[]>([]);
 
+  // Clear decorations on unmount or close
   useEffect(() => {
-    if (isVisible && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isVisible]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isVisible) return;
-      
-      if (e.key === 'Escape') {
-        onClose();
-      } else if (e.key === 'Enter') {
-        if (e.shiftKey) {
-          findPrevious();
-        } else {
-          findNext();
-        }
+    return () => {
+      if (editorRef.current) {
+        decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, []);
       }
     };
+  }, []);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isVisible, searchText]);
+  useEffect(() => {
+    if (!isVisible && editorRef.current) {
+      decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, []);
+    }
+    if (isVisible && searchInputRef.current) {
+      searchInputRef.current.focus();
+      handleSearch(); // Refresh on show
+    }
+  }, [isVisible]);
 
   const buildRegex = () => {
     let pattern = searchText;
@@ -64,8 +59,30 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
     }
   };
 
-  const findMatches = () => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isVisible) return;
+
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter') {
+        if (e.shiftKey) {
+          findPrevious();
+        } else {
+          findNext();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isVisible, searchText]);
+
+  const handleSearch = () => {
     if (!editorRef.current || !searchText) {
+      if (editorRef.current) {
+        decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, []);
+      }
       setMatchCount(0);
       return;
     }
@@ -74,24 +91,37 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
     const model = editor.getModel();
     if (!model) return;
 
-    const text = model.getValue();
-    const regexPattern = buildRegex();
-    
-    if (!regexPattern) {
-      setMatchCount(0);
-      return;
-    }
-
     try {
-      const matches = text.match(regexPattern);
-      setMatchCount(matches ? matches.length : 0);
+      const matches = model.findMatches(
+        searchText,
+        false, // searchOnlyEditableRange
+        regex,
+        caseSensitive,
+        wholeWord ? " `~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?" : null,
+        true // captureMatches
+      );
+
+      setMatchCount(matches.length);
+
+      // Apply highlighting
+      const newDecorations = matches.map((match: any) => ({
+        range: match.range,
+        options: {
+          className: 'find-match-highlight',
+          inlineClassName: 'find-match-highlight',
+          stickiness: 1 // NeverGrowsWhenTypingAtEdges
+        }
+      }));
+
+      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
     } catch (e) {
+      console.error('Find error:', e);
       setMatchCount(0);
     }
   };
 
   useEffect(() => {
-    findMatches();
+    handleSearch();
   }, [searchText, caseSensitive, wholeWord, regex]);
 
   const findNext = () => {
@@ -101,43 +131,39 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
     const model = editor.getModel();
     if (!model) return;
 
-    const regexPattern = buildRegex();
-    if (!regexPattern) return;
+    const matches = model.findMatches(
+      searchText,
+      false,
+      regex,
+      caseSensitive,
+      wholeWord ? " `~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?" : null,
+      true
+    );
 
-    const text = model.getValue();
+    if (matches.length === 0) return;
+
     const currentPos = editor.getPosition();
-    const currentOffset = model.getOffsetAt(currentPos);
-    
-    let nextMatch = null;
-    let nextOffset = -1;
-    
-    const regex = buildRegex();
-    if (!regex) return;
-    
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index >= currentOffset) {
-        nextMatch = match;
-        nextOffset = match.index;
-        break;
-      }
-    }
-    
+    let nextMatch = matches.find((m: any) =>
+      m.range.startLineNumber > currentPos.lineNumber ||
+      (m.range.startLineNumber === currentPos.lineNumber && m.range.startColumn > currentPos.column)
+    );
+
+    if (!nextMatch) nextMatch = matches[0]; // Wrap around
+
     if (nextMatch) {
-      const startPos = model.getPositionAt(nextOffset);
-      const endPos = model.getPositionAt(nextOffset + nextMatch[0].length);
-      editor.setSelection({
-        startLineNumber: startPos.lineNumber,
-        startColumn: startPos.column,
-        endLineNumber: endPos.lineNumber,
-        endColumn: endPos.column
-      });
-      editor.revealRangeInCenter({
-        startLineNumber: startPos.lineNumber,
-        startColumn: startPos.column,
-        endLineNumber: endPos.lineNumber,
-        endColumn: endPos.column
-      });
+      editor.setSelection(nextMatch.range);
+      editor.revealRangeInCenter(nextMatch.range);
+
+      // Update decorations to highlight current match specifically
+      const newDecorations = matches.map((match: any) => ({
+        range: match.range,
+        options: {
+          className: match === nextMatch ? 'find-current-match-highlight' : 'find-match-highlight',
+          inlineClassName: match === nextMatch ? 'find-current-match-highlight' : 'find-match-highlight',
+          stickiness: 1
+        }
+      }));
+      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
     }
   };
 
@@ -148,44 +174,39 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
     const model = editor.getModel();
     if (!model) return;
 
-    const regexPattern = buildRegex();
-    if (!regexPattern) return;
+    const matches = model.findMatches(
+      searchText,
+      false,
+      regex,
+      caseSensitive,
+      wholeWord ? " `~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?" : null,
+      true
+    );
 
-    const text = model.getValue();
+    if (matches.length === 0) return;
+
     const currentPos = editor.getPosition();
-    const currentOffset = model.getOffsetAt(currentPos);
-    
-    let prevMatch = null;
-    let prevOffset = -1;
-    
-    const regex = buildRegex();
-    if (!regex) return;
-    
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index < currentOffset) {
-        prevMatch = match;
-        prevOffset = match.index;
-      } else {
-        break;
-      }
-    }
-    
+    let prevMatch = [...matches].reverse().find((m: any) =>
+      m.range.startLineNumber < currentPos.lineNumber ||
+      (m.range.startLineNumber === currentPos.lineNumber && m.range.startColumn < currentPos.column)
+    );
+
+    if (!prevMatch) prevMatch = matches[matches.length - 1]; // Wrap around
+
     if (prevMatch) {
-      const startPos = model.getPositionAt(prevOffset);
-      const endPos = model.getPositionAt(prevOffset + prevMatch[0].length);
-      editor.setSelection({
-        startLineNumber: startPos.lineNumber,
-        startColumn: startPos.column,
-        endLineNumber: endPos.lineNumber,
-        endColumn: endPos.column
-      });
-      editor.revealRangeInCenter({
-        startLineNumber: startPos.lineNumber,
-        startColumn: startPos.column,
-        endLineNumber: endPos.lineNumber,
-        endColumn: endPos.column
-      });
+      editor.setSelection(prevMatch.range);
+      editor.revealRangeInCenter(prevMatch.range);
+
+      // Update decorations
+      const newDecorations = matches.map((match: any) => ({
+        range: match.range,
+        options: {
+          className: match === prevMatch ? 'find-current-match-highlight' : 'find-match-highlight',
+          inlineClassName: match === prevMatch ? 'find-current-match-highlight' : 'find-match-highlight',
+          stickiness: 1
+        }
+      }));
+      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
     }
   };
 
@@ -201,7 +222,7 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
 
     const selectedText = model.getValueInRange(selection);
     const regexPattern = buildRegex();
-    
+
     if (regexPattern && regexPattern.test(selectedText)) {
       const newText = selectedText.replace(regexPattern, replaceText);
       editor.executeEdits('replace', [
@@ -223,11 +244,11 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
 
     const text = model.getValue();
     const regexPattern = buildRegex();
-    
+
     if (!regexPattern) return;
 
     const newText = text.replace(regexPattern, replaceText);
-    
+
     if (newText !== text) {
       editor.executeEdits('replaceAll', [
         {
@@ -235,7 +256,7 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
           text: newText
         }
       ]);
-      findMatches();
+      handleSearch();
     }
   };
 
