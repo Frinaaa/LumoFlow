@@ -167,59 +167,27 @@ export const EditorLayout: React.FC = () => {
     };
     const handleQuickOpenToggle = () => editorStore.toggleQuickOpen();
 
-    const handleCreateNewFile = async () => {
+    const handleCreateNewFile = () => {
       console.log('🔥 Create new file event received (Ctrl+N)');
 
-      try {
-        // Auto-generate filename with incrementing number
-        let fileName = 'Untitled-1';
-        let counter = 1;
-
-        // Check existing tabs for untitled files
-        const existingTabs = editorStore.tabs.map(t => t.fileName.toLowerCase());
-        while (existingTabs.includes(fileName.toLowerCase())) {
-          counter++;
-          fileName = `Untitled-${counter}`;
-        }
-
-        console.log('🔥 Creating untitled file:', fileName);
-
-        // If no workspace, create an in-memory file (unsaved tab)
-        if (!fileStore.workspacePath) {
-          // Create a new tab without a file path (in-memory)
-          editorStore.addTab('', fileName, '', 'javascript');
-          console.log('🔥 Created in-memory file (no workspace)');
-        } else {
-          // If workspace exists, create actual file
-          const jsFileName = `${fileName}.js`;
-          let fileCounter = 1;
-          const existingFiles = fileStore.files.map(f => f.name.toLowerCase());
-          let finalFileName = jsFileName;
-
-          while (existingFiles.includes(finalFileName.toLowerCase())) {
-            finalFileName = `Untitled-${fileCounter}.js`;
-            fileCounter++;
-          }
-
-          const result = await fileOps.createFile(finalFileName);
-
-          if (!result) {
-            console.error('🔥 File creation failed, creating in-memory file');
-            // Fallback to in-memory file
-            editorStore.addTab('', fileName, '', 'javascript');
-          } else {
-            console.log('🔥 File created and opened successfully!');
-          }
-        }
-      } catch (error) {
-        console.error('🔥 Error creating file:', error);
-        // Fallback to in-memory file on error
+      if (!fileStore.workspacePath) {
+        // Fallback for no workspace: create an in-memory file (unsaved tab)
         const fileName = `Untitled-${Date.now()}`;
         editorStore.addTab('', fileName, '', 'javascript');
+        console.log('🔥 Created in-memory file (no workspace)');
+        return;
       }
+
+      // If workspace exists, trigger in-place creation in the sidebar
+      if (!editorStore.sidebarVisible) {
+        editorStore.toggleSidebar();
+      }
+      editorStore.setActiveSidebar('Explorer');
+      fileStore.setCreatingInFolder(null); // Create at root
+      fileStore.setIsCreatingFile(true);
     };
 
-    const handleCreateNewFolder = async () => {
+    const handleCreateNewFolder = () => {
       console.log('🔥 Create new folder event received (Ctrl+Alt+N)');
 
       // Check if workspace is set
@@ -228,45 +196,13 @@ export const EditorLayout: React.FC = () => {
         return;
       }
 
-      // Use DOM input for folder name
-      const folderName = await new Promise<string | null>((resolve) => {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = 'new-folder';
-        input.placeholder = 'Enter folder name';
-        input.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;padding:10px;font-size:16px;border:2px solid #00f2ff;background:#1e1e1e;color:#fff;width:300px;';
-        document.body.appendChild(input);
-        input.focus();
-        input.select();
-
-        const handleSubmit = () => {
-          const value = input.value;
-          document.body.removeChild(input);
-          resolve(value || null);
-        };
-
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') handleSubmit();
-          if (e.key === 'Escape') {
-            document.body.removeChild(input);
-            resolve(null);
-          }
-        });
-
-        setTimeout(() => {
-          if (document.body.contains(input)) {
-            document.body.removeChild(input);
-            resolve(null);
-          }
-        }, 30000);
-      });
-
-      if (folderName && folderName.trim()) {
-        const result = await fileOps.createFolder(folderName.trim());
-        if (!result) {
-          alert('Folder creation failed! Check console for details.');
-        }
+      // Trigger in-place creation in the sidebar
+      if (!editorStore.sidebarVisible) {
+        editorStore.toggleSidebar();
       }
+      editorStore.setActiveSidebar('Explorer');
+      fileStore.setCreatingInFolder(null); // Create at root
+      fileStore.setIsCreatingFolder(true);
     };
 
     window.addEventListener('open-file', handleOpenFile);
