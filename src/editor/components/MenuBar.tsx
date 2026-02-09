@@ -192,7 +192,7 @@ const MenuBar: React.FC<MenuBarProps> = ({
               setOpenMenu(null);
             }}><span>Search</span><span className="shortcut">Ctrl+Shift+F</span></div>
             <div className="menu-option" onClick={() => {
-              editorStore.setActiveSidebar('Git');
+              editorStore.setActiveSidebar('GitHub');
               if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
               setOpenMenu(null);
             }}><span>Source Control</span><span className="shortcut">Ctrl+Shift+G</span></div>

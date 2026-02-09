@@ -14,7 +14,7 @@ export const CommandPalette: React.FC = () => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   const editorStore = useEditorStore();
   const fileOps = useFileOperations();
   const activeTab = editorStore.tabs.find(t => t.id === editorStore.activeTabId);
@@ -79,12 +79,12 @@ export const CommandPalette: React.FC = () => {
       }
     },
     {
-      id: 'git',
+      id: 'github',
       label: 'View: Source Control',
       shortcut: 'Ctrl+Shift+G',
       category: 'View',
       action: () => {
-        editorStore.setActiveSidebar('Git');
+        editorStore.setActiveSidebar('GitHub');
         if (!editorStore.sidebarVisible) editorStore.toggleSidebar();
       }
     },
