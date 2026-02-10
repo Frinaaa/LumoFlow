@@ -11,6 +11,7 @@ const codeController = require('./controllers/codeController');
 const analysisController = require('./controllers/analysisController');
 const visualizationController = require('./controllers/visualizationController');
 const copilotController = require('./controllers/copilotController');
+const voiceController = require('./controllers/voiceController');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 let mainWindow;
@@ -203,9 +204,28 @@ const createWindow = async () => {
 };
 
 app.on('ready', () => {
+  // Grant microphone permissions automatically
+  const { session } = require('electron');
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    console.log(`🔒 Permission requested: ${permission}`);
+    if (permission === 'media' || permission === 'audioCapture') {
+      return callback(true);
+    }
+    callback(false);
+  });
+
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    if (permission === 'media' || permission === 'audioCapture') {
+      return true;
+    }
+    return false;
+  });
+
   // Disable Autofill at Chromium level
   app.commandLine.appendSwitch('disable-autofill-keyboard-accessory-view');
   app.commandLine.appendSwitch('disable-autofill');
+  // Recognition requires certain flags sometimes
+  app.commandLine.appendSwitch('enable-speech-input');
 
   console.log('🚀 App ready - Registering IPC handlers...');
 
@@ -228,6 +248,16 @@ app.on('ready', () => {
     // Register IPC Handlers FIRST
     ipcMain.handle('auth:login', authController.login);
     console.log('✅ Registered: auth:login');
+
+    ipcMain.handle('voice:transcribe', async (event, base64Audio) => {
+      try {
+        return await voiceController.transcribeAudio(base64Audio);
+      } catch (err) {
+        console.error('❌ Voice transcription failed:', err.message);
+        return '';
+      }
+    });
+    console.log('✅ Registered: voice:transcribe');
 
     ipcMain.handle('auth:signup', authController.signup);
     console.log('✅ Registered: auth:signup');
@@ -275,7 +305,7 @@ app.on('ready', () => {
     ipcMain.handle('viz:delete', visualizationController.deleteVisualization);
     console.log('✅ Registered: viz:delete');
 
-    
+
 
     // File System
     ipcMain.handle('files:readProject', async () => {

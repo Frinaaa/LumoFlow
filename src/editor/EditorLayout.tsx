@@ -205,6 +205,17 @@ export const EditorLayout: React.FC = () => {
       fileStore.setIsCreatingFolder(true);
     };
 
+    // AI AUTO-EDIT LISTENER
+    if ((window as any).api?.onEditorUpdate) {
+      (window as any).api.onEditorUpdate((code: string) => {
+        const currentActiveId = useEditorStore.getState().activeTabId;
+        if (currentActiveId) {
+          useEditorStore.getState().updateTabContent(currentActiveId, code);
+          console.log("🤖 AI applied an auto-edit.");
+        }
+      });
+    }
+
     window.addEventListener('open-file', handleOpenFile);
     window.addEventListener('quick-open-toggle', handleQuickOpenToggle);
     window.addEventListener('create-new-file', handleCreateNewFile);

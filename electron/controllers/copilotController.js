@@ -31,7 +31,7 @@ async function loadSDK() {
 }
 
 const copilotController = {
-    async ensureInitialized(token) {
+    async ensureInitialized(token, webContents) {
         const activeToken = token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
         if (!activeToken) throw new Error("MISSING_TOKEN");
 
@@ -50,13 +50,44 @@ const copilotController = {
 
             // FRESH SESSION PER MESSAGE
             const model = 'claude-haiku-4.5';
-            logToConsole(`🧪 Creating session: ${model}`);
+            logToConsole(`🧪 Creating Agent Session: ${model}`);
 
             session = await client.createSession({
                 model: model,
                 systemMessage: {
-                    content: "You are LumoFlow AI, a technical expert. Directly answer the user's coding query without any conversational filler or greetings. If the user provides code context, use it."
-                }
+                    content: `You are LumoFlow AI, an elite coding agent with direct control over the user's editor.
+
+DIRECTIVES:
+1. When asked to modify, refactor, or write code for the current file, ALWAYS use the 'write_file' tool.
+2. In your verbal response, briefly explain what you changed.
+3. If the user asks for a general explanation, just provide text.
+4. Do NOT ask for permission before using 'write_file' if the user's intent is clear.
+
+AGENT TOOLS:
+- write_file(code: string): Use this to overwrite the current active file in the user's editor with the 'code' provided.
+
+[CONTEXT] provides the current file state. [TASK] is the user's request.`
+                },
+                tools: [
+                    {
+                        name: "write_file",
+                        description: "Updates the current active file in the Monaco editor with new content. Use this whenever the user wants to apply changes to their code.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                code: { type: "string", description: "The complete new content for the file" }
+                            },
+                            required: ["code"]
+                        },
+                        handler: async ({ code }) => {
+                            logToConsole("🛠️ AI AGENT ACTION: write_file triggered");
+                            if (webContents) {
+                                webContents.send('editor:update-content', code);
+                            }
+                            return "The editor has been updated with requested code.";
+                        }
+                    }
+                ]
             });
             return true;
         } catch (error) {
@@ -71,11 +102,9 @@ const copilotController = {
     async streamChat(event, { message, token, context }) {
         const webContents = event.sender;
         try {
-            await this.ensureInitialized(token);
+            await this.ensureInitialized(token, webContents);
             logToConsole(`💭 USER_QUERY: "${message}"`);
 
-            // ATOMIC PROMPT - FIXING THE UNDEFINED PROMPT BUG
-            // Context injection is restored because the AI needs it to be useful.
             const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode:\n${context.currentCode}\n\n[TASK]\n${message}`;
 
             let deltasReceived = false;
@@ -92,7 +121,11 @@ const copilotController = {
                 if (content && !deltasReceived) webContents.send('copilot:chunk', content);
             });
 
-            // FIX: session.send() REQUIRES an object with a 'prompt' property
+            session.on('assistant.tool_call', (call) => {
+                logToConsole(`🔧 AGENT TOOL CALL: ${call.data.toolName}`);
+            });
+
+            // Set mode 'immediate' for faster agentic response
             await session.send({
                 prompt: promptContent,
                 mode: 'immediate'

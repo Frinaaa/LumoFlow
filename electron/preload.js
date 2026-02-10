@@ -97,13 +97,16 @@ contextBridge.exposeInMainWorld('api', {
   copilotChat: (data) => ipcRenderer.invoke('copilot:chat', data),
   copilotStreamChat: (data) => ipcRenderer.invoke('copilot:streamChat', data),
   copilotPing: () => ipcRenderer.invoke('copilot:ping'),
+  transcribeAudio: (base64Audio) => ipcRenderer.invoke('voice:transcribe', base64Audio),
   onCopilotChunk: (callback) => ipcRenderer.on('copilot:chunk', (event, chunk) => callback(chunk)),
   onCopilotDone: (callback) => ipcRenderer.on('copilot:done', (event) => callback()),
   onCopilotError: (callback) => ipcRenderer.on('copilot:error', (event, err) => callback(err)),
+  onEditorUpdate: (callback) => ipcRenderer.on('editor:update-content', (event, code) => callback(code)),
   removeCopilotListeners: () => {
     ipcRenderer.removeAllListeners('copilot:chunk');
     ipcRenderer.removeAllListeners('copilot:done');
     ipcRenderer.removeAllListeners('copilot:error');
+    ipcRenderer.removeAllListeners('editor:update-content');
   },
 
   // System
