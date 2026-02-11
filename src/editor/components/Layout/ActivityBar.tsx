@@ -133,9 +133,6 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         title="Dashboard"
         onMouseEnter={() => setHoveredIcon('home')}
         onMouseLeave={() => setHoveredIcon(null)}
-        style={{
-          color: hoveredIcon === 'home' ? '#00f2ff' : '#888',
-        }}
       >
         <i className="fa-solid fa-house"></i>
       </button>
@@ -150,9 +147,6 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         title="Explorer"
         onMouseEnter={() => setHoveredIcon('explorer')}
         onMouseLeave={() => setHoveredIcon(null)}
-        style={{
-          color: activeSidebar === 'Explorer' ? '#00f2ff' : hoveredIcon === 'explorer' ? '#00f2ff' : '#888'
-        }}
       >
         <i className="fa-regular fa-copy"></i>
       </button>
@@ -167,9 +161,6 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         title="Search"
         onMouseEnter={() => setHoveredIcon('search')}
         onMouseLeave={() => setHoveredIcon(null)}
-        style={{
-          color: activeSidebar === 'Search' ? '#00f2ff' : hoveredIcon === 'search' ? '#00f2ff' : '#888'
-        }}
       >
         <i className="fa-solid fa-magnifying-glass"></i>
       </button>
@@ -185,7 +176,6 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         onMouseEnter={() => setHoveredIcon('github')}
         onMouseLeave={() => setHoveredIcon(null)}
         style={{
-          color: activeSidebar === 'GitHub' ? '#00f2ff' : hoveredIcon === 'github' ? '#00f2ff' : '#888',
           position: 'relative'
         }}
       >
@@ -223,7 +213,6 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         onMouseLeave={() => setHoveredIcon(null)}
         onClick={() => setShowAccountMenu(!showAccountMenu)}
         style={{
-          color: hoveredIcon === 'account' || showAccountMenu ? '#00f2ff' : '#888',
           position: 'relative'
         }}
       >
@@ -263,9 +252,6 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
         title="Settings"
         onMouseEnter={() => setHoveredIcon('settings')}
         onMouseLeave={() => setHoveredIcon(null)}
-        style={{
-          color: hoveredIcon === 'settings' ? '#00f2ff' : '#888',
-        }}
       >
         <i className="fa-solid fa-gear"></i>
       </button>

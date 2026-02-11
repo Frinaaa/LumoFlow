@@ -253,7 +253,7 @@ const Terminal: React.FC<TerminalProps> = ({
             <button
               onClick={() => editorStore.createTerminalSession()}
               style={{
-                background: '#0e639c', color: 'white', border: 'none', padding: '6px 12px',
+                background: '#8e44ad', color: 'white', border: 'none', padding: '6px 12px',
                 cursor: 'pointer', marginTop: '10px', borderRadius: '2px'
               }}
             >

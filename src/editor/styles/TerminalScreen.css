@@ -7,20 +7,20 @@
   --bg-hover: #2a2d2e;
   --bg-active: #37373d;
   --bg-activity-bar: #333333;
-  
+
   --border-color: #2d2d2d;
   --border-light: #454545;
-  
+
   --text-primary: #ffffff;
   --text-secondary: #cccccc;
   --text-tertiary: #969696;
   --text-muted: #888888;
   --text-disabled: #666666;
-  
+
   --accent-primary: #00f2ff;
   --accent-secondary: #bc13fe;
   --accent-blue: #0e639c;
-  
+
   --error-color: #f14c4c;
   --warning-color: #cca700;
   --success-color: #89d185;
@@ -34,20 +34,20 @@
   --bg-hover: #e4e6f1;
   --bg-active: #d4d4d4;
   --bg-activity-bar: #2c2c2c;
-  
+
   --border-color: #e5e5e5;
   --border-light: #d4d4d4;
-  
+
   --text-primary: #000000;
   --text-secondary: #333333;
   --text-tertiary: #616161;
   --text-muted: #6c6c6c;
   --text-disabled: #a0a0a0;
-  
+
   --accent-primary: #0078d4;
   --accent-secondary: #8e44ad;
   --accent-blue: #0e639c;
-  
+
   --error-color: #e51400;
   --warning-color: #bf8803;
   --success-color: #388a34;
@@ -56,7 +56,8 @@
 /* --- ROOT GRID --- */
 .ide-grid-master {
   display: grid;
-  grid-template-rows: 35px 1fr 22px; /* Fixed Header | Body | Status */
+  grid-template-rows: 35px 1fr 22px;
+  /* Fixed Header | Body | Status */
   height: 100vh;
   width: 100vw;
   background-color: var(--bg-primary);
@@ -121,29 +122,28 @@
   cursor: pointer;
   background: transparent;
   border: none;
-  color: var(--text-muted);
-  font-size: 24px;
-  transition: color 0.2s;
+  color: #858585;
+  font-size: 18px;
+  transition: all 0.2s;
   position: relative;
 }
 
 .activity-icon:hover {
-  color: var(--text-primary);
+  color: #fff;
 }
 
 .activity-icon.active {
-  color: var(--text-primary);
+  color: #fff;
 }
 
 .activity-icon.active::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
+  bottom: 0;
   width: 2px;
-  height: 24px;
-  background: #bc13fe;
+  background: #fff;
 }
 
 /* --- SIDEBAR --- */
@@ -383,7 +383,8 @@
 .terminal-header span:hover {
   color: var(--text-secondary);
 }
+
 .menu-item:hover {
-  background-color:  #8e44ad !important;
+  background-color: #8e44ad !important;
   color: white !important;
 }

@@ -326,7 +326,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
       {/* Header */}
       <div style={{ padding: '12px 16px', background: '#151518', borderBottom: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: (isProcessing || isTranscribing) ? '#bc13fe' : '#00ff88', boxShadow: (isProcessing || isTranscribing) ? '0 0 10px #bc13fe' : '0 0 10px #00ff88', animation: (isProcessing || isTranscribing) ? 'pulse 1.5s infinite' : 'none' }}></div>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: (isProcessing || isTranscribing) ? '#bc13fe' : '#00f2ff', boxShadow: (isProcessing || isTranscribing) ? '0 0 10px #bc13fe' : '0 0 10px #00ff88', animation: (isProcessing || isTranscribing) ? 'pulse 1.5s infinite' : 'none' }}></div>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#888', letterSpacing: '0.5px' }}>LUMO AI ASSISTANT</span>
         </div>
         <button onClick={handleResetChat} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer' }} title="Reset Chat">
