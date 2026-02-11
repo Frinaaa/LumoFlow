@@ -2405,35 +2405,11 @@ const VisualizeTab: React.FC = () => {
       )}
 
       <div className="hud-header">
-        <div className="badge">STEP-BY-STEP VISUALIZATION</div>
+        <div className="viz-banner">
+          <i className="fa-solid fa-wand-magic-sparkles"></i>
+          <span>TRACE ANALYTICS</span>
+        </div>
         <div className="step">STEP {currentFrameIndex + 1} / {traceFrames.length}</div>
-      </div>
-      {/* Controls: Play/Pause and Sound Toggle */}
-      <div className="control-panel">
-        <button
-          onClick={handlePlayPause}
-          className={`play-pause-btn ${isAutoPlaying ? 'playing' : 'paused'}`}
-          title={isAutoPlaying ? 'Pause' : 'Play'}
-        >
-          <i className={`fa-solid ${isAutoPlaying ? 'fa-pause' : 'fa-play'}`}></i>
-          <span>{isAutoPlaying ? 'Pause' : 'Play'}</span>
-        </button>
-
-        <button
-          onClick={() => setSoundEnabled(!soundEnabled)}
-          className={`sound-toggle-btn ${soundEnabled ? 'sound-on' : 'sound-off'}`}
-          title={soundEnabled ? 'Sound On - Click to mute' : 'Sound Off - Click to unmute'}
-        >
-          <i className={`fa-solid ${soundEnabled ? 'fa-volume-up' : 'fa-volume-xmark'}`}></i>
-          <span>{soundEnabled ? 'Sound On' : 'Sound Off'}</span>
-        </button>
-
-        {isSpeaking && soundEnabled && (
-          <div className="speaking-indicator">
-            <div className="sound-wave"></div>
-            <span>Speaking...</span>
-          </div>
-        )}
       </div>
 
       {renderArrayVisualization()}
@@ -2475,45 +2451,53 @@ const VisualizeTab: React.FC = () => {
         <span>{currentFrame.desc}</span>
       </div>
 
-      {/* Save Button at Bottom */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '15px 10px',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-      }}>
-        <button
-          onClick={handleSaveVisualization}
-          className={`save-viz-btn ${saveStatus}`}
-          disabled={saveStatus === 'saving' || traceFrames.length === 0}
-          title="Save this visualization to view later"
-          style={{ width: '200px' }}
-        >
-          <i className={`fa-solid ${saveStatus === 'saving' ? 'fa-spinner fa-spin' :
-            saveStatus === 'saved' ? 'fa-check' :
-              saveStatus === 'error' ? 'fa-times' :
-                'fa-save'
-            }`}></i>
-          <span>
-            {saveStatus === 'saving' ? 'Saving...' :
-              saveStatus === 'saved' ? 'Saved!' :
-                saveStatus === 'error' ? 'Error' :
-                  'Save Visualization'}
-          </span>
-        </button>
-      </div>
+      {/* Controls and Footer Section */}
+      <div className="viz-footer">
+        <div className="control-panel">
+          <button
+            onClick={handlePlayPause}
+            className={`play-pause-btn ${isAutoPlaying ? 'playing' : 'paused'}`}
+            title={isAutoPlaying ? 'Pause' : 'Play'}
+          >
+            <i className={`fa-solid ${isAutoPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+            <span>{isAutoPlaying ? 'Pause' : 'Play'}</span>
+          </button>
 
-      <div className="progress-bar-container">
-        <div className="progress-label">
-          <span>Step {currentFrameIndex + 1} of {traceFrames.length}</span>
-          <span className="progress-percent">{Math.round(((currentFrameIndex + 1) / traceFrames.length) * 100)}%</span>
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`sound-toggle-btn ${soundEnabled ? 'sound-on' : 'sound-off'}`}
+            title={soundEnabled ? 'Sound On - Click to mute' : 'Sound Off - Click to unmute'}
+          >
+            <i className={`fa-solid ${soundEnabled ? 'fa-volume-up' : 'fa-volume-xmark'}`}></i>
+            <span>{soundEnabled ? 'Sound' : 'Muted'}</span>
+          </button>
+
+          {isSpeaking && soundEnabled && (
+            <div className="speaking-indicator">
+              <div className="sound-wave"></div>
+            </div>
+          )}
+
+          <button
+            onClick={handleSaveVisualization}
+            className={`save-viz-btn ${saveStatus}`}
+            disabled={saveStatus === 'saving' || traceFrames.length === 0}
+            title="Save Visualization"
+          >
+            <i className={`fa-solid ${saveStatus === 'saving' ? 'fa-spinner fa-spin' :
+              saveStatus === 'saved' ? 'fa-check' :
+                saveStatus === 'error' ? 'fa-times' :
+                  'fa-save'
+              }`}></i>
+          </button>
         </div>
+
         <div
-          className="progress-bar interactive"
+          className="progress-bar-container"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const percentage = clickX / rect.width;
+            const x = e.clientX - rect.left;
+            const percentage = x / rect.width;
             const newIndex = Math.floor(percentage * traceFrames.length);
             const clampedIndex = Math.max(0, Math.min(traceFrames.length - 1, newIndex));
 
@@ -2554,12 +2538,15 @@ const VisualizeTab: React.FC = () => {
           }}
           title="Click or drag to jump to any step"
         >
-          <div
-            className="progress-fill"
-            style={{ width: `${((currentFrameIndex + 1) / traceFrames.length) * 100}%` }}
-          ></div>
+          <div className="progress-bar interactive">
+            <div
+              className="progress-fill"
+              style={{ width: `${((currentFrameIndex + 1) / traceFrames.length) * 100}%` }}
+            ></div>
+          </div>
         </div>
       </div>
+
       <style>{styles}</style>
     </div>
   );
@@ -2572,36 +2559,63 @@ const styles = `
     display: flex; 
     flex-direction: column; 
     height: 100%; 
-    max-height: calc(100vh - 200px);
-    background: #0c0c0f; 
-    padding: 10px; 
-    gap: 8px; 
+    max-height: calc(100vh - 120px);
+    background: #111114; 
+    padding: 16px; 
+    gap: 12px; 
     overflow-y: auto;
     overflow-x: hidden;
   }
-  .universal-viz.empty { justify-content: center; align-items: center; background: #0c0c0f; overflow: hidden; }
+  .universal-viz.empty { justify-content: center; align-items: center; background: #111114; overflow: hidden; }
   
   .loader-box { text-align: center; color: #888; }
   .loader-box p { color: #00f2ff; font-size: 13px; margin: 8px 0 4px; font-weight: bold; }
   .loader-box span { color: #666; font-size: 11px; display: block; }
-  .spinner-neon { width: 35px; height: 35px; border: 2px solid #222; border-top: 2px solid #bc13fe; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px; }
+  .spinner-neon { width: 35px; height: 35px; border: 2px solid #222; border-top: 2px solid var(--accent-secondary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .hud-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; padding: 6px 0; }
-  .badge { background: #bc13fe; color: #fff; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px; }
-  .step { color: #888; font-size: 9px; font-family: monospace; }
+  .hud-header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; padding-bottom: 12px; border-bottom: 1px solid #222; margin-bottom: 8px; }
+  
+  .viz-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(90deg, #1e1e1e, #111);
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid #333;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  }
+  .viz-banner i { color: var(--accent-cyan); font-size: 11px; }
+  .viz-banner span { 
+    color: #fff; 
+    font-size: 11px; 
+    font-weight: 700; 
+    letter-spacing: 1.5px; 
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .step { color: #888; font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+
+  /* VIZ FOOTER DOCK */
+  .viz-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: #18181b;
+    border-top: 1px solid #2a2a2e;
+    border-radius: 8px 8px 0 0;
+    margin-top: auto;
+    flex-shrink: 0;
+  }
 
   /* CONTROL PANEL */
   .control-panel {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: rgba(0, 242, 255, 0.05);
-    border: 1px solid rgba(0, 242, 255, 0.2);
-    border-radius: 8px;
+    gap: 8px;
     flex-shrink: 0;
-    margin-bottom: 10px;
   }
   
   /* PLAY/PAUSE BUTTON */
@@ -2609,141 +2623,122 @@ const styles = `
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: bold;
+    padding: 6px 14px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-  .play-pause-btn.paused {
-    background: linear-gradient(135deg, #bc13fe, #9010cc);
-    color: #fff;
+    transition: all 0.2s ease;
+    background: #252526;
+    color: #ccc;
+    text-transform: uppercase;
   }
   .play-pause-btn.paused:hover {
-    background: linear-gradient(135deg, #d01fff, #bc13fe);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(188, 19, 254, 0.4);
+    background: #333337;
+    border-color: #444;
+    color: #fff;
   }
   .play-pause-btn.playing {
-    background: linear-gradient(135deg, #00f2ff, #0099cc);
-    color: #000;
+    background: rgba(14, 99, 156, 0.2);
+    border-color: #0e639c;
+    color: #00f2ff;
   }
   .play-pause-btn.playing:hover {
-    background: linear-gradient(135deg, #00ccff, #0077aa);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 242, 255, 0.5);
+    background: rgba(14, 99, 156, 0.3);
   }
   .play-pause-btn i {
-    font-size: 14px;
+    font-size: 11px;
   }
 
   /* SOUND TOGGLE */
   .sound-toggle-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: bold;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    background: #252526;
+    color: #888;
+    text-transform: uppercase;
   }
   .sound-toggle-btn.sound-on {
-    background: #bc13fe;
-    color: #fff;
-  }
-  .sound-toggle-btn.sound-on:hover {
-    background: #d01fff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(188, 19, 254, 0.4);
+    color: var(--accent-cyan);
+    border-color: rgba(0, 242, 255, 0.3);
   }
   .sound-toggle-btn.sound-off {
-    background: #ff0055;
-    color: #fff;
+    color: #ff4444;
+    border-color: rgba(255, 68, 68, 0.2);
   }
-  .sound-toggle-btn.sound-off:hover {
-    background: #cc0044;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 0, 85, 0.4);
-  }
-  .sound-toggle-btn i {
-    font-size: 13px;
+  .sound-toggle-btn:hover {
+    background: #333337;
   }
   
-  /* SAVE BUTTON */
+  /* SAVE BUTTON (MINI) */
   .save-viz-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: bold;
+    padding: 6px 10px;
+    background: #252526;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #888;
     cursor: pointer;
-    transition: all 0.3s ease;
-    background: linear-gradient(135deg, #00f2ff, #0099aa);
-    color: #000;
+    margin-left: auto;
   }
   .save-viz-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #0099aa, #006677);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 242, 255, 0.4);
-  }
-  .save-viz-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .save-viz-btn.saved {
-    background: linear-gradient(135deg, #00ff88, #00cc66);
-  }
-  .save-viz-btn.error {
-    background: linear-gradient(135deg, #ff0055, #cc0044);
     color: #fff;
+    border-color: #444;
   }
-  .save-viz-btn i {
-    font-size: 13px;
-  }
+  .save-viz-btn.saved { color: #4ec9b0; border-color: #4ec9b0; }
   
   /* SPEAKING INDICATOR */
   .speaking-indicator {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #00f2ff;
-    font-size: 11px;
-    font-weight: bold;
-    animation: fadeInOut 1.5s ease-in-out infinite;
-    margin-left: auto;
+    margin-left: 8px;
   }
   .sound-wave {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #00f2ff;
+    width: 6px;
+    height: 6px;
+    background: var(--accent-cyan);
     border-radius: 50%;
-    animation: soundPulse 1s ease-in-out infinite;
+    box-shadow: 0 0 10px var(--accent-cyan);
+    animation: soundPulse 0.8s ease-in-out infinite;
   }
   @keyframes soundPulse {
     0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.3); opacity: 0.5; }
-  }
-  @keyframes fadeInOut {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    50% { transform: scale(1.8); opacity: 0.5; }
   }
 
   /* PROGRESS BAR */
   .progress-bar-container {
     flex-shrink: 0;
-    padding: 10px;
-    background: #1a1a1d;
-    border-radius: 6px;
-    border: 1px solid #2a2a2a;
+    width: 100%;
+    cursor: pointer;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: #2a2a2a;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .progress-bar:hover {
+    height: 6px;
+    background: #333;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent-cyan);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 242, 255, 0.4);
   }
   .progress-label {
     display: flex;
@@ -2797,75 +2792,72 @@ const styles = `
   .array-visualization { 
     flex-shrink: 0; 
     background: #1a1a1d; 
-    border: 1px solid #2a2a2a; 
+    border: 1px solid #2a2a2e; 
     border-radius: 6px; 
-    padding: 12px; 
-    margin-bottom: 6px;
+    padding: 16px; 
+    margin-bottom: 8px;
     max-height: 240px;
     overflow: hidden;
   }
   .array-container { 
     display: flex; 
-    gap: 10px; 
+    gap: 12px; 
     justify-content: center; 
     align-items: flex-end; 
     min-height: 120px;
     max-height: 180px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 8px 0;
+    padding: 12px 0;
   }
-  .array-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .array-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   
   .array-bar { 
-    width: 35px; 
-    min-width: 35px;
-    background: linear-gradient(180deg, #00f2ff, #0088cc); 
-    border-radius: 5px 5px 0 0; 
+    width: 32px; 
+    min-width: 32px;
+    background: #00f2ff; 
+    border-radius: 3px 3px 0 0; 
     display: flex; 
     align-items: flex-end; 
     justify-content: center; 
-    padding-bottom: 5px;
-    box-shadow: 0 3px 12px rgba(0, 242, 255, 0.3);
+    padding-bottom: 6px;
+    box-shadow: 0 2px 8px rgba(0, 242, 255, 0.2);
     position: relative;
-    transition: all 0.8s ease; /* Slowed from 0.5s to 0.8s */
+    transition: all 0.8s ease;
     max-height: 150px;
   }
   
   .array-bar.comparing { 
-    background: linear-gradient(180deg, #ffaa00, #ff6600); 
-    box-shadow: 0 3px 18px rgba(255, 170, 0, 0.5);
-    transform: translateY(-6px);
-    transition: all 0.8s ease; /* Slowed transition */
+    background: #dcdcaa; 
+    box-shadow: 0 0 12px rgba(220, 220, 170, 0.4);
+    transform: translateY(-4px);
   }
   
   .array-bar.swapping { 
-    background: linear-gradient(180deg, #ff0055, #cc0044); 
-    box-shadow: 0 3px 20px rgba(255, 0, 85, 0.6);
-    transform: translateY(-10px) scale(1.06);
-    animation: pulse 0.8s ease-in-out; /* Slowed from 0.5s to 0.8s */
+    background: #ce9178; 
+    box-shadow: 0 0 15px rgba(206, 145, 120, 0.5);
+    transform: translateY(-8px);
+    animation: bounce 0.8s ease-in-out;
   }
   
   .array-bar.sorted { 
-    background: linear-gradient(180deg, #00ff88, #00cc66); 
-    box-shadow: 0 3px 12px rgba(0, 255, 136, 0.4);
-    transition: all 0.8s ease; /* Slowed transition */
+    background: #4ec9b0; 
+    box-shadow: 0 0 10px rgba(78, 201, 176, 0.3);
   }
   
   .array-bar.current { 
-    background: linear-gradient(180deg, #bc13fe, #8800cc); 
-    box-shadow: 0 3px 18px rgba(188, 19, 254, 0.5);
-    transform: translateY(-5px);
-    transition: all 0.8s ease; /* Slowed transition */
+    background: #c586c0; 
+    box-shadow: 0 0 12px rgba(197, 134, 192, 0.4);
+    transform: translateY(-3px);
   }
   
-  @keyframes pulse {
-    0%, 100% { transform: translateY(-10px) scale(1.06); }
-    50% { transform: translateY(-14px) scale(1.1); }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(-8px); }
+    50% { transform: translateY(-12px); }
   }
   
-  .bar-value { color: #fff; font-weight: bold; font-size: 13px; font-family: 'Orbitron', monospace; }
-  .bar-index { color: #666; font-size: 9px; font-family: monospace; }
+  .bar-value { color: #fff; font-weight: 600; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+  .bar-index { color: #666; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
 
   .memory-grid { 
     display: grid; 
