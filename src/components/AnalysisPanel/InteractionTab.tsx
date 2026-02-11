@@ -15,7 +15,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
     {
       id: '1',
       role: 'assistant',
-      content: '👋 **LumoFlow AI Online.**\nI can edit your files and listen to your voice. Click the mic to record!',
+      content: '👋 Hi! I\'m your **LumoFlow AI**. Ask me anything or use the mic to chat!',
       timestamp: new Date()
     }
   ]);
@@ -43,9 +43,28 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Timer for recording duration
+  useEffect(() => {
+    if (isRecording) {
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setRecordingTime(0);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isRecording]);
+
   // --- VOICE RECORDING (MediaRecorder) ---
   // --- VOICE RECORDING (Corrected startRecording) ---
- const startRecording = async () => {
+  const startRecording = async () => {
     try {
       console.log("🎤 Mic started...");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -61,7 +80,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
 
       mediaRecorder.onstop = async () => {
         console.log("🎤 Processing audio...");
-        
+
         // Cleanup Mic
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(t => t.stop());
@@ -69,26 +88,26 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
 
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
         const reader = new FileReader();
-        
+
         reader.onloadend = async () => {
           const base64Data = reader.result as string;
           const base64Audio = base64Data.split(',')[1];
 
           setIsTranscribing(true); // Show loading state
-          
+
           try {
             // 1. Send to Backend to convert Speech -> Text
             const text = await (window as any).api.transcribeAudio(base64Audio);
-            
+
             if (text && text !== '__TRANSCRIPTION_FAILED__') {
               const cleanText = text.trim();
-              
+
               // 2. Put Text in Input Box (Visual Feedback)
-              setInput(cleanText); 
-              
+              setInput(cleanText);
+
               // 3. AUTO-SEND to Copilot (The "Pilot" part)
               console.log("🚀 Auto-sending to Copilot:", cleanText);
-              handleSend(cleanText); 
+              handleSend(cleanText);
             } else {
               alert("Could not hear audio. Please check your API Key.");
             }
@@ -219,17 +238,6 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0e0e0f' }}>
-      {/* Header */}
-      <div style={{ padding: '12px 16px', background: '#151518', borderBottom: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: (isProcessing || isTranscribing) ? '#bc13fe' : '#00ff88', boxShadow: (isProcessing || isTranscribing) ? '0 0 10px #bc13fe' : '0 0 10px #00ff88', animation: (isProcessing || isTranscribing) ? 'pulse 1.5s infinite' : 'none' }}></div>
-          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#888', letterSpacing: '0.5px' }}>LUMO AI ASSISTANT</span>
-        </div>
-        <button onClick={() => setMessages([messages[0]])} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer' }} title="Reset Chat">
-          <i className="fa-solid fa-rotate-right"></i>
-        </button>
-      </div>
-
       {/* Messages */}
       <div className="custom-scroll" ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {messages.map((msg) => (
@@ -259,12 +267,12 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
 
       {/* Input */}
       <div style={{ padding: '15px', background: '#151518', borderTop: '1px solid #222' }}>
-        <div style={{ display: 'flex', alignItems: 'center', background: '#0e0e0f', borderRadius: '25px', padding: '5px 15px', gap: '10px', border: isRecording ? '1px solid #ff4444' : '1px solid #333' }}>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#0e0e0f', borderRadius: '25px', padding: '5px 15px', gap: '10px', border: isRecording ? '1px solid #bc13fe' : '1px solid #333' }}>
           <button
             onClick={toggleVoice}
             disabled={isProcessing || isTranscribing}
             style={{
-              background: isRecording ? '#ff4444' : 'none',
+              background: isRecording ? '#bc13fe' : 'none',
               border: 'none', color: isRecording ? '#fff' : '#888',
               width: '32px', height: '32px', borderRadius: '50%',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -278,7 +286,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
           </button>
 
           {isRecording && (
-            <span style={{ color: '#ff4444', fontSize: '12px', fontWeight: 'bold', minWidth: '40px' }}>
+            <span style={{ color: '#bc13fe', fontSize: '12px', fontWeight: 'bold', minWidth: '40px' }}>
               {formatTime(recordingTime)}
             </span>
           )}
@@ -311,7 +319,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
       <style>{`
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
         @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        @keyframes micPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); } }
+        @keyframes micPulse { 0% { box-shadow: 0 0 0 0 rgba(188, 19, 254, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(188, 19, 254, 0); } 100% { box-shadow: 0 0 0 0 rgba(188, 19, 254, 0); } }
         .dot-blink { width: 6px; height: 6px; background: #bc13fe; border-radius: 50%; animation: blink 1s infinite; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
