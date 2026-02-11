@@ -59,12 +59,14 @@ const copilotController = {
 
 DIRECTIVES:
 1. When asked to modify, refactor, or write code for the current file, ALWAYS use the 'write_file' tool.
-2. In your verbal response, briefly explain what you changed.
-3. If the user asks for a general explanation, just provide text.
-4. Do NOT ask for permission before using 'write_file' if the user's intent is clear.
+2. The 'write_file' tool will stage your changes for user review in a Diff View (Red/Green comparison).
+3. The user will see your proposed changes and can Accept or Discard them.
+4. In your verbal response, briefly explain what you changed and why.
+5. If the user asks for a general explanation, just provide text without using the tool.
+6. Do NOT ask for permission before using 'write_file' if the user's intent is clear.
 
 AGENT TOOLS:
-- write_file(code: string): Use this to overwrite the current active file in the user's editor with the 'code' provided.
+- write_file(code: string): Stages your proposed code changes for user review in the Diff View.
 
 [CONTEXT] provides the current file state. [TASK] is the user's request.`
                 },
@@ -80,11 +82,12 @@ AGENT TOOLS:
                             required: ["code"]
                         },
                         handler: async ({ code }) => {
-                            logToConsole("🛠️ AI AGENT ACTION: write_file triggered");
+                            logToConsole("🛠️ AI AGENT ACTION: Staging code for review");
                             if (webContents) {
-                                webContents.send('editor:update-content', code);
+                                // Send to Diff View for user review (Accept/Discard)
+                                webContents.send('editor:preview-diff', code);
                             }
-                            return "The editor has been updated with requested code.";
+                            return "✅ Changes staged for review. Please check the Diff View in your editor and Accept or Discard.";
                         }
                     }
                 ]

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, memo, useState } from 'react';
-import Editor, { Monaco } from '@monaco-editor/react';
+import Editor, { DiffEditor, Monaco } from '@monaco-editor/react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useAnalysisStore } from '../../stores/analysisStore';
 import { parseLiveCode } from '../../utils/liveParser';
@@ -26,6 +26,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const monacoRef = useRef<Monaco | null>(null);
   const [isGeneratingFix, setIsGeneratingFix] = useState(false);
   const [showFindReplace, setShowFindReplace] = useState(false);
+  const [isDiffMode, setIsDiffMode] = useState(false);
+  const [modifiedCode, setModifiedCode] = useState('');
   const editorStore = useEditorStore();
   const analysisStore = useAnalysisStore();
   const fileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'untitled';
@@ -104,6 +106,48 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     window.addEventListener('toggle-find-replace', handleToggleFindReplace);
     return () => window.removeEventListener('toggle-find-replace', handleToggleFindReplace);
   }, []);
+
+  useEffect(() => {
+    // Listen for CustomEvent from Chat UI (PREVIEW CHANGES button)
+    const handlePreview = (e: any) => {
+      if (e.detail && e.detail.code) {
+        console.log("⚡ Diff Preview Triggered from Chat");
+        setModifiedCode(e.detail.code);
+        setIsDiffMode(true);
+      }
+    };
+    window.addEventListener('preview-code-diff', handlePreview);
+    return () => window.removeEventListener('preview-code-diff', handlePreview);
+  }, []);
+
+  useEffect(() => {
+    // Listen for IPC Event from Copilot AI Agent (write_file tool)
+    const handlePreviewDiff = (newCode: string) => {
+      console.log('🤖 Copilot AI staging code for review...');
+      setModifiedCode(newCode);
+      setIsDiffMode(true);
+    };
+
+    if ((window as any).api?.onPreviewDiff) {
+      (window as any).api.onPreviewDiff(handlePreviewDiff);
+    }
+
+    // Note: We don't cleanup here because removeCopilotListeners removes ALL listeners
+    // The listener will be cleaned up when the component unmounts
+  }, []);
+
+  // 🟢 HANDLERS FOR DIFF ACTIONS
+  const handleAcceptDiff = () => {
+    onChange(modifiedCode); // Apply changes to main code
+    setIsDiffMode(false);
+    setModifiedCode('');
+    trackActivity({ title: 'AI Code Fix Applied', type: 'Refactor', xp: 50, color: '#00ff88', icon: 'fa-check' });
+  };
+
+  const handleDiscardDiff = () => {
+    setIsDiffMode(false);
+    setModifiedCode('');
+  };
 
   // AI-powered code fix generator
   const generateAIFix = async (errorMessage: string, line: number, currentCode: string): Promise<string | null> => {
@@ -533,82 +577,203 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
   return (
     <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      width: '100%',
-      overflow: 'hidden',
-      position: 'relative'
+      display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden', position: 'relative'
     }}>
+
+      {/* 🟢 FLOATING DIFF CONTROLS */}
+      {isDiffMode && (
+        <div style={{
+          position: 'absolute', top: '15px', right: '15px', zIndex: 2000,
+          display: 'flex', gap: '12px', background: 'linear-gradient(135deg, #1a1a1f 0%, #0e0e12 100%)',
+          padding: '12px 18px', borderRadius: '10px',
+          border: '1px solid rgba(188, 19, 254, 0.3)',
+          boxShadow: '0 8px 32px rgba(188, 19, 254, 0.4), 0 0 60px rgba(0, 242, 255, 0.2)',
+          backdropFilter: 'blur(10px)',
+          animation: 'slideInFromTop 0.3s ease-out'
+        }}>
+          <div style={{
+            color: '#fff', fontSize: '12px', fontWeight: 'bold',
+            display: 'flex', alignItems: 'center', marginRight: '10px',
+            textShadow: '0 0 10px rgba(188, 19, 254, 0.5)'
+          }}>
+            <i className="fa-solid fa-wand-magic-sparkles" style={{
+              color: '#bc13fe', marginRight: '8px',
+              animation: 'pulse 2s infinite'
+            }}></i>
+            STAGED CODE REVIEW
+          </div>
+          <button
+            onClick={handleAcceptDiff}
+            style={{
+              background: 'linear-gradient(135deg, rgba(0, 242, 255, 0.2) 0%, rgba(0, 242, 255, 0.1) 100%)',
+              color: '#00f2ff',
+              border: '1px solid #00f2ff',
+              borderRadius: '6px',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.3s',
+              boxShadow: '0 0 20px rgba(0, 242, 255, 0.3)',
+              textShadow: '0 0 10px rgba(0, 242, 255, 0.5)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 242, 255, 0.4) 0%, rgba(0, 242, 255, 0.2) 100%)';
+              e.currentTarget.style.boxShadow = '0 0 30px rgba(0, 242, 255, 0.6)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 242, 255, 0.2) 0%, rgba(0, 242, 255, 0.1) 100%)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 242, 255, 0.3)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <i className="fa-solid fa-check"></i> ACCEPT
+          </button>
+          <button
+            onClick={handleDiscardDiff}
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 68, 68, 0.2) 0%, rgba(255, 68, 68, 0.1) 100%)',
+              color: '#ff4444',
+              border: '1px solid #ff4444',
+              borderRadius: '6px',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.3s',
+              boxShadow: '0 0 20px rgba(255, 68, 68, 0.3)',
+              textShadow: '0 0 10px rgba(255, 68, 68, 0.5)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 68, 68, 0.4) 0%, rgba(255, 68, 68, 0.2) 100%)';
+              e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 68, 68, 0.6)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 68, 68, 0.2) 0%, rgba(255, 68, 68, 0.1) 100%)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 68, 68, 0.3)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <i className="fa-solid fa-xmark"></i> DISCARD
+          </button>
+        </div>
+      )}
+
       {isGeneratingFix && (
         <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: '#0e639c',
-          color: 'white',
-          padding: '8px 16px',
-          borderRadius: '4px',
-          fontSize: '12px',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+          position: 'absolute', top: '10px', right: '10px',
+          background: '#0e639c', color: 'white', padding: '8px 16px',
+          borderRadius: '4px', fontSize: '12px', zIndex: 1000,
+          display: 'flex', alignItems: 'center', gap: '8px'
         }}>
           <i className="fa-solid fa-wand-magic-sparkles fa-spin"></i>
           Generating AI fix...
         </div>
       )}
-      <div style={{
-        flex: 1,
-        overflow: 'hidden',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        <Editor
-          height="100%"
-          width="100%"
-          theme={editorStore.theme === 'light' ? 'vs-light' : 'vs-dark'}
-          language={language}
-          value={code}
-          onChange={(val) => onChange(val || "")}
-          onMount={handleEditorDidMount}
-          options={{
-            fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-            fontSize: 14,
-            minimap: { enabled: true },
-            cursorBlinking: 'smooth',
-            cursorSmoothCaretAnimation: 'on',
-            smoothScrolling: true,
-            contextmenu: true,
-            multiCursorModifier: 'ctrlCmd',
-            wordWrap: editorStore.wordWrap || 'on',
-            padding: { top: 10 },
-            guides: { indentation: true, bracketPairs: true },
-            bracketPairColorization: { enabled: true },
-            renderLineHighlight: 'all',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            lightbulb: {
-              enabled: 'on' as any
-            },
-            quickSuggestions: {
-              other: true,
-              comments: false,
-              strings: false
-            }
-          }}
-        />
+
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+
+        {/* 🟢 CONDITIONAL RENDERING: DiffEditor vs Editor */}
+        {isDiffMode ? (
+          <DiffEditor
+            height="100%"
+            width="100%"
+            theme={editorStore.theme === 'light' ? 'vs-light' : 'vs-dark'}
+            language={language}
+            original={code}          // Left: Current Code (Red)
+            modified={modifiedCode}  // Right: New Code (Green)
+            options={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 14,
+              renderSideBySide: true,
+              readOnly: true,
+              minimap: { enabled: false },
+              diffCodeLens: true,
+              scrollBeyondLastLine: false,
+            }}
+          />
+        ) : (
+          <Editor
+            height="100%"
+            width="100%"
+            theme={editorStore.theme === 'light' ? 'vs-light' : 'vs-dark'}
+            language={language}
+            value={code}
+            onChange={(val) => onChange(val || "")}
+            onMount={handleEditorDidMount}
+            options={{
+              fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+              fontSize: 14,
+              minimap: { enabled: true },
+              cursorBlinking: 'smooth',
+              smoothScrolling: true,
+              contextmenu: true,
+              wordWrap: editorStore.wordWrap || 'on',
+              padding: { top: 10 },
+              bracketPairColorization: { enabled: true },
+              renderLineHighlight: 'all',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+            }}
+          />
+        )}
+
         <FindReplace
           editorRef={internalEditorRef}
           isVisible={showFindReplace}
           onClose={() => setShowFindReplace(false)}
         />
       </div>
+
+      {/* CSS Animations for Diff Controls */}
+      <style>{`
+        @keyframes slideInFromTop {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(1.1);
+          }
+        }
+      `}</style>
     </div>
   );
 };
+
+// Helper style for diff mode buttons
+const diffBtnStyle = (color: string, bg: string) => ({
+  background: bg,
+  color: color,
+  border: `1px solid ${color}`,
+  borderRadius: '4px',
+  padding: '6px 12px',
+  cursor: 'pointer',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  transition: 'all 0.2s'
+});
 
 export default memo(CodeEditor);

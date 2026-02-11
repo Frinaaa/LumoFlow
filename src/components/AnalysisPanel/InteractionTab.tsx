@@ -11,19 +11,38 @@ interface Message {
 }
 
 const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  // Load messages from localStorage or use default
+  const getInitialMessages = (): Message[] => {
+    try {
+      const saved = localStorage.getItem('lumoflow_chat_messages');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Convert timestamp strings back to Date objects
+        return parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to load chat history:', e);
+    }
+
+    // Default welcome message
+    return [{
       id: '1',
       role: 'assistant',
-      content: '👋 Hi! I\'m your **LumoFlow AI**. Ask me anything or use the mic to chat!',
+      content: '👋 **LumoFlow AI Online.**\nI can edit your files and listen to your voice. Click the mic to record!',
       timestamp: new Date()
-    }
-  ]);
+    }];
+  };
+
+  const [messages, setMessages] = useState<Message[]>(getInitialMessages());
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [thinkingMessage, setThinkingMessage] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -38,6 +57,15 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('lumoflow_chat_messages', JSON.stringify(messages));
+    } catch (e) {
+      console.error('Failed to save chat history:', e);
+    }
+  }, [messages]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -156,6 +184,23 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
       timestamp: new Date()
     }]);
 
+    // Show thinking messages
+    const thinkingMessages = [
+      '🤔 Analyzing your code...',
+      '🔍 Understanding the context...',
+      '💡 Formulating solution...',
+      '⚙️ Processing request...',
+      '🧠 Thinking...'
+    ];
+
+    let thinkingIndex = 0;
+    setThinkingMessage(thinkingMessages[0]);
+
+    const thinkingInterval = setInterval(() => {
+      thinkingIndex = (thinkingIndex + 1) % thinkingMessages.length;
+      setThinkingMessage(thinkingMessages[thinkingIndex]);
+    }, 1500);
+
     copilotService.setContext({
       currentCode: activeTabRef.current?.content || '',
       currentFile: activeTabRef.current?.fileName || 'untitled.js',
@@ -169,7 +214,11 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
       await copilotService.streamChat(
         textToSend,
         (chunk) => {
+          // Clear thinking message when first chunk arrives
           if (!accumulatedText) {
+            clearInterval(thinkingInterval);
+            setThinkingMessage(null);
+
             setMessages(prev => [...prev, {
               id: assistantId,
               role: 'assistant',
@@ -180,18 +229,28 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
           accumulatedText += chunk;
           setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: accumulatedText } : m));
         },
-        () => setIsProcessing(false)
+        () => {
+          clearInterval(thinkingInterval);
+          setThinkingMessage(null);
+          setIsProcessing(false);
+        }
       );
     } catch (err) {
       console.error("AI Error:", err);
+      clearInterval(thinkingInterval);
+      setThinkingMessage(null);
       setIsProcessing(false);
     }
   };
 
-  const applyEdit = (code: string, msgId: string) => {
-    if (!activeTab) return;
-    editorStore.updateTabContent(activeTab.id, code);
-    setMessages(prev => prev.map(m => m.id === msgId ? { ...m, applied: true } : m));
+  const previewEdit = (newCode: string) => {
+    // Dispatch an event that CodeEditor.tsx listens to
+    const event = new CustomEvent('preview-code-diff', {
+      detail: {
+        code: newCode
+      }
+    });
+    window.dispatchEvent(event);
   };
 
   const renderContent = (content: string, msgId: string, isApplied?: boolean) => {
@@ -205,10 +264,25 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
           <div key={i} style={{ margin: '15px 0', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
             <div style={{ background: '#25252a', padding: '6px 12px', fontSize: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#888', textTransform: 'uppercase' }}>{lang || 'code'}</span>
-              <button onClick={() => applyEdit(code, msgId)} disabled={isApplied}
-                style={{ background: isApplied ? '#00ff88' : '#bc13fe', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-                {isApplied ? '✓ APPLIED' : 'APPLY TO FILE'}
+              <button
+                onClick={() => previewEdit(code)}
+                style={{
+                  background: '#bc13fe',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 10px',
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <i className="fa-solid fa-code-compare"></i> PREVIEW CHANGES
               </button>
+
             </div>
             <pre style={{ margin: 0, padding: '12px', background: '#0a0a0c', fontSize: '12px', overflowX: 'auto', color: '#bc13fe' }}>
               <code>{code}</code>
@@ -236,8 +310,30 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const handleResetChat = () => {
+    const defaultMessage: Message = {
+      id: '1',
+      role: 'assistant',
+      content: '👋 **LumoFlow AI Online.**\nI can edit your files and listen to your voice. Click the mic to record!',
+      timestamp: new Date()
+    };
+    setMessages([defaultMessage]);
+    localStorage.setItem('lumoflow_chat_messages', JSON.stringify([defaultMessage]));
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0e0e0f' }}>
+      {/* Header */}
+      <div style={{ padding: '12px 16px', background: '#151518', borderBottom: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: (isProcessing || isTranscribing) ? '#bc13fe' : '#00ff88', boxShadow: (isProcessing || isTranscribing) ? '0 0 10px #bc13fe' : '0 0 10px #00ff88', animation: (isProcessing || isTranscribing) ? 'pulse 1.5s infinite' : 'none' }}></div>
+          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#888', letterSpacing: '0.5px' }}>LUMO AI ASSISTANT</span>
+        </div>
+        <button onClick={handleResetChat} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer' }} title="Reset Chat">
+          <i className="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+
       {/* Messages */}
       <div className="custom-scroll" ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {messages.map((msg) => (
@@ -255,7 +351,35 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
             </div>
           </div>
         ))}
-        {(isProcessing || isTranscribing) && (
+
+        {/* Thinking Message */}
+        {thinkingMessage && (
+          <div style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '16px',
+              fontSize: '13px',
+              lineHeight: '1.5',
+              background: '#1c1c1f',
+              color: '#bc13fe',
+              boxShadow: '0 4px 15px rgba(188, 19, 254, 0.2)',
+              border: '1px solid #bc13fe',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontStyle: 'italic'
+            }}>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <div className="dot-blink" style={{ animationDelay: '0s', background: '#bc13fe' }}></div>
+                <div className="dot-blink" style={{ animationDelay: '0.2s', background: '#bc13fe' }}></div>
+                <div className="dot-blink" style={{ animationDelay: '0.4s', background: '#bc13fe' }}></div>
+              </div>
+              {thinkingMessage}
+            </div>
+          </div>
+        )}
+
+        {(isProcessing || isTranscribing) && !thinkingMessage && (
           <div style={{ alignSelf: 'flex-start', display: 'flex', gap: '8px', alignItems: 'center', padding: '8px 16px' }}>
             <div className="dot-blink" style={{ animationDelay: '0s' }}></div>
             <div className="dot-blink" style={{ animationDelay: '0.2s' }}></div>
@@ -267,12 +391,12 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
 
       {/* Input */}
       <div style={{ padding: '15px', background: '#151518', borderTop: '1px solid #222' }}>
-        <div style={{ display: 'flex', alignItems: 'center', background: '#0e0e0f', borderRadius: '25px', padding: '5px 15px', gap: '10px', border: isRecording ? '1px solid #bc13fe' : '1px solid #333' }}>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#0e0e0f', borderRadius: '25px', padding: '5px 15px', gap: '10px', border: isRecording ? '1px solid #ff4444' : '1px solid #333' }}>
           <button
             onClick={toggleVoice}
             disabled={isProcessing || isTranscribing}
             style={{
-              background: isRecording ? '#bc13fe' : 'none',
+              background: isRecording ? '#ff4444' : 'none',
               border: 'none', color: isRecording ? '#fff' : '#888',
               width: '32px', height: '32px', borderRadius: '50%',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -286,7 +410,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
           </button>
 
           {isRecording && (
-            <span style={{ color: '#bc13fe', fontSize: '12px', fontWeight: 'bold', minWidth: '40px' }}>
+            <span style={{ color: '#ff4444', fontSize: '12px', fontWeight: 'bold', minWidth: '40px' }}>
               {formatTime(recordingTime)}
             </span>
           )}
@@ -319,7 +443,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
       <style>{`
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
         @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        @keyframes micPulse { 0% { box-shadow: 0 0 0 0 rgba(188, 19, 254, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(188, 19, 254, 0); } 100% { box-shadow: 0 0 0 0 rgba(188, 19, 254, 0); } }
+        @keyframes micPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); } }
         .dot-blink { width: 6px; height: 6px; background: #bc13fe; border-radius: 50%; animation: blink 1s infinite; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }

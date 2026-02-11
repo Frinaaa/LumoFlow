@@ -102,7 +102,10 @@ contextBridge.exposeInMainWorld('api', {
   onCopilotDone: (callback) => ipcRenderer.on('copilot:done', (event) => callback()),
   onCopilotError: (callback) => ipcRenderer.on('copilot:error', (event, err) => callback(err)),
   onEditorUpdate: (callback) => ipcRenderer.on('editor:update-content', (event, code) => callback(code)),
+  onPreviewDiff: (callback) => ipcRenderer.on('editor:preview-diff', (event, code) => callback(code)),
   removeCopilotListeners: () => {
+    // Only remove stream-related listeners (used between chat messages)
+    // Do NOT remove editor:preview-diff - it must persist across chats!
     ipcRenderer.removeAllListeners('copilot:chunk');
     ipcRenderer.removeAllListeners('copilot:done');
     ipcRenderer.removeAllListeners('copilot:error');
