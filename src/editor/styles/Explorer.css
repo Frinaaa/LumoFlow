@@ -154,3 +154,20 @@
     background: #454545;
     margin: 5px 0;
 }
+
+/* Thin Scrollbars for Explorer */
+.vs-explorer-container {
+    overflow-y: auto;
+}
+
+.vs-explorer-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.vs-explorer-container::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+.vs-explorer-container:hover::-webkit-scrollbar-thumb {
+    background: rgba(121, 121, 121, 0.4);
+}

@@ -18,7 +18,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -65,9 +66,38 @@ body {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Global VS Code-style Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.7);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(121, 121, 121, 0.4) transparent;
 }
 
 /* App Container */
@@ -91,48 +121,49 @@ body {
   font-size: 14px;
   color: var(--text-secondary);
 }
+
 /* App.css Shared Brand System */
 .app-brand {
-    display: flex;
-    align-items: center;
-    user-select: none;
+  display: flex;
+  align-items: center;
+  user-select: none;
 }
 
 .app-brand-icon {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(0, 242, 255, 0.1);
-    border: 1px solid rgba(0, 242, 255, 0.3);
-    border-radius: 50%;
-    color: var(--accent-cyan);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 242, 255, 0.1);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  border-radius: 50%;
+  color: var(--accent-cyan);
 }
 
 .app-brand-text {
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 800;
-    color: #ffffff;
-    text-transform: uppercase;
-    line-height: 1;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  color: #ffffff;
+  text-transform: uppercase;
+  line-height: 1;
 }
 
 .app-brand-highlight {
-    color: var(--accent-cyan);
-    text-shadow: 0 0 20px rgba(0, 242, 255, 0.8);
+  color: var(--accent-cyan);
+  text-shadow: 0 0 20px rgba(0, 242, 255, 0.8);
 }
 
 /* Small Variant for Headers */
 .app-brand.small {
-    flex-direction: row;
-    gap: 12px;
+  flex-direction: row;
+  gap: 12px;
 }
 
 .app-brand.small .app-brand-icon {
-    width: 35px;
-    height: 35px;
-    font-size: 16px;
+  width: 35px;
+  height: 35px;
+  font-size: 16px;
 }
 
 .app-brand.small .app-brand-text {
-    font-size: 24px;
+  font-size: 24px;
 }
