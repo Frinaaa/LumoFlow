@@ -55,14 +55,14 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
   };
 
   return (
-    <div className="vs-titlebar-container">
+    <div className="vs-titlebar-container" style={{ WebkitAppRegion: 'drag' } as any}>
       {/* 1. LEFT SECTION: Logo and MenuBar */}
-      <div className="titlebar-section left">
+      <div className="titlebar-section left" style={{ WebkitAppRegion: 'drag' } as any}>
         <div className="titlebar-logo">
           <i className="fa-solid fa-bolt"></i>
           <span className="logo-text">LUMO<span>FLOW</span></span>
         </div>
-        <div className="titlebar-menu-wrapper">
+        <div className="titlebar-menu-wrapper" style={{ WebkitAppRegion: 'no-drag' } as any}>
           <MenuBar
             onNewFile={() => {
               console.log('🔥 NEW FILE CLICKED');
@@ -151,8 +151,8 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
         </div>
       </div>
 
-      <div className="titlebar-section center">
-        <div className="titlebar-search" onClick={() => editorStore.toggleQuickOpen()} title="Search files (Ctrl+P)">
+      <div className="titlebar-section center" style={{ WebkitAppRegion: 'drag' } as any}>
+        <div className="titlebar-search" onClick={() => editorStore.toggleQuickOpen()} title="Search files (Ctrl+P)" style={{ WebkitAppRegion: 'no-drag' } as any}>
           <i className="fa-solid fa-magnifying-glass"></i>
           <span>
             {activeTab ? (
@@ -166,8 +166,8 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
       </div>
 
       {/* 3. RIGHT SECTION: Action Buttons + Layout Toggles + Window Controls */}
-      <div className="titlebar-section right">
-        <div className="action-btns">
+      <div className="titlebar-section right" style={{ WebkitAppRegion: 'drag' } as any}>
+        <div className="action-btns" style={{ WebkitAppRegion: 'no-drag' } as any}>
           <button
             className="purple-btn analyze"
             onClick={handleAnalyze}
@@ -193,7 +193,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
         </div>
 
         {/* Layout Toggles */}
-        <div style={{ display: 'flex', gap: '5px', marginRight: '10px', color: '#ccc' }}>
+        <div style={{ display: 'flex', gap: '5px', marginRight: '10px', color: '#ccc', WebkitAppRegion: 'no-drag' } as any}>
           <div
             className="control-btn small"
             onClick={toggleSidebar}
@@ -210,13 +210,14 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
           </div>
         </div>
 
-        <div className="window-controls">
+        <div className="window-controls" style={{ WebkitAppRegion: 'no-drag' } as any}>
           <div className="control-btn" onClick={minimize} title="Minimize"><i className="fa-solid fa-minus"></i></div>
           <div className="control-btn" onClick={maximize} title="Maximize"><i className="fa-regular fa-square"></i></div>
           <div className="control-btn close" onClick={close} title="Close"><i className="fa-solid fa-xmark"></i></div>
         </div>
       </div>
     </div >
+
   );
 };
 

@@ -19,8 +19,9 @@ const SimpleTitlebar: React.FC = () => {
       top: 0,
       left: 0,
       right: 0,
-      zIndex: 9999
-    } as React.CSSProperties}>
+      zIndex: 9999,
+      WebkitAppRegion: 'drag' // Entire titlebar is draggable
+    } as any}>
       {/* LEFT: Logo and Name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <i className="fa-solid fa-bolt" style={{ color: '#00f2ff', fontSize: '14px' }}></i>
@@ -35,7 +36,8 @@ const SimpleTitlebar: React.FC = () => {
       </div>
 
       {/* RIGHT: Window Controls */}
-      <div style={{ display: 'flex', gap: '18px' }}>
+      <div style={{ display: 'flex', gap: '18px', WebkitAppRegion: 'no-drag' } as any}>
+
         <i
           className="fa-solid fa-minus"
           onClick={minimize}
