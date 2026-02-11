@@ -14,6 +14,10 @@ const copilotController = require('./controllers/copilotController');
 const voiceController = require('./controllers/voiceController');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+console.log("--- STARTUP CHECK ---");
+console.log("Check: Token exists?", !!process.env.GITHUB_TOKEN); 
+console.log("---------------------");
+
 let mainWindow;
 let authWindow;
 let projectDir = path.join(require('os').homedir(), 'LumoFlow_Projects');
@@ -205,21 +209,16 @@ const createWindow = async () => {
 
 app.on('ready', () => {
   // Grant microphone permissions automatically
-  const { session } = require('electron');
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    console.log(`🔒 Permission requested: ${permission}`);
-    if (permission === 'media' || permission === 'audioCapture') {
-      return callback(true);
-    }
+  // Inside app.on('ready', ...)
+const { session } = require('electron');
+session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+  const allowedPermissions = ['media', 'audioCapture', 'notifications'];
+  if (allowedPermissions.includes(permission)) {
+    callback(true); // Automatically approve microphone
+  } else {
     callback(false);
-  });
-
-  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
-    if (permission === 'media' || permission === 'audioCapture') {
-      return true;
-    }
-    return false;
-  });
+  }
+});
 
   // Disable Autofill at Chromium level
   app.commandLine.appendSwitch('disable-autofill-keyboard-accessory-view');

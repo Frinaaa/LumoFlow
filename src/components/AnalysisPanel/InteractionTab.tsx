@@ -44,14 +44,15 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
   }, [messages]);
 
   // --- VOICE RECORDING (MediaRecorder) ---
-  const startRecording = async () => {
+  // --- VOICE RECORDING (Corrected startRecording) ---
+ const startRecording = async () => {
     try {
-      console.log("🎤 Requesting microphone...");
+      console.log("🎤 Mic started...");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       audioChunksRef.current = [];
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const mediaRecorder = new MediaRecorder(stream); // Default browser mimeType is usually best
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -59,38 +60,40 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
       };
 
       mediaRecorder.onstop = async () => {
-        console.log("🎤 Recording stopped. Processing audio...");
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        audioChunksRef.current = [];
-
-        // Release mic
+        console.log("🎤 Processing audio...");
+        
+        // Cleanup Mic
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(t => t.stop());
-          streamRef.current = null;
         }
 
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
         const reader = new FileReader();
+        
         reader.onloadend = async () => {
           const base64Data = reader.result as string;
-          if (!base64Data?.includes(',')) return;
           const base64Audio = base64Data.split(',')[1];
 
-          setIsTranscribing(true);
+          setIsTranscribing(true); // Show loading state
+          
           try {
+            // 1. Send to Backend to convert Speech -> Text
             const text = await (window as any).api.transcribeAudio(base64Audio);
+            
             if (text && text !== '__TRANSCRIPTION_FAILED__') {
-              setInput(text.trim());
-              handleSend(text.trim());
-            } else if (text === '__TRANSCRIPTION_FAILED__') {
-              setMessages(prev => [...prev, {
-                id: 'err-' + Date.now(),
-                role: 'assistant',
-                content: '🎤 Sorry, I couldn\'t process that audio. Please try again or type your message.',
-                timestamp: new Date()
-              }]);
+              const cleanText = text.trim();
+              
+              // 2. Put Text in Input Box (Visual Feedback)
+              setInput(cleanText); 
+              
+              // 3. AUTO-SEND to Copilot (The "Pilot" part)
+              console.log("🚀 Auto-sending to Copilot:", cleanText);
+              handleSend(cleanText); 
+            } else {
+              alert("Could not hear audio. Please check your API Key.");
             }
-          } catch (err) {
-            console.error("Transcription error:", err);
+          } catch (e) {
+            console.error(e);
           } finally {
             setIsTranscribing(false);
           }
@@ -98,16 +101,13 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
         reader.readAsDataURL(audioBlob);
       };
 
-      mediaRecorder.start(250);
+      mediaRecorder.start();
       setIsRecording(true);
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
-    } catch (err: any) {
-      console.error("Mic error:", err);
-      alert("Could not access microphone.");
+    } catch (e) {
+      console.error("Mic Error", e);
+      setIsRecording(false);
     }
   };
-
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
