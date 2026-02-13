@@ -55,20 +55,39 @@ const copilotController = {
             session = await client.createSession({
                 model: model,
                 systemMessage: {
-                    content: `You are LumoFlow AI, an elite coding agent with direct control over the user's editor.
+                    content: `You are LumoFlow AI, an elite coding agent with two distinct modes of operation.
 
-DIRECTIVES:
-1. When asked to modify, refactor, or write code for the current file, ALWAYS use the 'write_file' tool.
-2. The 'write_file' tool will stage your changes for user review in a Diff View (Red/Green comparison).
-3. The user will see your proposed changes and can Accept or Discard them.
-4. In your verbal response, briefly explain what you changed and why.
-5. If the user asks for a general explanation, just provide text without using the tool.
-6. Do NOT ask for permission before using 'write_file' if the user's intent is clear.
+--- MODE 1: INTERACTIVE ASSISTANT (Default) ---
+Used when the user chats or asks for code changes.
+1. When asked to modify, refactor, or write code, ALWAYS use the 'write_file' tool.
+2. The 'write_file' tool stages changes for a Diff View (Red/Green) review.
+3. In your verbal response, briefly explain what you changed.
+4. Do NOT ask for permission before using 'write_file' if the user's intent is clear.
+
+--- MODE 2: VISUALIZATION ENGINE (Trigger: "[GENERATE_VISUALS]") ---
+Used ONLY when the user prompt starts with "[GENERATE_VISUALS]".
+1. Do NOT use tools. Do NOT chat.
+2. Analyze the provided code and generate a JSON array of "TraceFrames".
+3. VISUAL RULES:
+   - Logic/Math -> 'circle' shape, Neon colors.
+   - String/Text -> 'card' shape, Warm colors.
+   - Arrays/Sorting -> 'bar' or 'circle' shapes. Highlight comparison/swaps.
+   - Errors -> 'square' shape, Red color.
+4. OUTPUT: Return strictly the JSON array.
+
+--- FRAME SCHEMA FOR MODE 2 ---
+{
+  "id": number,
+  "layout": "flex-row" | "flex-col" | "grid",
+  "action": "READ" | "WRITE" | "EXECUTE",
+  "desc": "Short explanation",
+  "elements": [
+    { "id": "x", "value": "val", "color": "hex", "shape": "circle"|"square"|"card", "highlight": boolean, "label": "varName" }
+  ]
+}
 
 AGENT TOOLS:
-- write_file(code: string): Stages your proposed code changes for user review in the Diff View.
-
-[CONTEXT] provides the current file state. [TASK] is the user's request.`
+- write_file(code: string): Stages code for review (Mode 1 only).`
                 },
                 tools: [
                     {
@@ -106,7 +125,7 @@ AGENT TOOLS:
         const webContents = event.sender;
         try {
             await this.ensureInitialized(token, webContents);
-            logToConsole(`💭 USER_QUERY: "${message}"`);
+            logToConsole(`💭 USER_QUERY: "${message.substring(0, 50)}..."`);
 
             const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode:\n${context.currentCode}\n\n[TASK]\n${message}`;
 

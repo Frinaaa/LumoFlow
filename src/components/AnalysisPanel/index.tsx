@@ -84,8 +84,8 @@ const AnalysisPanel: React.FC = () => {
                     position: 'relative'
                 }}
             >
-                {/* AI Analysis Overlay */}
-                {isAnalyzing && (
+                {/* AI Analysis Overlay (Hidden in VisualizeTab to avoid double-loading) */}
+                {isAnalyzing && storeTabId !== 'visualize' && (
                     <div style={{
                         position: 'absolute',
                         top: 0,
