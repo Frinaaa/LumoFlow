@@ -233,75 +233,39 @@ export const useFileOperations = () => {
   };
 
   const runCode = async (tabId: string): Promise<boolean> => {
-    const tab = editorStore.tabs.find(t => t.id === tabId);
+    // 1. Get the freshest state directly (ignores React render cycles)
+    const currentStore = useEditorStore.getState();
+    const tab = currentStore.tabs.find(t => t.id === tabId);
     if (!tab) return false;
 
+    // 2. Capture the EXACT code being sent to the terminal
+    const exactCodeToRun = tab.content;
+    const exactFilePath = tab.filePath;
+
+    const analysisStoreImport = await import('../stores/analysisStore');
+    const analysisStore = analysisStoreImport.useAnalysisStore.getState();
+
+    // 3. IMMEDIATELY Reset Visuals so the old bubbles die
+    analysisStore.setTraceFrames([], 'UNIVERSAL');
+
+    // 4. PREPARE Terminal UI
+    editorStore.clearOutputData();
+    editorStore.setActiveBottomTab('Output');
+    if (!editorStore.terminalVisible) editorStore.toggleTerminal();
+
     try {
-      // 1. Check for immediate editor-detected errors (Static only)
-      const currentFileProblems = editorStore.staticProblems.filter(p => p.source === tab.fileName && p.type === 'error');
-      if (currentFileProblems.length > 0) {
-        editorStore.setActiveBottomTab('Problems');
-        editorStore.clearOutputData(); // Clear previous spam
-        editorStore.appendOutputData(`❌ Cannot run: ${currentFileProblems.length} errors detected in ${tab.fileName}. Fix them first!\n`);
-        if (!editorStore.terminalVisible) editorStore.toggleTerminal();
-        return false;
-      }
+      // 5. Run the code in the terminal
+      const result = await terminalApi.runCode(tab.filePath, exactCodeToRun);
 
-      // 2. Clear old outputs and prepare UI
-      editorStore.clearOutputData();
-      editorStore.clearDebugData();
-      editorStore.clearRuntimeProblems();
-      editorStore.setActiveBottomTab('Output');
-      if (!editorStore.terminalVisible) editorStore.toggleTerminal();
-      editorStore.appendOutputData(`▶ Running ${tab.fileName}...\n\n`);
-
-      // 🟢 FIX: Trigger AI Simulation IMMEDIATELY.
-      // This starts the "Thinking" process while the code is still executing in the background.
-      const analysisStoreImport = await import('../stores/analysisStore');
-      const analysisStore = analysisStoreImport.useAnalysisStore.getState();
-
-      // 🟢 Only start a fresh simulation if one isn't already running
-      if (!analysisStore.isAnalyzing) {
-        analysisStore.fetchAiSimulation(tab.content, tab.filePath);
-      }
-
-      // 4. Secure Execution via Electron API
-      const result = await terminalApi.runCode(tab.filePath, tab.content);
-
-      if (result.stdout) {
+      // 6. NOW trigger the AI with the EXACT code AND the result
+      // Doing it after result ensures the AI knows exactly what the code did
+      if (result.stdout || result.stderr === "") {
         editorStore.appendOutputData(result.stdout + '\n');
-
-        // 🟢 Instead of starting over, just let the AI know the output if needed
-        // but don't reset the traceFrames array.
-        analysisStore.fetchAiSimulation(tab.content, tab.filePath, result.stdout);
-      }
-
-      if (result.stderr) {
-        // Switch to Problems tab if we have runtime errors
-        editorStore.setActiveBottomTab('Problems');
-
-        // Parse runtime errors into problems store so they show up in the Problems view
-        const { parseErrors } = await import('../../utils/utils');
-        const runtimeProblems = parseErrors(result.stderr, tab.fileName, tab.filePath);
-
-        // Store as runtime problems
-        if (runtimeProblems.length === 0) {
-          // Fallback if parser couldn't find specific lines but stderr exists
-          runtimeProblems.push({
-            message: result.stderr.split('\n')[0] || 'Unknown Runtime Error',
-            line: 1,
-            source: tab.fileName,
-            type: 'error'
-          } as any);
-        }
-        editorStore.setRuntimeProblems(runtimeProblems as any);
-
-        editorStore.appendDebugData(`[Runtime Error in ${tab.fileName}]\n${result.stderr}\n\n`);
-        editorStore.appendOutputData('\n❌ Execution failed. Check Problems tab for details.\n');
+        // Send BOTH code and output in ONE call to ensure they match
+        analysisStore.fetchAiSimulation(exactCodeToRun, exactFilePath, result.stdout);
       } else {
-        editorStore.appendOutputData('\n✅ Completed successfully.\n');
+        editorStore.appendOutputData(result.stderr);
       }
-
       return true;
     } catch (error: any) {
       editorStore.appendOutputData(`\n❌ Error: ${error.message}\n`);

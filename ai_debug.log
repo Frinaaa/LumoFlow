@@ -2811,3 +2811,171 @@ Limit your response to a ma..."
 [2026-02-13T10:00:47.403Z][SESS:wownge] 🏁 CYCLE_COMPLETE
 [2026-02-13T10:00:55.186Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "state": "Runnin...
 [2026-02-13T10:00:55.200Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:24:05.182Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:24:06.099Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:24:07.214Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:24:07.321Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:24:09.231Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:24:09.588Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:24:12.226Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:24:12.322Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:24:15.228Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:24:15.319Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:24:18.218Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:24:18.309Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:24:20.278Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:24:20.433Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:24:20.958Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:24:20.961Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:24:21.217Z][SESS:wownge] 📦 REPLY: [{"frame": 0, "array": [5, 3, 8, 4, 2], "comparing...
+[2026-02-13T10:24:21.219Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:24:22.108Z][SESS:wownge] 📦 REPLY: [   {     "frame": 0,     "memory": { "arr": [5, 3...
+[2026-02-13T10:24:22.111Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:24:27.799Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "title": "Initia...
+[2026-02-13T10:24:27.804Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:24:29.115Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T10:24:29.116Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:24:34.414Z][SESS:wownge] 📦 REPLY: [   {     "frame": 0,     "desc": "Initializing bu...
+[2026-02-13T10:24:34.416Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:24:42.407Z][SESS:wownge] 📦 REPLY: [   {     "frame": 1,     "title": "Bubble Sort In...
+[2026-02-13T10:24:42.408Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:26:53.741Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:26:53.852Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:26:55.745Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:26:55.848Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:26:57.759Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:26:57.871Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:00.113Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:00.202Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:02.118Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:02.207Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:04.126Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:04.303Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:06.140Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:06.231Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:08.159Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:08.249Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:08.975Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:27:08.976Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:10.188Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:10.292Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:11.135Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:27:11.137Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:12.180Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:12.285Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:14.062Z][SESS:wownge] 📦 REPLY: [   {     "frame": 0,     "desc": "Initializing bu...
+[2026-02-13T10:27:14.064Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:14.190Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:14.291Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:16.054Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T10:27:16.056Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:16.066Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:27:16.069Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:16.230Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:16.366Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:19.109Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "title": "Initia...
+[2026-02-13T10:27:19.111Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:19.220Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:19.312Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:21.232Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:21.336Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:23.143Z][SESS:wownge] 📦 REPLY: [   {     "frame": 0,     "desc": "Initializing th...
+[2026-02-13T10:27:23.146Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:23.240Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:27:23.243Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:23.256Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "title": "Bubble...
+[2026-02-13T10:27:23.258Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:28.234Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "title": "Initia...
+[2026-02-13T10:27:28.237Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:31.956Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "title": "Initia...
+[2026-02-13T10:27:31.958Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:32.076Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:27:32.078Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:35.100Z][SESS:wownge] 📦 REPLY: [   {     "frame": 1,     "desc": "Initializing th...
+[2026-02-13T10:27:35.103Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:36.782Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:27:36.784Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:27:42.219Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:27:42.395Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:27:55.206Z][SESS:wownge] 📦 REPLY: [{"step": 0, "phase": "initialization", "memory": ...
+[2026-02-13T10:27:55.208Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:28:09.502Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:28:09.612Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:28:11.511Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:28:11.604Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:28:13.620Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:28:13.725Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:28:15.631Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:28:15.703Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:28:17.639Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:28:17.727Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:28:19.656Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T10:28:19.771Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+    ..."
+[2026-02-13T10:28:20.974Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T10:28:20.976Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:28:24.278Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T10:28:24.279Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:28:25.866Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T10:28:25.868Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:28:31.434Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T10:28:31.436Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:28:31.587Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T10:28:31.590Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T10:28:31.892Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "stage": "Initia...
+[2026-02-13T10:28:31.895Z][SESS:wownge] 🏁 CYCLE_COMPLETE

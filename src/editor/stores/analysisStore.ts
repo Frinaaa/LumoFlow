@@ -133,7 +133,16 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     const cacheKey = code.trim();
     const cached = get().vizCache[cacheKey];
 
-    if (cached) {
+    // If cached AND we don't need to force update due to new output, use cache
+    // But if we have new output to incorporate, we might want to re-run?
+    // For now, let's assume cache is king unless output is very different?
+    // The user's prompt implies we should re-run.
+    // Let's stick to the user's logic: "KILL previous state immediately".
+    // I will comment out cache check if it conflicts, but let's keep it for now as a "fast load"
+    // and if output is different, maybe the cache key should include output?
+    // Actually, let's follow the user's explicit instruction to update the prompt and clear state.
+
+    if (cached && !output) { // Only use cache if no output change is being forced
       console.log("⚡ Visual Cache Hit! Loading instantly...");
       set({
         traceFrames: cached,
@@ -147,34 +156,30 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       return;
     }
 
-    // 🟢 CRITICAL FIX: Only clear frames if we are starting FRESH
-    // If output is provided, we might be refining an existing visual, so keep bubbles!
-    if (!get().traceFrames.length || !output) {
-      set({
-        isAnalyzing: true,
-        isVisible: true,
-        activeTabId: 'visualize',
-        traceFrames: [], // Clear old bubbles immediately
-        currentFrameIndex: 0,
-        currentVisualFilePath: filePath
-      });
-    } else {
-      set({ isAnalyzing: true, currentVisualFilePath: filePath });
-    }
+    // 🟢 Step 1: KILL previous state immediately
+    // This prevents the "old bubbles" from showing while the AI thinks
+    set({
+      isAnalyzing: true,
+      isVisible: true,
+      activeTabId: 'visualize',
+      traceFrames: [], // Clear old bubbles immediately
+      currentFrameIndex: 0,
+      currentVisualFilePath: filePath
+    });
 
     try {
       const { copilotService } = await import('../../services/CopilotService');
       let fullResponse = "";
 
-      // 🟢 SPEED OPTIMIZATION: Tell AI to be concise (fewer frames = faster loading)
-      // This keeps your "Standard" but stops the AI from generating 50+ useless frames.
-      const prompt = `[GENERATE_VISUAL_JSON] 
-        Focus: Key state changes only (Max 12 frames).
-        Standard: High-tech female 'desc' narration.
-        Include: 'comparing' and 'swapping' metadata for 3D effects.
-        Program output: "${output || 'Running...'}"
-        CODE:
-        ${code}`;
+      // 🟢 Step 2: Strict Prompting
+      // We tell the AI it MUST use the provided code and output exactly.
+      const prompt = `[GENERATE_VISUAL_JSON]
+        STRICT RULES: 
+        1. Visualize THIS CODE ONLY: \`${code}\`
+        2. Reflect this ACTUAL OUTPUT: "${output || 'No output'}"
+        3. Max 12 frames. High-tech female narrator 'desc'.
+        4. Include 'comparing'/'swapping' for 3D bubbles.
+        5. Output ONLY raw JSON array starting with [.`;
 
       await copilotService.streamChat(
         prompt,
@@ -202,11 +207,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
             const end = fullResponse.lastIndexOf(']') + 1;
             if (start !== -1) {
               const frames = JSON.parse(fullResponse.substring(start, end));
+
+              // Finalize
               set((state) => ({
                 vizCache: { ...state.vizCache, [code.trim()]: frames },
                 traceFrames: frames,
                 isAnalyzing: false,
-                // Keep everything else the same to preserve the UI
+                isVisible: true,
+                activeTabId: 'visualize'
               }));
             }
           } catch (e) {
