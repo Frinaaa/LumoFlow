@@ -19,6 +19,7 @@ let CopilotClient = null;
 let client = null;
 let session = null;
 let currentToken = null;
+let isInitializing = false;
 
 async function loadSDK() {
     if (CopilotClient) return;
@@ -32,9 +33,14 @@ async function loadSDK() {
 
 const copilotController = {
     async ensureInitialized(token, webContents) {
+        // Extreme priority: if session exists, return immediately.
+        if (session) return true;
+        if (isInitializing) return false;
+
         const activeToken = token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
         if (!activeToken) throw new Error("MISSING_TOKEN");
 
+        isInitializing = true;
         try {
             await loadSDK();
             if (client && currentToken !== activeToken) {
@@ -48,65 +54,31 @@ const copilotController = {
                 currentToken = activeToken;
             }
 
-            // FRESH SESSION PER MESSAGE
-            const model = 'claude-haiku-4.5';
-            logToConsole(`🧪 Creating Agent Session: ${model}`);
+            // 🚀 ULTRA-SPEED: Reuse session to save 1.5s creation time
+            if (session) return true;
+
+            const model = 'gpt-4o-mini';
+            logToConsole(`🧪 Creating Persistent Agent Session: ${model}`);
 
             session = await client.createSession({
                 model: model,
                 systemMessage: {
-                    content: `You are LumoFlow AI, an elite coding agent with two distinct modes of operation.
-
---- MODE 1: INTERACTIVE ASSISTANT (Default) ---
-Used when the user chats or asks for code changes.
-1. When asked to modify, refactor, or write code, ALWAYS use the 'write_file' tool.
-2. The 'write_file' tool stages changes for a Diff View (Red/Green) review.
-3. In your verbal response, briefly explain what you changed.
-4. Do NOT ask for permission before using 'write_file' if the user's intent is clear.
-
---- MODE 2: VISUALIZATION ENGINE (Trigger: "[GENERATE_VISUALS]") ---
-Used ONLY when the user prompt starts with "[GENERATE_VISUALS]".
-1. Do NOT use tools. Do NOT chat.
-2. Analyze the provided code and generate a JSON array of "TraceFrames".
-3. VISUAL RULES:
-   - Logic/Math -> 'circle' shape, Neon colors.
-   - String/Text -> 'card' shape, Warm colors.
-   - Arrays/Sorting -> 'bar' or 'circle' shapes. Highlight comparison/swaps.
-   - Errors -> 'square' shape, Red color.
-4. OUTPUT: Return strictly the JSON array.
-
---- FRAME SCHEMA FOR MODE 2 ---
-{
-  "id": number,
-  "layout": "flex-row" | "flex-col" | "grid",
-  "action": "READ" | "WRITE" | "EXECUTE",
-  "desc": "Short explanation",
-  "elements": [
-    { "id": "x", "value": "val", "color": "hex", "shape": "circle"|"square"|"card", "highlight": boolean, "label": "varName" }
-  ]
-}
-
-AGENT TOOLS:
-- write_file(code: string): Stages code for review (Mode 1 only).`
+                    content: `Act as LumoFlow AI. 
+MODE 1 (Chat): Use 'write_file' tool for code edits.
+MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array of trace frames. Start with '[' immediately. Use user variable names. Include 'comparing' or 'swapping' metadata. Write high-tech female 'desc' narration.`
                 },
                 tools: [
                     {
                         name: "write_file",
-                        description: "Updates the current active file in the Monaco editor with new content. Use this whenever the user wants to apply changes to their code.",
+                        description: "Stage code for Diff review.",
                         parameters: {
                             type: "object",
-                            properties: {
-                                code: { type: "string", description: "The complete new content for the file" }
-                            },
+                            properties: { code: { type: "string" } },
                             required: ["code"]
                         },
                         handler: async ({ code }) => {
-                            logToConsole("🛠️ AI AGENT ACTION: Staging code for review");
-                            if (webContents) {
-                                // Send to Diff View for user review (Accept/Discard)
-                                webContents.send('editor:preview-diff', code);
-                            }
-                            return "✅ Changes staged for review. Please check the Diff View in your editor and Accept or Discard.";
+                            if (webContents) webContents.send('editor:preview-diff', code);
+                            return "✅ Staged.";
                         }
                     }
                 ]
@@ -114,10 +86,9 @@ AGENT TOOLS:
             return true;
         } catch (error) {
             logToConsole(`🔥 Init Failed: ${error.message}`);
-            if (!session) {
-                session = await client.createSession({ model: 'gpt-4o' });
-            }
-            return true;
+            return false;
+        } finally {
+            isInitializing = false;
         }
     },
 
@@ -127,7 +98,7 @@ AGENT TOOLS:
             await this.ensureInitialized(token, webContents);
             logToConsole(`💭 USER_QUERY: "${message.substring(0, 50)}..."`);
 
-            const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode:\n${context.currentCode}\n\n[TASK]\n${message}`;
+            const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode: \n${context.currentCode}\n\n[TASK]\n${message}`;
 
             let deltasReceived = false;
             const unsubscribeDelta = session.on('assistant.message_delta', (delta) => {
