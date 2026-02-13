@@ -87,6 +87,21 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => clearTimeout(timer);
   }, [code, analysisStore]);
 
+  // 🚀 Speculative AI Fetching
+  useEffect(() => {
+    if (!code || code.length < 10) return;
+
+    const timer = setTimeout(() => {
+      // Only fetch if the analysis panel is actually open or we're in a "fast-load" mode
+      if (analysisStore.isVisible) {
+        console.log("🤖 Speculative AI visualization started...");
+        analysisStore.fetchAiSimulation(code, selectedFile || 'untitled');
+      }
+    }, 2000); // 2 second debounce: AI starts thinking while user pauses
+
+    return () => clearTimeout(timer);
+  }, [code, analysisStore, selectedFile]);
+
   const handleSave = () => {
     onSave();
   };

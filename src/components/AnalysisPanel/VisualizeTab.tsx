@@ -7,12 +7,21 @@ import { useUserStore } from '../../stores/userStore';
 const VisualizeTab: React.FC = () => {
   const {
     traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames,
-    isAnalyzing, fetchAiSimulation
+    isAnalyzing, fetchAiSimulation, currentVisualFilePath
   } = useAnalysisStore();
+
+
   const { tabs, activeTabId } = useEditorStore();
   const { user } = useUserStore();
 
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
+
+  // 🟢 STALE CHECK: Ensure visuals match current file
+  const isStale = useMemo(() => {
+    if (!activeTab || !traceFrames.length) return true;
+    if (currentVisualFilePath && currentVisualFilePath !== activeTab.filePath) return true;
+    return false;
+  }, [activeTab, traceFrames, currentVisualFilePath]);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -58,7 +67,39 @@ const VisualizeTab: React.FC = () => {
   // 🟢 3. 3D RENDERER (Spheres and Depth Cards)
   const render3DStage = () => {
     const frame = traceFrames[currentFrameIndex];
-    if (!frame || !frame.memory) return <div className="lumo-empty">AWAITING LUMO LOGIC...</div>;
+
+    // 🟢 CHANGE: Only show the "Preparing" screen if we have ZERO frames.
+    // If we have frames but are still analyzing, show the bubbles anyway!
+    if (traceFrames.length === 0) {
+      return (
+        <div className="theater-3d" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%',
+          background: 'radial-gradient(ellipse at center, rgba(30, 10, 50, 0.6) 0%, rgba(0, 0, 0, 0) 70%)'
+        }}>
+          <div className="lumo-empty" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            animation: 'fadeIn 0.5s ease-out'
+          }}>
+            <i className="fa-solid fa-wand-magic-sparkles fa-spin" style={{
+              fontSize: '2.5rem',
+              background: '-webkit-linear-gradient(#bc13fe, #00f2ff)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 10px rgba(188, 19, 254, 0.6))',
+              marginBottom: '20px'
+            }}></i>
+            <p style={{
+              marginTop: '15px',
+              fontSize: '12px',
+              color: '#00f2ff',
+              letterSpacing: '2px',
+              fontWeight: 'bold',
+              textShadow: '0 0 10px rgba(0, 242, 255, 0.4)'
+            }}>LUMO AI: PREPARING STAGE...</p>
+          </div>
+        </div>
+      );
+    }
 
     const arrayKey = Object.keys(frame.memory).find(k => Array.isArray(frame.memory[k]) && !['comparing', 'swapping'].includes(k));
     const arrayData = arrayKey ? frame.memory[arrayKey] : null;
@@ -102,10 +143,10 @@ const VisualizeTab: React.FC = () => {
   return (
     <div className="lumo-visuals-wrapper">
       {/* 🟢 LOADING OVERLAY (Died from Store) */}
-      {isAnalyzing && (
+      {(isAnalyzing || isStale) && (
         <div className="ai-overlay">
           <div className="spinner-3d"></div>
-          <p>LUMO AI: DIRECTING SCENE...</p>
+          <p>{isStale ? "PREPARING NEW VISUALS..." : "LUMO AI: DIRECTING SCENE..."}</p>
         </div>
       )}
 

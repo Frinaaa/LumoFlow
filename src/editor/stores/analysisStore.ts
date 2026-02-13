@@ -25,6 +25,9 @@ interface AnalysisState {
   isVisible: boolean;
   isAnalyzing: boolean; // 🟢 Fixes: "isAnalyzing does not exist"
   data: any | null;      // Stores AI explanation data
+  vizCache: Record<string, any[]>; // 🟢 CACHE: Store results by code hash
+  currentVisualFilePath: string | null;
+  clearVisuals: () => void;
   traceFrames: TraceFrame[];
   currentFrameIndex: number;
   isPlaying: boolean;
@@ -48,14 +51,25 @@ interface AnalysisState {
   showPanel: (val?: boolean) => void;
   openTab: (tabId: 'visualize' | 'explain' | 'interact' | 'games' | 'debug') => void;
   activeTabId: string;
-  fetchAiSimulation: (code: string, output?: string) => Promise<void>;
+  fetchAiSimulation: (code: string, filePath: string, output?: string) => Promise<void>;
 }
 
 // 4. Implementation
-export const useAnalysisStore = create<AnalysisState>((set) => ({
+export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   isVisible: false,
   isAnalyzing: false,
   data: null,
+  vizCache: {}, // Initialize cache
+  currentVisualFilePath: null,
+
+  // 2. Clear function to reset everything
+  clearVisuals: () => set({
+    traceFrames: [],
+    currentFrameIndex: 0,
+    visualMode: 'UNIVERSAL',
+    data: null
+  }),
+
   traceFrames: [],
   currentFrameIndex: 0,
   isPlaying: false,
@@ -112,40 +126,90 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   activeTabId: 'visualize',
   openTab: (tabId) => set({ activeTabId: tabId, isVisible: true }),
 
-  fetchAiSimulation: async (code: string, output?: string) => {
+  fetchAiSimulation: async (code: string, filePath: string, output?: string) => {
     if (!code || code.trim().length < 5) return;
 
-    set({ isAnalyzing: true, isVisible: true, activeTabId: 'visualize', traceFrames: [] });
+    // 🚀 CACHE CHECK: If code hasn't changed, load from cache instantly!
+    const cacheKey = code.trim();
+    const cached = get().vizCache[cacheKey];
+
+    if (cached) {
+      console.log("⚡ Visual Cache Hit! Loading instantly...");
+      set({
+        traceFrames: cached,
+        isAnalyzing: false,
+        isVisible: true,
+        activeTabId: 'visualize',
+        visualMode: 'UNIVERSAL',
+        currentFrameIndex: 0,
+        currentVisualFilePath: filePath
+      });
+      return;
+    }
+
+    // 🟢 CRITICAL FIX: Only clear frames if we are starting FRESH
+    // If output is provided, we might be refining an existing visual, so keep bubbles!
+    if (!get().traceFrames.length || !output) {
+      set({
+        isAnalyzing: true,
+        isVisible: true,
+        activeTabId: 'visualize',
+        traceFrames: [], // Clear old bubbles immediately
+        currentFrameIndex: 0,
+        currentVisualFilePath: filePath
+      });
+    } else {
+      set({ isAnalyzing: true, currentVisualFilePath: filePath });
+    }
 
     try {
       const { copilotService } = await import('../../services/CopilotService');
       let fullResponse = "";
 
-      const prompt = output
-        ? `[GENERATE_VISUAL_JSON] Program output: "${output}". \n\nCODE:\n${code}`
-        : `[GENERATE_VISUAL_JSON] CODE:\n${code}`;
+      // 🟢 SPEED OPTIMIZATION: Tell AI to be concise (fewer frames = faster loading)
+      // This keeps your "Standard" but stops the AI from generating 50+ useless frames.
+      const prompt = `[GENERATE_VISUAL_JSON] 
+        Focus: Key state changes only (Max 12 frames).
+        Standard: High-tech female 'desc' narration.
+        Include: 'comparing' and 'swapping' metadata for 3D effects.
+        Program output: "${output || 'Running...'}"
+        CODE:
+        ${code}`;
 
       await copilotService.streamChat(
         prompt,
-        (chunk) => { fullResponse += chunk; },
+        (chunk) => {
+          fullResponse += chunk;
+
+          // 🟢 NEW: Try to show partial results immediately
+          try {
+            // If the AI has finished at least one object in the array
+            if (fullResponse.includes('},')) {
+              const lastValidIndex = fullResponse.lastIndexOf('}');
+              const partialJson = fullResponse.substring(0, lastValidIndex + 1) + ']';
+              const start = partialJson.indexOf('[');
+              if (start !== -1) {
+                const frames = JSON.parse(partialJson.substring(start));
+                // Show the frames we have so far without stopping the loading spinner
+                set({ traceFrames: frames });
+              }
+            }
+          } catch (e) { /* Ignore partial parse errors */ }
+        },
         () => {
           try {
             const start = fullResponse.indexOf('[');
             const end = fullResponse.lastIndexOf(']') + 1;
             if (start !== -1) {
               const frames = JSON.parse(fullResponse.substring(start, end));
-              set({
+              set((state) => ({
+                vizCache: { ...state.vizCache, [code.trim()]: frames },
                 traceFrames: frames,
-                currentFrameIndex: 0,
                 isAnalyzing: false,
-                isVisible: true,
-                activeTabId: 'visualize',
-                visualMode: 'UNIVERSAL'
-              });
-              console.log("🎬 Visual simulation synced successfully");
+                // Keep everything else the same to preserve the UI
+              }));
             }
           } catch (e) {
-            console.error("AI Visualization Error");
             set({ isAnalyzing: false });
           }
         }

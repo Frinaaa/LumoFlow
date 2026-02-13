@@ -255,17 +255,25 @@ export const useFileOperations = () => {
       if (!editorStore.terminalVisible) editorStore.toggleTerminal();
       editorStore.appendOutputData(`▶ Running ${tab.fileName}...\n\n`);
 
-      // 3. Speculative AI Start: Start simulating logic BEFORE execution finishes
+      // 🟢 FIX: Trigger AI Simulation IMMEDIATELY.
+      // This starts the "Thinking" process while the code is still executing in the background.
       const analysisStoreImport = await import('../stores/analysisStore');
       const analysisStore = analysisStoreImport.useAnalysisStore.getState();
-      analysisStore.fetchAiSimulation(tab.content);
+
+      // 🟢 Only start a fresh simulation if one isn't already running
+      if (!analysisStore.isAnalyzing) {
+        analysisStore.fetchAiSimulation(tab.content, tab.filePath);
+      }
 
       // 4. Secure Execution via Electron API
       const result = await terminalApi.runCode(tab.filePath, tab.content);
 
-      // 4. Handle results
       if (result.stdout) {
         editorStore.appendOutputData(result.stdout + '\n');
+
+        // 🟢 Instead of starting over, just let the AI know the output if needed
+        // but don't reset the traceFrames array.
+        analysisStore.fetchAiSimulation(tab.content, tab.filePath, result.stdout);
       }
 
       if (result.stderr) {
@@ -292,16 +300,6 @@ export const useFileOperations = () => {
         editorStore.appendOutputData('\n❌ Execution failed. Check Problems tab for details.\n');
       } else {
         editorStore.appendOutputData('\n✅ Completed successfully.\n');
-
-        // 5. Success! Trigger Lumo AI Analysis automatically
-        try {
-          const analysisStore = (await import('../stores/analysisStore')).useAnalysisStore.getState();
-
-          // 🟢 IMMEDIATE ACTION: Trigger 3D Simulation with Program Output
-          analysisStore.fetchAiSimulation(tab.content, result.stdout);
-        } catch (aiErr) {
-          console.error('AI Visualization trigger failed:', aiErr);
-        }
       }
 
       return true;

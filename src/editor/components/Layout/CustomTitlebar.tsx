@@ -29,16 +29,20 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
     const activeTab = tabs.find(t => t.id === activeTabId);
     if (!activeTab) return;
 
+    // 🟢 Clear first!
+    const analysisState = useAnalysisStore.getState();
+    analysisState.clearVisuals();
+
     // 1. Open the panel immediately
     if (!isVisible) togglePanel();
 
-    // The VisualizeTab will automatically detect the code and generate frames
-    // No need to manually generate frames here anymore
-
-    // 2. Optional: Run background AI analysis if available
     try {
       if ((window as any).api?.analyzeCode) {
         setAnalyzing(true);
+
+        // Include the filePath here
+        analysisState.fetchAiSimulation(activeTab.content, activeTab.filePath);
+
         const result = await (window as any).api.analyzeCode({
           code: activeTab.content,
           language: activeTab.language,

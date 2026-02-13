@@ -19,6 +19,7 @@ let CopilotClient = null;
 let client = null;
 let session = null;
 let currentToken = null;
+let isInitializing = false;
 
 async function loadSDK() {
     if (CopilotClient) return;
@@ -32,9 +33,14 @@ async function loadSDK() {
 
 const copilotController = {
     async ensureInitialized(token, webContents) {
+        // Extreme priority: if session exists, return immediately.
+        if (session) return true;
+        if (isInitializing) return false;
+
         const activeToken = token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
         if (!activeToken) throw new Error("MISSING_TOKEN");
 
+        isInitializing = true;
         try {
             await loadSDK();
             if (client && currentToken !== activeToken) {
@@ -80,10 +86,9 @@ MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array o
             return true;
         } catch (error) {
             logToConsole(`🔥 Init Failed: ${error.message}`);
-            if (!session) {
-                session = await client.createSession({ model: 'gpt-4o' });
-            }
-            return true;
+            return false;
+        } finally {
+            isInitializing = false;
         }
     },
 
