@@ -41,3 +41,7 @@ coverage/
 # Local Database (If you store MongoDB data locally in the project)
 data/
 db/
+
+ai_debug.log
+node_modules/
+dist/
