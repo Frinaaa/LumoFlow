@@ -255,7 +255,12 @@ export const useFileOperations = () => {
       if (!editorStore.terminalVisible) editorStore.toggleTerminal();
       editorStore.appendOutputData(`▶ Running ${tab.fileName}...\n\n`);
 
-      // 3. Execute code via Electron API
+      // 3. Speculative AI Start: Start simulating logic BEFORE execution finishes
+      const analysisStoreImport = await import('../stores/analysisStore');
+      const analysisStore = analysisStoreImport.useAnalysisStore.getState();
+      analysisStore.fetchAiSimulation(tab.content);
+
+      // 4. Secure Execution via Electron API
       const result = await terminalApi.runCode(tab.filePath, tab.content);
 
       // 4. Handle results

@@ -48,7 +48,7 @@ const copilotController = {
                 currentToken = activeToken;
             }
 
-            // 🚀 PERFORMANCE: Reuse session if available to save 1-2s creation time
+            // 🚀 ULTRA-SPEED: Reuse session to save 1.5s creation time
             if (session) return true;
 
             const model = 'gpt-4o-mini';
@@ -58,23 +58,21 @@ const copilotController = {
                 model: model,
                 systemMessage: {
                     content: `Act as LumoFlow AI. 
-MODE 1 (Chat): Use 'write_file' tool for code edits. Briefly explain.
-MODE 2 ([GENERATE_VISUALS]): 3D Logic Engine. Output ONLY a raw JSON array of trace frames. No markdown. Use user's variable names in 'memory'. Include 'comparing'/[idx1,idx2] or 'swapping'/[idx1,idx2] in metadata. Write high-tech female 'desc' narration.`
+MODE 1 (Chat): Use 'write_file' tool for code edits.
+MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array of trace frames. Start with '[' immediately. Use user variable names. Include 'comparing' or 'swapping' metadata. Write high-tech female 'desc' narration.`
                 },
                 tools: [
                     {
                         name: "write_file",
-                        description: "Update active file. Stages code for Diff Review.",
+                        description: "Stage code for Diff review.",
                         parameters: {
                             type: "object",
-                            properties: {
-                                code: { type: "string" }
-                            },
+                            properties: { code: { type: "string" } },
                             required: ["code"]
                         },
                         handler: async ({ code }) => {
                             if (webContents) webContents.send('editor:preview-diff', code);
-                            return "✅ Staged for review.";
+                            return "✅ Staged.";
                         }
                     }
                 ]

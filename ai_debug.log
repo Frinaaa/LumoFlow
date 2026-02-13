@@ -1683,3 +1683,494 @@ fu..."
 [2026-02-13T08:43:18.341Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
 [2026-02-13T08:43:34.034Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "phase": "initial...
 [2026-02-13T08:43:34.036Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:44:58.140Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:44:58.389Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:45:04.898Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:45:05.042Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:45:13.792Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T08:45:13.794Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:45:21.896Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "frame": "INITIAL...
+[2026-02-13T08:45:21.898Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:45:48.195Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:45:48.311Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Direction: Simulate high-impact..."
+[2026-02-13T08:46:01.379Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:46:01.510Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Direction: Simulate high-impact..."
+[2026-02-13T08:46:05.680Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T08:46:05.681Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:46:08.707Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:46:08.838Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Direction: Simulate high-impact..."
+[2026-02-13T08:46:18.208Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T08:46:18.210Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:46:25.051Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T08:46:25.053Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:46:44.200Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:46:44.280Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:46:59.381Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "state": "initial...
+[2026-02-13T08:46:59.382Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:46:59.783Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:46:59.873Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:05.280Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:05.359Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:07.189Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:07.272Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:08.165Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:08.298Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:08.454Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:08.601Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:12.987Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:13.076Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:13.575Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:13.673Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:13.691Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "call": "validate...
+[2026-02-13T08:47:13.693Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:13.792Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:13.992Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:14.048Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:14.121Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:14.802Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:14.874Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:15.776Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:15.842Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "function": "vali...
+[2026-02-13T08:47:15.845Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:15.870Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:18.997Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "call": "validat...
+[2026-02-13T08:47:19.000Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:19.388Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T08:47:19.389Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:20.127Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:20.205Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:20.991Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "function": "vali...
+[2026-02-13T08:47:20.993Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:22.540Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "function": "vali...
+[2026-02-13T08:47:22.542Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:22.658Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T08:47:22.659Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:23.589Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 1,     "desc": "Initial...
+[2026-02-13T08:47:23.590Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:23.762Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T08:47:23.764Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:24.435Z][SESS:wownge] 📦 REPLY: ```json [   {     "call": 1,     "function": "vali...
+[2026-02-13T08:47:24.438Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:24.439Z][SESS:wownge] 📦 REPLY: [{"step": 0, "phase": "initialization", "desc": "I...
+[2026-02-13T08:47:24.440Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:39.019Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T08:47:39.021Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:42.160Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:42.246Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:44.582Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:44.677Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:45.657Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:45.769Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:45.871Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:47:45.971Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:47:52.583Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "operation": "IN...
+[2026-02-13T08:47:52.585Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:56.600Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "step": "INITIAL...
+[2026-02-13T08:47:56.602Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:47:58.569Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "operation": "IN...
+[2026-02-13T08:47:58.571Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:48:01.909Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "timestamp": "IN...
+[2026-02-13T08:48:01.911Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:48:30.483Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:30.582Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:32.218Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:32.311Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:44.336Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "action": "initi...
+[2026-02-13T08:48:44.338Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:48:49.257Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T08:48:49.260Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:48:55.888Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:55.992Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:57.709Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:57.990Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:58.152Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:58.423Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:58.801Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:58.884Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:58.908Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:59.020Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:59.175Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:48:59.634Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:59.656Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:59.690Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:59.699Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:48:59.711Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:49:01.348Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:01.449Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:49:02.092Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:02.412Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:49:04.257Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "operation": "ini...
+[2026-02-13T08:49:04.260Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:06.843Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:06.845Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:07.884Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "ini...
+[2026-02-13T08:49:07.886Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:08.841Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "desc": "Initial...
+[2026-02-13T08:49:08.843Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:09.346Z][SESS:wownge] 📦 REPLY: [   {     "step": 1,     "operation": "push",     ...
+[2026-02-13T08:49:09.624Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:10.028Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:10.029Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:10.030Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:10.031Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:10.746Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:10.748Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:12.903Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:12.905Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:14.196Z][SESS:wownge] 📦 REPLY: [   {     "step": 1,     "operation": "push",     ...
+[2026-02-13T08:49:14.198Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:24.331Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:24.482Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:49:25.607Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:25.797Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D: 
+
+le..."
+[2026-02-13T08:49:25.990Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:26.143Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:49:27.309Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:27.541Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D: 
+
+le..."
+[2026-02-13T08:49:27.808Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:27.943Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:49:34.035Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "operation": "ini...
+[2026-02-13T08:49:34.037Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:34.155Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:34.157Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:34.251Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:34.253Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:34.839Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:34.841Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:36.914Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T08:49:36.916Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:37.037Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:37.122Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D: 
+
+le..."
+[2026-02-13T08:49:37.242Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:49:37.355Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:49:45.210Z][SESS:wownge] 📦 REPLY: ```json [   {     "frame": 0,     "operation": "In...
+[2026-02-13T08:49:45.211Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:49:45.655Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:49:45.657Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:50:09.517Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:50:09.650Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D: 
+
+le..."
+[2026-02-13T08:50:09.807Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:50:09.926Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUALS] Simulate this logic in 3D. Prog..."
+[2026-02-13T08:50:19.484Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "ini...
+[2026-02-13T08:50:19.487Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:50:19.623Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:50:19.625Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:51:52.708Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:51:52.789Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let stack = [];
+
+
+..."
+[2026-02-13T08:51:52.838Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:51:52.892Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Push: 10 S..."
+[2026-02-13T08:52:01.239Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:52:01.241Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:52:03.389Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T08:52:03.390Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:52:16.135Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:52:16.248Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+function factorial(n)..."
+[2026-02-13T08:52:26.417Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T08:52:26.420Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:52:44.545Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:52:44.614Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🐾 Hyena..."
+[2026-02-13T08:52:44.695Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:52:44.769Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "🐾 Hyena P..."
+[2026-02-13T08:52:54.485Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "action": "Initia...
+[2026-02-13T08:52:54.487Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:52:56.430Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "action": "Initia...
+[2026-02-13T08:52:56.432Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:53:01.658Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:53:01.764Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🐾 Hyena..."
+[2026-02-13T08:53:01.858Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:53:01.945Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "🐾 Hyena P..."
+[2026-02-13T08:53:13.812Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "operation": "ini...
+[2026-02-13T08:53:13.814Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:53:16.440Z][SESS:wownge] 📦 REPLY: [   {     "step": 1,     "operation": "initialize"...
+[2026-02-13T08:53:16.442Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:54:26.657Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:54:26.738Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+[
+  {
+    "step": 0,
+..."
+[2026-02-13T08:54:36.291Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:54:36.381Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+[
+  {
+    "step": 0,
+..."
+[2026-02-13T08:54:45.618Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "operation": "INI...
+[2026-02-13T08:54:45.620Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:54:47.618Z][SESS:wownge] 📦 REPLY: I see you've provided a complete hospital queue ma...
+[2026-02-13T08:54:47.620Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:55:42.900Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:55:42.995Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🏥 Hospi..."
+[2026-02-13T08:55:43.100Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:55:43.216Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "🏥 Hospita..."
+[2026-02-13T08:55:56.443Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "Ini...
+[2026-02-13T08:55:56.444Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:55:58.026Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T08:55:58.027Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:56:19.383Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:56:19.464Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🏥 Hospi..."
+[2026-02-13T08:56:21.902Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:56:21.994Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🏥 Hospi..."
+[2026-02-13T08:56:33.219Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T08:56:33.221Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:56:34.499Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "action": "Initia...
+[2026-02-13T08:56:34.501Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:56:52.130Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:56:52.200Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🏥 Hospi..."
+[2026-02-13T08:57:08.733Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "Ini...
+[2026-02-13T08:57:08.735Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:57:45.305Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:57:45.392Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🏥 Hospi..."
+[2026-02-13T08:58:00.512Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "Ini...
+[2026-02-13T08:58:00.513Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:58:03.543Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:58:03.703Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+[
+  {
+    "step": 1,
+..."
+[2026-02-13T08:58:20.737Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "Sys...
+[2026-02-13T08:58:20.739Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:58:34.026Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:58:34.101Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+console.log("🍔 Colle..."
+[2026-02-13T08:58:34.181Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:58:34.254Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "🍔 College..."
+[2026-02-13T08:58:49.532Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "stu...
+[2026-02-13T08:58:49.534Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:58:50.180Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "operation": "ini...
+[2026-02-13T08:58:50.181Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T08:59:48.024Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:59:48.188Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [2, 4, 6, 8..."
+[2026-02-13T08:59:48.431Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T08:59:48.577Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Low=0, Mid..."
+[2026-02-13T08:59:58.610Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "phase": "initial...
+[2026-02-13T08:59:58.611Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:00:00.373Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T09:00:00.375Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:00:21.373Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:00:21.461Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let stack = [];
+
+
+..."
+[2026-02-13T09:00:21.568Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:00:21.651Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Push: 10 S..."
+[2026-02-13T09:00:29.199Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T09:00:29.200Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:00:29.375Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "pus...
+[2026-02-13T09:00:29.376Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:00:48.261Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:00:48.367Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [64, 25, 12..."
+[2026-02-13T09:00:48.580Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:00:48.682Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "After pass..."
+[2026-02-13T09:01:00.094Z][SESS:wownge] 📦 REPLY: ```json [   {     "pass": 0,     "desc": "Initiali...
+[2026-02-13T09:01:00.096Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:01:00.104Z][SESS:wownge] 📦 REPLY: ```json [   {     "pass": 1,     "stage": "search"...
+[2026-02-13T09:01:00.106Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:01:25.010Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:01:25.107Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let queue = [];
+
+fu..."
+[2026-02-13T09:01:25.207Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:01:25.309Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Added: A Q..."
+[2026-02-13T09:01:33.272Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "operation": "ini...
+[2026-02-13T09:01:33.274Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:01:34.312Z][SESS:wownge] 📦 REPLY: [   {     "step": 1,     "operation": "enqueue",  ...
+[2026-02-13T09:01:34.314Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:16.475Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:16.592Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let queue = [];
+
+fu..."
+[2026-02-13T09:02:16.706Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:16.816Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Added: A Q..."
+[2026-02-13T09:02:23.910Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:02:23.912Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:26.206Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:26.364Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+function validateForm..."
+[2026-02-13T09:02:26.461Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:26.560Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Username m..."
+[2026-02-13T09:02:28.189Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "operation": "enq...
+[2026-02-13T09:02:28.192Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:32.515Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:32.598Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+function validateForm..."
+[2026-02-13T09:02:32.688Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:32.766Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Username m..."
+[2026-02-13T09:02:34.929Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T09:02:34.931Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:36.485Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "function": "vali...
+[2026-02-13T09:02:36.488Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:40.562Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiali...
+[2026-02-13T09:02:40.564Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:43.296Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:43.420Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:02:43.531Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:43.642Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:02:44.184Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "function": "vali...
+[2026-02-13T09:02:44.186Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:45.866Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:45.949Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:02:46.070Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:02:46.167Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:02:58.495Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:02:58.497Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:02:59.027Z][SESS:wownge] 📦 REPLY: [   {     "step": 0,     "desc": "Initializing the...
+[2026-02-13T09:02:59.029Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:03:03.629Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "memory": {      ...
+[2026-02-13T09:03:03.631Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:03:08.518Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:03:08.519Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:13.781Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:13.883Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:13.987Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:14.064Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:29.254Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:04:29.256Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:29.994Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:04:29.996Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:42.306Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:42.404Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:42.510Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:42.590Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:43.188Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:43.370Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:43.464Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:43.565Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:43.573Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:43.635Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:43.678Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:43.764Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:43.804Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:43.871Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:43.882Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:43.892Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:44.103Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:44.108Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:44.111Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:44.124Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:44.254Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:44.386Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:44.526Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:44.736Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:44.737Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:44.973Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:44.993Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:45.026Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:45.330Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:45.459Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:04:45.606Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:04:47.825Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:04:55.279Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "phase": "initial...
+[2026-02-13T09:04:55.281Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:58.056Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "phase": "initial...
+[2026-02-13T09:04:58.058Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:58.939Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "phase": "initial...
+[2026-02-13T09:04:58.941Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:58.989Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:04:58.990Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:59.324Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "stage": "initial...
+[2026-02-13T09:04:59.325Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:04:59.386Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:04:59.388Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:01.036Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:01.039Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:01.987Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:01.989Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:01.999Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "phase": "initial...
+[2026-02-13T09:05:02.544Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:02.546Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:02.547Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:03.018Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:03.032Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:03.034Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:03.689Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:03.691Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:03.692Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:04.237Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "indices": {"i": ...
+[2026-02-13T09:05:04.239Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:07.733Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "phase": "initial...
+[2026-02-13T09:05:07.734Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:08.310Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:08.312Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:22.001Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:05:22.084Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:05:22.189Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:05:22.428Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:05:38.611Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:38.613Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:05:40.005Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:05:40.007Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:08:20.560Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:08:20.651Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:08:20.757Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:08:20.834Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:08:34.329Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:08:34.392Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:08:34.397Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:08:34.459Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:08:34.564Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:08:34.633Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:08:35.028Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:08:35.030Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:08:47.940Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:08:48.037Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+let arr = [5, 3, 8, 4..."
+[2026-02-13T09:08:48.137Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:08:48.217Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Original A..."
+[2026-02-13T09:08:49.173Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "phase": "initial...
+[2026-02-13T09:08:49.174Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:08:49.897Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:08:49.899Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:09:02.536Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 0,     "desc": "Initiali...
+[2026-02-13T09:09:02.538Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:09:02.836Z][SESS:wownge] 📦 REPLY: [{"step": 0, "phase": "initialization", "array": [...
+[2026-02-13T09:09:02.837Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:09:05.001Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:09:05.130Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] CODE:
+function validateForm..."
+[2026-02-13T09:09:05.255Z][SESS:wownge] 🧪 Creating Agent Session: gpt-4o-mini
+[2026-02-13T09:09:05.355Z][SESS:wownge] 💭 USER_QUERY: "[GENERATE_VISUAL_JSON] Program output: "Username m..."
+[2026-02-13T09:09:13.378Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "desc": "Initiati...
+[2026-02-13T09:09:13.380Z][SESS:wownge] 🏁 CYCLE_COMPLETE
+[2026-02-13T09:09:17.981Z][SESS:wownge] 📦 REPLY: ```json [   {     "step": 1,     "function": "vali...
+[2026-02-13T09:09:17.983Z][SESS:wownge] 🏁 CYCLE_COMPLETE

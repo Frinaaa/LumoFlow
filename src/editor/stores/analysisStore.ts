@@ -122,8 +122,8 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
       let fullResponse = "";
 
       const prompt = output
-        ? `[GENERATE_VISUALS] Simulate this logic in 3D. Program output: "${output}". Reconcile with this. \n\nCODE:\n${code}`
-        : `[GENERATE_VISUALS] Simulate this logic in 3D: \n\n${code}`;
+        ? `[GENERATE_VISUAL_JSON] Program output: "${output}". \n\nCODE:\n${code}`
+        : `[GENERATE_VISUAL_JSON] CODE:\n${code}`;
 
       await copilotService.streamChat(
         prompt,
