@@ -1,238 +1,231 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useAnalysisStore } from '../../editor/stores/analysisStore';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useAnalysisStore, TraceFrame } from '../../editor/stores/analysisStore';
 import { useEditorStore } from '../../editor/stores/editorStore';
-import { copilotService } from '../../services/CopilotService';
 import { useUserStore } from '../../stores/userStore';
+import { copilotService } from '../../services/CopilotService';
 
 const VisualizeTab: React.FC = () => {
-  const {
-    traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames,
-    isAnalyzing, fetchAiSimulation, currentVisualFilePath
-  } = useAnalysisStore();
-
-
-  const { tabs, activeTabId } = useEditorStore();
+  // --- STORES ---
+  const { traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames, isPlaying, isReplaying } = useAnalysisStore();
+  const editorStore = useEditorStore();
+  const { tabs, activeTabId, outputData, debugData } = editorStore;
   const { user } = useUserStore();
+  
+  // --- STATE ---
+  const [isAiSimulating, setIsAiSimulating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // 🟢 STALE CHECK: Ensure visuals match current file
-  const isStale = useMemo(() => {
-    if (!activeTab || !traceFrames.length) return true;
-    if (currentVisualFilePath && currentVisualFilePath !== activeTab.filePath) return true;
-    return false;
-  }, [activeTab, traceFrames, currentVisualFilePath]);
+  // 🟢 1. THE AI SIMULATOR (Adaptive Logic)
+  const fetchAiSimulation = async (codeSnippet: string) => {
+    if (!codeSnippet || codeSnippet.length < 10) return;
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+    setIsAiSimulating(true);
+    let fullResponse = "";
 
-  // 🟢 MANUAL TRIGGER: Clear stage on switch
-  const previousTabIdRef = useRef(activeTabId);
-  useEffect(() => {
-    if (activeTabId !== previousTabIdRef.current) {
-      setTraceFrames([]);
-      previousTabIdRef.current = activeTabId;
+    try {
+      // We tell the AI to use Mode 2 (Visualization Engine) defined in our backend
+      await copilotService.streamChat(
+        `[GENERATE_VISUALS] Simulate this code and return ONLY the JSON array of TraceFrames. 
+        Detect the variables used (like ${activeTab?.fileName}) and reflect them in the memory. 
+        If it is a sort/search, include 'comparing' or 'swapping' arrays. \n\n${codeSnippet}`,
+        (chunk) => { fullResponse += chunk; },
+        () => {
+          try {
+            // Extract the JSON array from the potential markdown response
+            const jsonStart = fullResponse.indexOf('[');
+            const jsonEnd = fullResponse.lastIndexOf(']') + 1;
+            const jsonStr = fullResponse.substring(jsonStart, jsonEnd);
+            
+            if (jsonStr) {
+              const frames = JSON.parse(jsonStr);
+              setTraceFrames(frames, 'UNIVERSAL');
+            }
+          } catch (e) {
+            console.error("AI Visualization Parse Error");
+          } finally {
+            setIsAiSimulating(false);
+          }
+        }
+      );
+    } catch (err) {
+      console.error("AI Connection Failed");
+      setIsAiSimulating(false);
     }
-  }, [activeTabId]);
+  };
 
-  // 🟢 2. FEMALE VOICE & PLAYBACK SYNC
-  const speak = (text: string) => {
-    if (isMuted || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google US English')));
-    if (femaleVoice) utterance.voice = femaleVoice;
+  // 🟢 2. REAL-TIME OBSERVER (Typing)
+  useEffect(() => {
+    if (isReplaying || !activeTab?.content) return;
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      // Auto-move to next frame if PLAY is active
-      if (isPlaying && currentFrameIndex < traceFrames.length - 1) {
-        setTimeout(() => setFrameIndex(currentFrameIndex + 1), 600);
-      } else {
-        setIsPlaying(false);
+    // Debounce: Wait 1.5 seconds after typing stops to re-simulate
+    const timer = setTimeout(() => {
+      fetchAiSimulation(activeTab.content);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [activeTab?.content, activeTabId]);
+
+  // 🟢 3. EXECUTION SYNC (Run Button)
+  useEffect(() => {
+    const handleRefresh = (e: any) => {
+      if (e.detail && e.detail.code) {
+        fetchAiSimulation(e.detail.code);
       }
     };
-    window.speechSynthesis.speak(utterance);
-  };
+    window.addEventListener('refresh-ai-visuals', handleRefresh);
+    return () => window.removeEventListener('refresh-ai-visuals', handleRefresh);
+  }, []);
 
-  useEffect(() => {
-    if (isPlaying && traceFrames[currentFrameIndex]?.desc) {
-      speak(traceFrames[currentFrameIndex].desc);
-    }
-  }, [currentFrameIndex, isPlaying]);
+  // 🟢 4. ADAPTIVE RENDERER
+  const renderArrayVisualization = () => {
+    const currentFrame = traceFrames[currentFrameIndex];
+    if (!currentFrame || !currentFrame.memory) return null;
 
-  // 🟢 3. 3D RENDERER (Spheres and Depth Cards)
-  const render3DStage = () => {
-    // 🟢 If we have data, SHOW THE DATA (ignore isAnalyzing)
-    if (traceFrames.length > 0) {
-      const frame = traceFrames[currentFrameIndex];
-      if (!frame || !frame.memory) return null;
+    // Dynamically find the array the AI simulated
+    const arrayKey = Object.keys(currentFrame.memory).find(k => 
+      Array.isArray(currentFrame.memory[k]) && 
+      !['comparing', 'swapping', 'sorted'].includes(k)
+    );
 
-      const arrayKey = Object.keys(frame.memory).find(k => Array.isArray(frame.memory[k]) && !['comparing', 'swapping'].includes(k));
-      const arrayData = arrayKey ? frame.memory[arrayKey] : null;
-      const comparing = frame.memory.comparing || [];
-      const swapping = frame.memory.swapping || [];
+    if (!arrayKey) return null;
 
-      return (
-        <div className="theater-3d">
-          {arrayData ? (
-            <div className="bubbles-row-3d">
-              {arrayData.map((val: any, idx: number) => {
-                const isComp = comparing.includes(idx);
-                const isSwap = swapping.includes(idx);
-                return (
-                  <div key={idx} className={`bubble-3d ${isComp ? 'comp' : ''} ${isSwap ? 'swap' : ''}`}
-                    style={{
-                      background: isSwap ? 'radial-gradient(circle at 30% 30%, #ff0055, #660022)' : isComp ? 'radial-gradient(circle at 30% 30%, #ffaa00, #884400)' : 'radial-gradient(circle at 30% 30%, #bc13fe, #330055)',
-                      transform: isSwap ? 'translateZ(60px) translateY(-20px) rotateY(15deg)' : isComp ? 'translateZ(30px) translateY(-10px)' : 'translateZ(0)'
-                    }}
-                  >
-                    <div className="shine"></div>
-                    <span>{String(val)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="vars-grid-3d">
-              {Object.entries(frame.memory).filter(([k]) => !['comparing', 'swapping'].includes(k)).map(([k, v]) => (
-                <div key={k} className="card-3d">
-                  <span className="label">{k}</span>
-                  <strong className="val">{JSON.stringify(v)}</strong>
+    const array = currentFrame.memory[arrayKey];
+    const comparing = currentFrame.memory.comparing || [];
+    const swapping = currentFrame.memory.swapping || [];
+
+    return (
+      <div className="array-visualization bubble-theme">
+        <div className="bubble-container">
+          {array.map((val: any, idx: number) => {
+            const isComparing = comparing.includes(idx);
+            const isSwapping = swapping.includes(idx);
+            return (
+              <div key={idx} className="bubble-wrapper">
+                <div className={`bubble ${isComparing ? 'bubble-comparing' : ''} ${isSwapping ? 'bubble-swapping' : ''}`}>
+                  <span className="bubble-value">{val}</span>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="bubble-index">#{idx}</div>
+              </div>
+            );
+          })}
         </div>
-      );
-    }
-
-    // 🟢 Only if we have NO data, show the Loading Wand
-    if (isAnalyzing) {
-      return (
-        <div className="theater-3d" style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%',
-          background: 'radial-gradient(ellipse at center, rgba(30, 10, 50, 0.6) 0%, rgba(0, 0, 0, 0) 70%)'
-        }}>
-          <div className="lumo-empty" style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            animation: 'fadeIn 0.5s ease-out'
-          }}>
-            <i className="fa-solid fa-wand-magic-sparkles fa-spin" style={{
-              fontSize: '2.5rem',
-              background: '-webkit-linear-gradient(#bc13fe, #00f2ff)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 10px rgba(188, 19, 254, 0.6))',
-              marginBottom: '20px'
-            }}></i>
-            <p style={{
-              marginTop: '15px',
-              fontSize: '12px',
-              color: '#00f2ff',
-              letterSpacing: '2px',
-              fontWeight: 'bold',
-              textShadow: '0 0 10px rgba(0, 242, 255, 0.4)'
-            }}>LUMO AI: SIMULATING LOGIC...</p>
-          </div>
-        </div>
-      );
-    }
-
-    return <div className="lumo-empty">Ready to visualize.</div>;
+      </div>
+    );
   };
+
+  // --- AUDIO LOGIC ---
+  const stopSpeaking = () => {
+    if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); setIsSpeaking(false); }
+  };
+
+  const speakDescription = (text: string, shouldAutoAdvance: boolean = false) => {
+    if ('speechSynthesis' in window && soundEnabled) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.85;
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        if (shouldAutoAdvance && isAutoPlaying && currentFrameIndex < traceFrames.length - 1) {
+          setFrameIndex(prev => prev + 1);
+        }
+      };
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (isAutoPlaying) {
+      setIsAutoPlaying(false);
+      stopSpeaking();
+    } else {
+      setIsAutoPlaying(true);
+      if (traceFrames[currentFrameIndex]?.desc) speakDescription(traceFrames[currentFrameIndex].desc, true);
+    }
+  };
+
+  const handleSaveVisualization = async () => {
+     // ... (Keep your existing save logic here)
+  };
+
+  const currentFrame = traceFrames[currentFrameIndex];
 
   return (
-    <div className="lumo-visuals-wrapper">
-      {/* 🟢 LOADING OVERLAY (Died from Store) */}
-      {(isAnalyzing || isStale) && (
-        <div className="ai-overlay">
-          <div className="spinner-3d"></div>
-          <p>{isStale ? "PREPARING NEW VISUALS..." : "LUMO AI: DIRECTING SCENE..."}</p>
+    <div className="universal-viz">
+      {/* 🟢 AI LOADING OVERLAY */}
+      {isAiSimulating && (
+        <div className="ai-overlay" style={{
+            position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)',
+            zIndex: 100, display: 'flex', flexDirection: 'column', 
+            alignItems: 'center', justifyContent: 'center'
+        }}>
+            <div className="spinner-neon"></div>
+            <p style={{ color: '#bc13fe', marginTop: 10, fontFamily: 'Orbitron', fontSize: '10px' }}>
+                LUMO AI SIMULATING EXECUTION...
+            </p>
         </div>
       )}
 
-      <div className="cinema-header">
-        <div className="cinema-title">LUMO <span className="highlight">VISUALS</span></div>
-        {/* 🟢 FIX: Corrected Frame Counter logic */}
-        <div className="cinema-stats">
-          FRAME {traceFrames.length > 0 ? currentFrameIndex + 1 : 0} / {traceFrames.length}
+      {/* Header */}
+      <div className="hud-header">
+        <div className="viz-banner">
+          <i className="fa-solid fa-wand-magic-sparkles"></i>
+          <span>{traceFrames.length > 0 ? "LIVE SIMULATION" : "READY"}</span>
         </div>
+        <div className="step">STEP {currentFrameIndex + 1} / {traceFrames.length}</div>
       </div>
 
-      <div className="cinema-stage">
-        {render3DStage()}
+      {renderArrayVisualization()}
+
+      {/* Dynamic Memory Grid */}
+      <div className="memory-grid">
+        {currentFrame && Object.entries(currentFrame.memory)
+          .filter(([key]) => !Array.isArray(currentFrame.memory[key]) && !['comparing', 'swapping', 'sorted'].includes(key))
+          .map(([key, value]) => (
+            <div key={key} className={`widget ${currentFrame.activeVariable === key ? 'active' : ''}`}>
+              <div className="widget-label">{key}</div>
+              <div className="val-viz">{String(value)}</div>
+            </div>
+          ))}
       </div>
 
-      <div className="cinema-controls">
-        <div className="narrator-hud">
-          <i className={`fa-solid fa-microphone-lines ${isSpeaking ? 'active' : ''}`}></i>
-          <p>{traceFrames[currentFrameIndex]?.desc || "Change code to see visuals..."}</p>
-        </div>
+      <div className="explanation-hud">
+        <i className={`fa-solid ${currentFrame?.action === 'WRITE' ? 'fa-pen-nib' : 'fa-eye'}`}></i>
+        <span>{currentFrame?.desc || "Analyzing code logic..."}</span>
+      </div>
 
-        <div className="playback-bar">
-          <button onClick={() => { setIsPlaying(!isPlaying); if (isPlaying) window.speechSynthesis.cancel(); }} className="play-btn">
-            <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+      <div className="viz-footer">
+        <div className="control-panel">
+          <button onClick={handlePlayPause} className="play-pause-btn">
+            <i className={`fa-solid ${isAutoPlaying ? 'fa-pause' : 'fa-play'}`}></i>
           </button>
-
-          {/* 🟢 MOVABLE PROGRESS LINE (SCRUBBER) */}
-          <input
-            type="range" className="scrubber"
-            min="0" max={Math.max(0, traceFrames.length - 1)}
-            value={currentFrameIndex}
-            onChange={(e) => {
-              setIsPlaying(false);
-              window.speechSynthesis.cancel();
-              setFrameIndex(parseInt(e.target.value));
-            }}
-          />
-
-          <button className="save-viz-icon" onClick={() => { }} title="Save Video Data"><i className="fa-solid fa-bookmark"></i></button>
+          <button onClick={() => setSoundEnabled(!soundEnabled)} className="sound-toggle-btn">
+             <i className={`fa-solid ${soundEnabled ? 'fa-volume-up' : 'fa-volume-xmark'}`}></i>
+          </button>
+        </div>
+        
+        <div className="progress-bar-container">
+          <div className="progress-bar interactive" onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const percent = (e.clientX - rect.left) / rect.width;
+              setFrameIndex(Math.floor(percent * traceFrames.length));
+          }}>
+            <div className="progress-fill" style={{ width: `${((currentFrameIndex + 1) / traceFrames.length) * 100}%` }}></div>
+          </div>
         </div>
       </div>
 
       <style>{`
-        .lumo-visuals-wrapper { height: 100%; display: flex; flex-direction: column; background: #050508; position: relative; color: white; font-family: 'Orbitron', sans-serif; overflow: hidden; }
-        .cinema-header { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #1a1a1a; }
-        .cinema-title { font-size: 14px; font-weight: 900; letter-spacing: 2px; }
-        .highlight { color: #bc13fe; text-shadow: 0 0 10px #bc13fe; }
-        .cinema-stats { font-size: 10px; color: #444; font-family: monospace; }
-        
-        .cinema-stage { flex: 1; display: flex; align-items: center; justify-content: center; perspective: 1000px; }
-        .bubbles-row-3d { display: flex; gap: 20px; transform-style: preserve-3d; transform: rotateX(15deg); }
-        .bubble-3d { 
-            width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; position: relative; transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset -5px -5px 15px rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .bubble-3d.swap { animation: 3dBounce 0.6s infinite alternate; }
-        .shine { position: absolute; top: 10%; left: 20%; width: 15px; height: 10px; background: rgba(255,255,255,0.2); border-radius: 50%; }
-
-        .vars-grid-3d { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; transform: rotateX(10deg); }
-        .card-3d { background: #111; border: 1px solid #222; padding: 12px 20px; border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.4); border-bottom: 3px solid #00f2ff; }
-        .label { display: block; font-size: 8px; color: #888; margin-bottom: 4px; }
-
-        .cinema-controls { background: #0c0c0f; padding: 20px; border-top: 1px solid #1a1a1a; }
-        .narrator-hud { display: flex; gap: 15px; align-items: center; margin-bottom: 20px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; min-height: 50px; border: 1px solid rgba(188,19,254,0.1); }
-        .narrator-hud p { color: #aaa; margin: 0; font-size: 12px; font-family: 'Inter'; line-height: 1.5; }
-        .fa-microphone-lines.active { color: #00f2ff; animation: pulse 1s infinite; }
-
-        .playback-bar { display: flex; align-items: center; gap: 15px; }
-        .play-btn { width: 45px; height: 45px; border-radius: 50%; border: none; background: #bc13fe; color: white; cursor: pointer; font-size: 18px; box-shadow: 0 0 15px rgba(188,19,254,0.4); }
-        .scrubber { flex: 1; accent-color: #bc13fe; cursor: pointer; height: 4px; background: #222; border-radius: 2px; }
-        .save-viz-icon { background: none; border: none; color: #444; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        .save-viz-icon:hover { color: #00f2ff; transform: scale(1.2); }
-
-        .ai-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .spinner-3d { width: 40px; height: 40px; border: 3px solid #222; border-top: 3px solid #bc13fe; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        
+        .spinner-neon { width: 30px; height: 30px; border: 2px solid #222; border-top: 2px solid #bc13fe; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        @keyframes 3dBounce { from { transform: translateZ(60px) translateY(-20px); } to { transform: translateZ(80px) translateY(-30px); } }
+        /* Include the rest of your CSS here */
       `}</style>
     </div>
   );
