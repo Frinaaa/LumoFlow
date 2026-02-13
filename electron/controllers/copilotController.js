@@ -48,46 +48,33 @@ const copilotController = {
                 currentToken = activeToken;
             }
 
-            // FRESH SESSION PER MESSAGE
-            const model = 'claude-haiku-4.5';
-            logToConsole(`🧪 Creating Agent Session: ${model}`);
+            // 🚀 PERFORMANCE: Reuse session if available to save 1-2s creation time
+            if (session) return true;
+
+            const model = 'gpt-4o-mini';
+            logToConsole(`🧪 Creating Persistent Agent Session: ${model}`);
 
             session = await client.createSession({
                 model: model,
                 systemMessage: {
-                    content: `You are LumoFlow AI, an elite coding agent with direct control over the user's editor.
-
-DIRECTIVES:
-1. When asked to modify, refactor, or write code for the current file, ALWAYS use the 'write_file' tool.
-2. The 'write_file' tool will stage your changes for user review in a Diff View (Red/Green comparison).
-3. The user will see your proposed changes and can Accept or Discard them.
-4. In your verbal response, briefly explain what you changed and why.
-5. If the user asks for a general explanation, just provide text without using the tool.
-6. Do NOT ask for permission before using 'write_file' if the user's intent is clear.
-
-AGENT TOOLS:
-- write_file(code: string): Stages your proposed code changes for user review in the Diff View.
-
-[CONTEXT] provides the current file state. [TASK] is the user's request.`
+                    content: `Act as LumoFlow AI. 
+MODE 1 (Chat): Use 'write_file' tool for code edits. Briefly explain.
+MODE 2 ([GENERATE_VISUALS]): 3D Logic Engine. Output ONLY a raw JSON array of trace frames. No markdown. Use user's variable names in 'memory'. Include 'comparing'/[idx1,idx2] or 'swapping'/[idx1,idx2] in metadata. Write high-tech female 'desc' narration.`
                 },
                 tools: [
                     {
                         name: "write_file",
-                        description: "Updates the current active file in the Monaco editor with new content. Use this whenever the user wants to apply changes to their code.",
+                        description: "Update active file. Stages code for Diff Review.",
                         parameters: {
                             type: "object",
                             properties: {
-                                code: { type: "string", description: "The complete new content for the file" }
+                                code: { type: "string" }
                             },
                             required: ["code"]
                         },
                         handler: async ({ code }) => {
-                            logToConsole("🛠️ AI AGENT ACTION: Staging code for review");
-                            if (webContents) {
-                                // Send to Diff View for user review (Accept/Discard)
-                                webContents.send('editor:preview-diff', code);
-                            }
-                            return "✅ Changes staged for review. Please check the Diff View in your editor and Accept or Discard.";
+                            if (webContents) webContents.send('editor:preview-diff', code);
+                            return "✅ Staged for review.";
                         }
                     }
                 ]
@@ -106,9 +93,9 @@ AGENT TOOLS:
         const webContents = event.sender;
         try {
             await this.ensureInitialized(token, webContents);
-            logToConsole(`💭 USER_QUERY: "${message}"`);
+            logToConsole(`💭 USER_QUERY: "${message.substring(0, 50)}..."`);
 
-            const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode:\n${context.currentCode}\n\n[TASK]\n${message}`;
+            const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode: \n${context.currentCode}\n\n[TASK]\n${message}`;
 
             let deltasReceived = false;
             const unsubscribeDelta = session.on('assistant.message_delta', (delta) => {

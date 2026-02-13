@@ -290,23 +290,12 @@ export const useFileOperations = () => {
 
         // 5. Success! Trigger Lumo AI Analysis automatically
         try {
-          const { analysisApi } = await import('../api/analysis');
           const analysisStore = (await import('../stores/analysisStore')).useAnalysisStore.getState();
 
-          analysisStore.setAnalyzing(true);
-          const analysisRes = await analysisApi.analyzeCode({
-            code: tab.content,
-            language: tab.language,
-            fileName: tab.fileName
-          });
-
-          if (analysisRes.success) {
-            analysisStore.setAnalysisData(analysisRes.analysis);
-            editorStore.appendOutputData(`✨ Lumo AI: Code analysis completed. Check the Analysis panel.\n`);
-          }
-          analysisStore.setAnalyzing(false);
+          // 🟢 IMMEDIATE ACTION: Trigger 3D Simulation with Program Output
+          analysisStore.fetchAiSimulation(tab.content, result.stdout);
         } catch (aiErr) {
-          console.error('AI Analysis trigger failed:', aiErr);
+          console.error('AI Visualization trigger failed:', aiErr);
         }
       }
 

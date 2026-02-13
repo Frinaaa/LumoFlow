@@ -3,13 +3,21 @@ import { create } from 'zustand';
 // 1. Define valid modes for the UI
 export type VisualMode = 'SORTING' | 'LIST_PROCESS' | 'STRING_HUD' | 'MATH_LOGIC' | 'UNIVERSAL';
 
-// 2. Define the "Video Frame" structure
+export interface VisualElement {
+  id: string;
+  val: string | number;
+  color: string;
+  shape: 'circle' | 'card' | 'pill' | 'square';
+  anim?: 'pop' | 'shake' | 'slide';
+}
+
 export interface TraceFrame {
   id: number;
   memory: Record<string, any>;
-  activeVariable: string | null;
-  action: 'READ' | 'WRITE' | 'EXECUTE'; // <--- Ensure this matches
+  action?: 'READ' | 'WRITE' | 'EXECUTE';
   desc: string;
+  layout?: 'horizontal' | 'vertical' | 'grid';
+  elements?: VisualElement[];
 }
 
 // 3. The interface that the components see
@@ -40,6 +48,7 @@ interface AnalysisState {
   showPanel: (val?: boolean) => void;
   openTab: (tabId: 'visualize' | 'explain' | 'interact' | 'games' | 'debug') => void;
   activeTabId: string;
+  fetchAiSimulation: (code: string, output?: string) => Promise<void>;
 }
 
 // 4. Implementation
@@ -102,4 +111,47 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   showPanel: (val = true) => set({ isVisible: val }),
   activeTabId: 'visualize',
   openTab: (tabId) => set({ activeTabId: tabId, isVisible: true }),
+
+  fetchAiSimulation: async (code: string, output?: string) => {
+    if (!code || code.trim().length < 5) return;
+
+    set({ isAnalyzing: true, isVisible: true, activeTabId: 'visualize', traceFrames: [] });
+
+    try {
+      const { copilotService } = await import('../../services/CopilotService');
+      let fullResponse = "";
+
+      const prompt = output
+        ? `[GENERATE_VISUALS] Simulate this logic in 3D. Program output: "${output}". Reconcile with this. \n\nCODE:\n${code}`
+        : `[GENERATE_VISUALS] Simulate this logic in 3D: \n\n${code}`;
+
+      await copilotService.streamChat(
+        prompt,
+        (chunk) => { fullResponse += chunk; },
+        () => {
+          try {
+            const start = fullResponse.indexOf('[');
+            const end = fullResponse.lastIndexOf(']') + 1;
+            if (start !== -1) {
+              const frames = JSON.parse(fullResponse.substring(start, end));
+              set({
+                traceFrames: frames,
+                currentFrameIndex: 0,
+                isAnalyzing: false,
+                isVisible: true,
+                activeTabId: 'visualize',
+                visualMode: 'UNIVERSAL'
+              });
+              console.log("🎬 Visual simulation synced successfully");
+            }
+          } catch (e) {
+            console.error("AI Visualization Error");
+            set({ isAnalyzing: false });
+          }
+        }
+      );
+    } catch (err) {
+      set({ isAnalyzing: false });
+    }
+  }
 }));

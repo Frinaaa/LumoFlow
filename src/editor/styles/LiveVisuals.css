@@ -41,7 +41,8 @@
   width: 50px;
   height: 50px;
   background: #1e1e1e;
-  border: 2px solid #ffd700; /* Yellow like JS logo */
+  border: 2px solid #ffd700;
+  /* Yellow like JS logo */
   color: #fff;
   display: flex;
   align-items: center;
@@ -49,7 +50,7 @@
   font-family: monospace;
   font-size: 18px;
   border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
 .data-box.existing {
@@ -58,23 +59,41 @@
 
 /* The Magic Animation for Push */
 .data-box.new-item-pop {
-  background: #00f2ff; /* Neon Cyan */
+  background: #00f2ff;
+  /* Neon Cyan */
   color: #000;
   border-color: #fff;
   animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 @keyframes popIn {
-  0% { transform: scale(0) translateY(-50px); opacity: 0; }
-  70% { transform: scale(1.2) translateY(0); opacity: 1; }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0) translateY(-50px);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.2) translateY(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* --- VARIABLE STYLES --- */
 .memory-box-container {
   text-align: center;
 }
-.var-label { color: #bc13fe; font-size: 14px; margin-bottom: 5px; font-weight: bold; }
+
+.var-label {
+  color: #bc13fe;
+  font-size: 14px;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
 .memory-box {
   width: 100px;
   height: 100px;
@@ -86,6 +105,7 @@
   border-radius: 12px;
   animation: borderFlash 1s infinite alternate;
 }
+
 .memory-value {
   font-size: 24px;
   color: #fff;
@@ -93,8 +113,13 @@
 }
 
 @keyframes borderFlash {
-  from { box-shadow: 0 0 5px #bc13fe; }
-  to { box-shadow: 0 0 20px #bc13fe; }
+  from {
+    box-shadow: 0 0 5px #bc13fe;
+  }
+
+  to {
+    box-shadow: 0 0 20px #bc13fe;
+  }
 }
 
 /* --- CSS FLEX STYLES --- */
@@ -107,6 +132,7 @@
   border-radius: 8px;
   transition: all 0.5s ease;
 }
+
 .flex-item-demo {
   width: 40px;
   height: 40px;
@@ -126,4 +152,60 @@
   font-size: 12px;
   font-family: monospace;
 }
-.highlight { color: #00f2ff; font-weight: bold; }
+
+.highlight {
+  color: #00f2ff;
+  font-weight: bold;
+}
+
+.universal-viz {
+  position: relative;
+  min-height: 400px;
+  /* Ensure it has height */
+  background: #0c0c0f;
+  /* Dark background */
+  color: white;
+  overflow: hidden;
+}
+
+.canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  min-height: 250px;
+}
+
+/* 🟢 The Loading Spinner Overlay */
+.ai-status-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(5, 5, 8, 0.9);
+  /* Semi-transparent black */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.spinner-neon {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(188, 19, 254, 0.1);
+  border-top: 3px solid #bc13fe;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 15px rgba(188, 19, 254, 0.4);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
