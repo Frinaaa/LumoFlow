@@ -7,7 +7,7 @@ import { useUserStore } from '../../stores/userStore';
 const VisualizeTab: React.FC = () => {
   const {
     traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames,
-    isAnalyzing, fetchAiSimulation, currentVisualFilePath
+    isVisualizing, fetchAiSimulation, currentVisualFilePath
   } = useAnalysisStore();
 
 
@@ -74,29 +74,8 @@ const VisualizeTab: React.FC = () => {
       return (
         <div className="theater-3d" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%',
-          background: 'radial-gradient(ellipse at center, rgba(30, 10, 50, 0.6) 0%, rgba(0, 0, 0, 0) 70%)'
         }}>
-          <div className="lumo-empty" style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            animation: 'fadeIn 0.5s ease-out'
-          }}>
-            <i className="fa-solid fa-wand-magic-sparkles fa-spin" style={{
-              fontSize: '2.5rem',
-              background: '-webkit-linear-gradient(#bc13fe, #00f2ff)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 10px rgba(188, 19, 254, 0.6))',
-              marginBottom: '20px'
-            }}></i>
-            <p style={{
-              marginTop: '15px',
-              fontSize: '12px',
-              color: '#00f2ff',
-              letterSpacing: '2px',
-              fontWeight: 'bold',
-              textShadow: '0 0 10px rgba(0, 242, 255, 0.4)'
-            }}>LUMO AI: PREPARING STAGE...</p>
-          </div>
+          {/* No redundant text here, handled by ai-overlay */}
         </div>
       );
     }
@@ -142,11 +121,11 @@ const VisualizeTab: React.FC = () => {
 
   return (
     <div className="lumo-visuals-wrapper">
-      {/* 🟢 LOADING OVERLAY (Died from Store) */}
-      {(isAnalyzing || isStale) && (
+      {/* 🟢 LOADING OVERLAY (Decoupled from Interaction/Explanation) */}
+      {(isVisualizing || isStale) && (
         <div className="ai-overlay">
           <div className="spinner-3d"></div>
-          <p>{isStale ? "PREPARING NEW VISUALS..." : "LUMO AI: DIRECTING SCENE..."}</p>
+          <p>{isVisualizing ? "LUMO AI: DIRECTING SCENE..." : "PREPARING NEW VISUALS..."}</p>
         </div>
       )}
 

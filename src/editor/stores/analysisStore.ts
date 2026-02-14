@@ -23,7 +23,8 @@ export interface TraceFrame {
 // 3. The interface that the components see
 interface AnalysisState {
   isVisible: boolean;
-  isAnalyzing: boolean; // 🟢 Fixes: "isAnalyzing does not exist"
+  isAnalyzing: boolean;
+  isVisualizing: boolean; // 🟢 Decoupled visualization state
   data: any | null;      // Stores AI explanation data
   vizCache: Record<string, any[]>; // 🟢 CACHE: Store results by code hash
   currentVisualFilePath: string | null;
@@ -36,7 +37,8 @@ interface AnalysisState {
 
   // Actions
   togglePanel: () => void;
-  setAnalyzing: (val: boolean) => void;     // 🟢 Fixes: "setAnalyzing does not exist"
+  setAnalyzing: (val: boolean) => void;
+  setVisualizing: (val: boolean) => void;   // 🟢 Separate flag for visuals
   setAnalysisData: (data: any) => void;     // 🟢 Fixes: "setAnalysisData does not exist"
   setReplaying: (val: boolean) => void;
 
@@ -58,6 +60,7 @@ interface AnalysisState {
 export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   isVisible: false,
   isAnalyzing: false,
+  isVisualizing: false,
   data: null,
   vizCache: {}, // Initialize cache
   currentVisualFilePath: null,
@@ -78,6 +81,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
   togglePanel: () => set((state) => ({ isVisible: !state.isVisible })),
   setAnalyzing: (val) => set({ isAnalyzing: val }),
+  setVisualizing: (val) => set({ isVisualizing: val }),
   setAnalysisData: (data) => set({ data }),
   setReplaying: (val) => set({ isReplaying: val }),
 
@@ -137,7 +141,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       console.log("⚡ Visual Cache Hit! Loading instantly...");
       set({
         traceFrames: cached,
-        isAnalyzing: false,
+        isVisualizing: false,
         isVisible: true,
         activeTabId: 'visualize',
         visualMode: 'UNIVERSAL',
@@ -148,18 +152,17 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }
 
     // 🟢 CRITICAL FIX: Only clear frames if we are starting FRESH
-    // If output is provided, we might be refining an existing visual, so keep bubbles!
     if (!get().traceFrames.length || !output) {
       set({
-        isAnalyzing: true,
+        isVisualizing: true,
         isVisible: true,
         activeTabId: 'visualize',
-        traceFrames: [], // Clear old bubbles immediately
+        traceFrames: [],
         currentFrameIndex: 0,
         currentVisualFilePath: filePath
       });
     } else {
-      set({ isAnalyzing: true, currentVisualFilePath: filePath });
+      set({ isVisualizing: true, currentVisualFilePath: filePath });
     }
 
     try {
@@ -205,17 +208,16 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
               set((state) => ({
                 vizCache: { ...state.vizCache, [code.trim()]: frames },
                 traceFrames: frames,
-                isAnalyzing: false,
-                // Keep everything else the same to preserve the UI
+                isVisualizing: false,
               }));
             }
           } catch (e) {
-            set({ isAnalyzing: false });
+            set({ isVisualizing: false });
           }
         }
       );
     } catch (err) {
-      set({ isAnalyzing: false });
+      set({ isVisualizing: false });
     }
   }
 }));

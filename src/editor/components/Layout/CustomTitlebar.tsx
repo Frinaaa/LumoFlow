@@ -38,11 +38,11 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
 
     try {
       if ((window as any).api?.analyzeCode) {
-        setAnalyzing(true);
-
-        // Include the filePath here
+        // 1. Trigger Visuals (Independent)
         analysisState.fetchAiSimulation(activeTab.content, activeTab.filePath);
 
+        // 2. Trigger Generic Analysis (Managed locally here)
+        setAnalyzing(true);
         const result = await (window as any).api.analyzeCode({
           code: activeTab.content,
           language: activeTab.language,

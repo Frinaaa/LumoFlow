@@ -304,6 +304,10 @@ export const useFileOperations = () => {
             analysisStore.setAnalysisData(analysisRes.analysis);
             editorStore.appendOutputData(`✨ Lumo AI: Code analysis completed. Check the Analysis panel.\n`);
           }
+
+          // 🚀 Trigger Visuals (Independent simulation)
+          analysisStore.fetchAiSimulation(tab.content, tab.filePath, result.stdout);
+
           analysisStore.setAnalyzing(false);
         } catch (aiErr) {
           console.error('AI Analysis trigger failed:', aiErr);
