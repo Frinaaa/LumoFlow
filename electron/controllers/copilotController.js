@@ -101,22 +101,46 @@ MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array o
             const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode: \n${context.currentCode}\n\n[TASK]\n${message}`;
 
             let deltasReceived = false;
-            const unsubscribeDelta = session.on('assistant.message_delta', (delta) => {
+
+            const onDelta = (delta) => {
                 deltasReceived = true;
-                const chunk = delta?.deltaContent || delta?.content || delta?.data?.deltaContent ||
-                    (delta?.choices && delta.choices[0]?.delta?.content);
-                if (chunk) webContents.send('copilot:chunk', chunk);
-            });
+                // Exhaustive chunk extraction for varying SDK versions
+                let chunk = delta?.deltaContent ||
+                    delta?.content ||
+                    delta?.data?.deltaContent ||
+                    delta?.choices?.[0]?.delta?.content ||
+                    delta?.message?.content?.parts?.[0];
 
-            const unsubscribeMsg = session.on('assistant.message', (msg) => {
-                const content = msg?.data?.content || msg?.content;
-                logToConsole(`📦 REPLY: ${content?.substring(0, 50).replace(/\n/g, ' ')}...`);
-                if (content && !deltasReceived) webContents.send('copilot:chunk', content);
-            });
+                if (!chunk && delta?.data) {
+                    chunk = delta.data.deltaContent || delta.data.content;
+                }
 
-            session.on('assistant.tool_call', (call) => {
-                logToConsole(`🔧 AGENT TOOL CALL: ${call.data.toolName}`);
-            });
+                if (chunk && !webContents.isDestroyed()) {
+                    webContents.send('copilot:chunk', chunk);
+                }
+            };
+
+            const onMsg = (msg) => {
+                const content = msg?.data?.content || msg?.content || msg?.message?.content?.parts?.[0];
+                if (content) {
+                    logToConsole(`📦 REPLY: ${content.substring(0, 50).replace(/\n/g, ' ')}...`);
+                    if (!deltasReceived && !webContents.isDestroyed()) {
+                        webContents.send('copilot:chunk', content);
+                    }
+                }
+            };
+
+            const onTool = (call) => {
+                logToConsole(`🔧 AGENT TOOL CALL: ${call?.data?.toolName || call?.toolName || 'unknown'}`);
+            };
+
+            const uDelta = session.on('assistant.message_delta', onDelta);
+            const uMsg = session.on('assistant.message', onMsg);
+            const uTool = session.on('assistant.tool_call', onTool);
+
+            // Also listen for non-prefixed events just in case
+            const uDelta2 = session.on('message_delta', onDelta);
+            const uMsg2 = session.on('message', onMsg);
 
             // Set mode 'immediate' for faster agentic response
             await session.send({
@@ -124,10 +148,24 @@ MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array o
                 mode: 'immediate'
             });
 
-            await new Promise(r => session.on('session.idle', r));
+            await new Promise(r => {
+                const timer = setTimeout(() => {
+                    logToConsole("⚠️ Safety timeout reached");
+                    r();
+                }, 15000); // 15s safety 
 
-            if (unsubscribeDelta) unsubscribeDelta();
-            if (unsubscribeMsg) unsubscribeMsg();
+                session.on('session.idle', () => {
+                    logToConsole("💤 Session IDLE");
+                    clearTimeout(timer);
+                    r();
+                });
+            });
+
+            if (uDelta) uDelta();
+            if (uMsg) uMsg();
+            if (uTool) uTool();
+            if (uDelta2) uDelta2();
+            if (uMsg2) uMsg2();
 
             webContents.send('copilot:done');
             logToConsole("🏁 CYCLE_COMPLETE");
