@@ -57,7 +57,7 @@ const copilotController = {
             // 🚀 ULTRA-SPEED: Reuse session to save 1.5s creation time
             if (session) return true;
 
-            const model = 'gpt-4o-mini';
+            const model = 'gpt-4.1';
             logToConsole(`🧪 Creating Persistent Agent Session: ${model}`);
 
             session = await client.createSession({

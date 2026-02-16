@@ -132,22 +132,7 @@ const VisualizeTab: React.FC = () => {
             display: 'flex', flexDirection: 'column', alignItems: 'center',
             animation: 'fadeIn 0.5s ease-out'
           }}>
-            <i className="fa-solid fa-wand-magic-sparkles fa-spin" style={{
-              fontSize: '2.5rem',
-              background: '-webkit-linear-gradient(#bc13fe, #00f2ff)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 10px rgba(188, 19, 254, 0.6))',
-              marginBottom: '20px'
-            }}></i>
-            <p style={{
-              marginTop: '15px',
-              fontSize: '12px',
-              color: '#00f2ff',
-              letterSpacing: '2px',
-              fontWeight: 'bold',
-              textShadow: '0 0 10px rgba(0, 242, 255, 0.4)'
-            }}>LUMO AI: SIMULATING LOGIC...</p>
+            
           </div>
         </div>
       );
