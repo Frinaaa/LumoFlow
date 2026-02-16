@@ -69,15 +69,21 @@ const VisualizeTab: React.FC = () => {
     // 🟢 If we have data, SHOW THE DATA (ignore isAnalyzing)
     if (traceFrames.length > 0) {
       const frame = traceFrames[currentFrameIndex];
-      if (!frame || !frame.memory) return null;
+      if (!frame) return null;
 
-      const arrayKey = Object.keys(frame.memory).find(k => Array.isArray(frame.memory[k]) && !['comparing', 'swapping'].includes(k));
-      const arrayData = arrayKey ? frame.memory[arrayKey] : null;
-      const comparing = frame.memory.comparing || [];
-      const swapping = frame.memory.swapping || [];
+      // AI sometimes returns 'vars' instead of 'memory'
+      const memory = frame.memory || (frame as any).vars || {};
+
+      const arrayKey = Object.keys(memory).find(k => Array.isArray(memory[k]) && !['comparing', 'swapping'].includes(k));
+      const arrayData = arrayKey ? memory[arrayKey] : null;
+      const comparing = memory.comparing || [];
+      const swapping = memory.swapping || [];
+
+      // If no variables found, show a summary card of the frame
+      const hasVars = Object.keys(memory).filter(k => !['comparing', 'swapping'].includes(k)).length > 0;
 
       return (
-        <div className="theater-3d">
+        <div className="theater-3d" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {arrayData ? (
             <div className="bubbles-row-3d">
               {arrayData.map((val: any, idx: number) => {
@@ -96,14 +102,19 @@ const VisualizeTab: React.FC = () => {
                 );
               })}
             </div>
-          ) : (
+          ) : hasVars ? (
             <div className="vars-grid-3d">
-              {Object.entries(frame.memory).filter(([k]) => !['comparing', 'swapping'].includes(k)).map(([k, v]) => (
+              {Object.entries(memory).filter(([k]) => !['comparing', 'swapping'].includes(k)).map(([k, v]) => (
                 <div key={k} className="card-3d">
                   <span className="label">{k}</span>
-                  <strong className="val">{JSON.stringify(v)}</strong>
+                  <strong className="val">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</strong>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="card-3d" style={{ borderBottomColor: '#bc13fe' }}>
+              <span className="label">ACTION</span>
+              <strong className="val">Executing...</strong>
             </div>
           )}
         </div>
