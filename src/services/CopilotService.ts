@@ -3,7 +3,7 @@ export class CopilotService {
 
     setContext(context: any) { this.context = context; }
 
-    async streamChat(message: string, onChunk: (c: string) => void, onComplete: () => void): Promise<void> {
+    async streamChat(message: string, onChunk: (c: string) => void, onComplete: () => void, onError?: (err: string) => void): Promise<void> {
         if (!(window as any).api) return;
         const api = (window as any).api;
 
@@ -32,7 +32,11 @@ export class CopilotService {
 
             api.onCopilotError((err: string) => {
                 console.error("📥 [Service] Stream Error:", err);
-                onChunk(`\n\n⚠️ Error: ${err}`);
+                if (onError) {
+                    onError(err);
+                } else {
+                    onChunk(`\n\n⚠️ Error: ${err}`);
+                }
                 cleanup();
             });
 
@@ -46,7 +50,11 @@ export class CopilotService {
                 token: localStorage.getItem('github_token'),
                 context: sanitized
             }).catch((e: any) => {
-                onChunk(`\n\n⚠️ Bridge Failure`);
+                if (onError) {
+                    onError(e.message || "Bridge Failure");
+                } else {
+                    onChunk(`\n\n⚠️ Bridge Failure`);
+                }
                 cleanup();
             });
 
@@ -54,6 +62,7 @@ export class CopilotService {
             setTimeout(() => {
                 if (!hasFinished) {
                     console.warn("AI Stream timed out");
+                    if (onError) onError("Request timed out");
                     cleanup();
                 }
             }, 15000);

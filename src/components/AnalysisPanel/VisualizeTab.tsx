@@ -7,7 +7,7 @@ import { useUserStore } from '../../stores/userStore';
 const VisualizeTab: React.FC = () => {
   const {
     traceFrames, currentFrameIndex, setFrameIndex, setTraceFrames,
-    isVisualizing, fetchAiSimulation, currentVisualFilePath
+    isAnalyzing, fetchAiSimulation, currentVisualFilePath
   } = useAnalysisStore();
 
 
@@ -66,66 +66,92 @@ const VisualizeTab: React.FC = () => {
 
   // 🟢 3. 3D RENDERER (Spheres and Depth Cards)
   const render3DStage = () => {
-    const frame = traceFrames[currentFrameIndex];
+    // 🟢 If we have data, SHOW THE DATA (ignore isAnalyzing)
+    if (traceFrames.length > 0) {
+      const frame = traceFrames[currentFrameIndex];
+      if (!frame || !frame.memory) return null;
 
-    // 🟢 CHANGE: Only show the "Preparing" screen if we have ZERO frames.
-    // If we have frames but are still analyzing, show the bubbles anyway!
-    if (traceFrames.length === 0) {
+      const arrayKey = Object.keys(frame.memory).find(k => Array.isArray(frame.memory[k]) && !['comparing', 'swapping'].includes(k));
+      const arrayData = arrayKey ? frame.memory[arrayKey] : null;
+      const comparing = frame.memory.comparing || [];
+      const swapping = frame.memory.swapping || [];
+
       return (
-        <div className="theater-3d" style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%',
-        }}>
-          {/* No redundant text here, handled by ai-overlay */}
+        <div className="theater-3d">
+          {arrayData ? (
+            <div className="bubbles-row-3d">
+              {arrayData.map((val: any, idx: number) => {
+                const isComp = comparing.includes(idx);
+                const isSwap = swapping.includes(idx);
+                return (
+                  <div key={idx} className={`bubble-3d ${isComp ? 'comp' : ''} ${isSwap ? 'swap' : ''}`}
+                    style={{
+                      background: isSwap ? 'radial-gradient(circle at 30% 30%, #ff0055, #660022)' : isComp ? 'radial-gradient(circle at 30% 30%, #ffaa00, #884400)' : 'radial-gradient(circle at 30% 30%, #bc13fe, #330055)',
+                      transform: isSwap ? 'translateZ(60px) translateY(-20px) rotateY(15deg)' : isComp ? 'translateZ(30px) translateY(-10px)' : 'translateZ(0)'
+                    }}
+                  >
+                    <div className="shine"></div>
+                    <span>{String(val)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="vars-grid-3d">
+              {Object.entries(frame.memory).filter(([k]) => !['comparing', 'swapping'].includes(k)).map(([k, v]) => (
+                <div key={k} className="card-3d">
+                  <span className="label">{k}</span>
+                  <strong className="val">{JSON.stringify(v)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
 
-    const arrayKey = Object.keys(frame.memory).find(k => Array.isArray(frame.memory[k]) && !['comparing', 'swapping'].includes(k));
-    const arrayData = arrayKey ? frame.memory[arrayKey] : null;
-    const comparing = frame.memory.comparing || [];
-    const swapping = frame.memory.swapping || [];
+    // 🟢 Only if we have NO data, show the Loading Wand
+    if (isAnalyzing) {
+      return (
+        <div className="theater-3d" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%',
+          background: 'radial-gradient(ellipse at center, rgba(30, 10, 50, 0.6) 0%, rgba(0, 0, 0, 0) 70%)'
+        }}>
+          <div className="lumo-empty" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            animation: 'fadeIn 0.5s ease-out'
+          }}>
+            <i className="fa-solid fa-wand-magic-sparkles fa-spin" style={{
+              fontSize: '2.5rem',
+              background: '-webkit-linear-gradient(#bc13fe, #00f2ff)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 10px rgba(188, 19, 254, 0.6))',
+              marginBottom: '20px'
+            }}></i>
+            <p style={{
+              marginTop: '15px',
+              fontSize: '12px',
+              color: '#00f2ff',
+              letterSpacing: '2px',
+              fontWeight: 'bold',
+              textShadow: '0 0 10px rgba(0, 242, 255, 0.4)'
+            }}>LUMO AI: SIMULATING LOGIC...</p>
+          </div>
+        </div>
+      );
+    }
 
-    return (
-      <div className="theater-3d">
-        {arrayData ? (
-          <div className="bubbles-row-3d">
-            {arrayData.map((val: any, idx: number) => {
-              const isComp = comparing.includes(idx);
-              const isSwap = swapping.includes(idx);
-              return (
-                <div key={idx} className={`bubble-3d ${isComp ? 'comp' : ''} ${isSwap ? 'swap' : ''}`}
-                  style={{
-                    background: isSwap ? 'radial-gradient(circle at 30% 30%, #ff0055, #660022)' : isComp ? 'radial-gradient(circle at 30% 30%, #ffaa00, #884400)' : 'radial-gradient(circle at 30% 30%, #bc13fe, #330055)',
-                    transform: isSwap ? 'translateZ(60px) translateY(-20px) rotateY(15deg)' : isComp ? 'translateZ(30px) translateY(-10px)' : 'translateZ(0)'
-                  }}
-                >
-                  <div className="shine"></div>
-                  <span>{String(val)}</span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="vars-grid-3d">
-            {Object.entries(frame.memory).filter(([k]) => !['comparing', 'swapping'].includes(k)).map(([k, v]) => (
-              <div key={k} className="card-3d">
-                <span className="label">{k}</span>
-                <strong className="val">{JSON.stringify(v)}</strong>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+    return <div className="lumo-empty">Ready to visualize.</div>;
   };
 
   return (
     <div className="lumo-visuals-wrapper">
-      {/* 🟢 LOADING OVERLAY (Decoupled from Interaction/Explanation) */}
-      {(isVisualizing || isStale) && (
+      {/* 🟢 LOADING OVERLAY (Died from Store) */}
+      {(isAnalyzing || isStale) && (
         <div className="ai-overlay">
           <div className="spinner-3d"></div>
-          <p>{isVisualizing ? "LUMO AI: DIRECTING SCENE..." : "PREPARING NEW VISUALS..."}</p>
+          <p>{isStale ? "PREPARING NEW VISUALS..." : "LUMO AI: DIRECTING SCENE..."}</p>
         </div>
       )}
 

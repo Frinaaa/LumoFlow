@@ -171,8 +171,10 @@ MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array o
             logToConsole("🏁 CYCLE_COMPLETE");
 
         } catch (error) {
-            logToConsole(`🔥 FATAL: ${error.message}`);
+            logToConsole(`🔥 AI ERROR: ${error.message}`);
+            // Just send the raw error. The frontend will now just stop the spinner.
             webContents.send('copilot:error', error.message);
+            webContents.send('copilot:done');
         }
     },
 
