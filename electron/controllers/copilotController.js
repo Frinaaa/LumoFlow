@@ -20,6 +20,8 @@ let client = null;
 let session = null;
 let currentToken = null;
 let isInitializing = false;
+// 🔑 Mutable reference to always point to the LATEST webContents
+let activeWebContents = null;
 
 async function loadSDK() {
     if (CopilotClient) return;
@@ -63,22 +65,36 @@ const copilotController = {
             session = await client.createSession({
                 model: model,
                 systemMessage: {
-                    content: `Act as LumoFlow AI. 
-MODE 1 (Chat): Use 'write_file' tool for code edits.
-MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array of trace frames. Start with '[' immediately. Use user variable names. Include 'comparing' or 'swapping' metadata. Write high-tech female 'desc' narration.`
+                    content: `You are LumoFlow AI, a coding assistant integrated into an IDE.
+
+IMPORTANT: When the user asks you to fix, edit, modify, change, or write code:
+1. ALWAYS use the 'write_file' tool to stage the code for review.
+2. Put the COMPLETE file content in the 'code' parameter - not just a snippet.
+3. The user will see a diff preview and can accept or discard your changes.
+4. After calling write_file, briefly explain what you changed.
+
+For questions, explanations, or non-code tasks, respond normally in markdown.
+Use markdown code blocks (\`\`\`) only for illustrative snippets in explanations, NOT for actual file edits.`
                 },
                 tools: [
                     {
                         name: "write_file",
-                        description: "Stage code for Diff review.",
+                        description: "Write or edit the user's current file. Use this ALWAYS when the user asks to fix, edit, modify, or change code. Pass the COMPLETE updated file content.",
                         parameters: {
                             type: "object",
-                            properties: { code: { type: "string" } },
+                            properties: { code: { type: "string", description: "The complete updated file content" } },
                             required: ["code"]
                         },
                         handler: async ({ code }) => {
-                            if (webContents) webContents.send('editor:preview-diff', code);
-                            return "✅ Staged.";
+                            logToConsole(`🔧 write_file tool called! Code length: ${code?.length || 0}`);
+                            // 🔑 Use the mutable activeWebContents reference (updated every streamChat call)
+                            if (activeWebContents && !activeWebContents.isDestroyed()) {
+                                activeWebContents.send('editor:preview-diff', code);
+                                logToConsole('✅ Sent editor:preview-diff to active webContents');
+                            } else {
+                                logToConsole('⚠️ No active webContents for preview-diff!');
+                            }
+                            return "✅ Code staged for user review. The user will see a diff preview.";
                         }
                     }
                 ]
@@ -94,6 +110,8 @@ MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array o
 
     async streamChat(event, { message, token, context }) {
         const webContents = event.sender;
+        // 🔑 Update the mutable reference so write_file tool always uses latest webContents
+        activeWebContents = webContents;
         try {
             await this.ensureInitialized(token, webContents);
             logToConsole(`💭 USER_QUERY: "${message.substring(0, 50)}..."`);
@@ -142,11 +160,27 @@ MODE 2 ([GENERATE_VISUAL_JSON]): 3D Logic Engine. Output ONLY a raw JSON array o
             const uDelta2 = session.on('message_delta', onDelta);
             const uMsg2 = session.on('message', onMsg);
 
-            // Set mode 'immediate' for faster agentic response
-            await session.send({
-                prompt: promptContent,
-                mode: 'immediate'
-            });
+            // 🔄 SESSION VALIDATION: Try to send, recreate if stale
+            try {
+                await session.send({
+                    prompt: promptContent,
+                    mode: 'immediate'
+                });
+            } catch (sendError) {
+                if (sendError.message.includes('Session not found')) {
+                    logToConsole('🔄 Stale session detected. Recreating...');
+                    session = null; // Clear stale session
+                    await this.ensureInitialized(token, webContents); // Force recreation
+
+                    // Retry with fresh session
+                    await session.send({
+                        prompt: promptContent,
+                        mode: 'immediate'
+                    });
+                } else {
+                    throw sendError; // Re-throw if it's a different error
+                }
+            }
 
             await new Promise(r => {
                 const timer = setTimeout(() => {

@@ -242,11 +242,11 @@ export const useFileOperations = () => {
     const exactCodeToRun = tab.content;
     const exactFilePath = tab.filePath;
 
-    const analysisStoreImport = await import('../stores/analysisStore');
-    const analysisStore = analysisStoreImport.useAnalysisStore.getState();
+    const visualStoreImport = await import('../stores/visualStore');
+    const visualStore = visualStoreImport.useVisualStore.getState();
 
     // 3. IMMEDIATELY Reset Visuals so the old bubbles die
-    analysisStore.setTraceFrames([], 'UNIVERSAL');
+    visualStore.clearVisuals();
 
     // 4. PREPARE Terminal UI
     editorStore.clearOutputData();
@@ -262,7 +262,7 @@ export const useFileOperations = () => {
       if (result.stdout || result.stderr === "") {
         editorStore.appendOutputData(result.stdout + '\n');
         // Send BOTH code and output in ONE call to ensure they match
-        analysisStore.fetchAiSimulation(exactCodeToRun, exactFilePath, result.stdout);
+        visualStore.fetchAiSimulation(exactCodeToRun, exactFilePath, result.stdout);
       } else {
         editorStore.appendOutputData(result.stderr);
       }

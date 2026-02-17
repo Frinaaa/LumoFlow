@@ -1,7 +1,7 @@
 import React from 'react';
 import MenuBar from '../MenuBar';
 import { useEditor } from '../../../context/EditorContext';
-import { useEditorStore, useAnalysisStore, useFileStore } from '../../stores';
+import { useEditorStore, useAnalysisStore, useVisualStore, useFileStore } from '../../stores';
 import { useWindowControls } from '../../../hooks/useWindowControls';
 import { useFileOperations } from '../../hooks/useFileOperations';
 import '../../styles/CustomTitlebar.css';
@@ -15,6 +15,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
   const editorState = useEditor();
   const editorStore = useEditorStore();
   const fileOps = useFileOperations();
+  const visualStore = useVisualStore();
   const isAnalyzing = useAnalysisStore(state => state.isAnalyzing);
   const isVisible = useAnalysisStore(state => state.isVisible);
   const togglePanel = useAnalysisStore(state => state.togglePanel);
@@ -30,8 +31,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
     if (!activeTab) return;
 
     // 🟢 Clear first!
-    const analysisState = useAnalysisStore.getState();
-    analysisState.clearVisuals();
+    visualStore.clearVisuals();
 
     // 1. Open the panel immediately
     if (!isVisible) togglePanel();
@@ -39,7 +39,7 @@ const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ workspaceFolderName }) 
     try {
       if ((window as any).api?.analyzeCode) {
         // 1. Trigger Visuals (Independent)
-        analysisState.fetchAiSimulation(activeTab.content, activeTab.filePath);
+        visualStore.fetchAiSimulation(activeTab.content, activeTab.filePath);
 
         // 2. Trigger Generic Analysis (Managed locally here)
         setAnalyzing(true);

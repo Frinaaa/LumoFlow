@@ -1,59 +1,19 @@
-console.log("🏥 Hospital Token Queue System Started");
+let arr = [2, 4, 6, 8, 10, 12];
+let target = 8;
 
-// Queue to store patients
-let patientQueue = [];
-let tokenNo = 100;
+let low = 0, high = arr.length - 1;
 
-// Patient arrives
-function addPatient(name, issue) {
-  let patient = {
-    token: tokenNo++,
-    name: name,
-    issue: issue,
-    status: "Waiting"
-  };
+while (low <= high) {
+  let mid = Math.floor((low + high) / 2);
+  // Logging the current state
+  console.log(`Low=${low}, Mid=${mid}, High=${high}`);
 
-  patientQueue.push(patient);
-  console.log(`➡️ Patient ${name} registered | Token ${patient.token}`);
-  showQueue();
-}
-
-// Doctor attends patient
-function attendPatient() {
-  if (patientQueue.length === 0) {
-    console.log("😴 No patients waiting");
-    return;
+  if (arr[mid] === target) {
+    console.log("Found at index", mid);
+    break;
+  } else if (arr[mid] < target) {
+    low = mid + 1;
+  } else {
+    high = mid - 1;
   }
-
-  let patient = patientQueue.shift();
-  patient.status = "Consulting";
-  console.log(`👨‍⚕️ Doctor attending ${patient.name} (Token ${patient.token})`);
-  showQueue();
 }
-
-// Display queue
-function showQueue() {
-  console.log("📋 Current Patient Queue:");
-
-  if (patientQueue.length === 0) {
-    console.log("Queue Empty\n");
-    return;
-  }
-
-  patientQueue.forEach((p, index) => {
-    console.log(
-      `${index + 1}. Token ${p.token} | ${p.name} | ${p.issue} | ${p.status}`
-    );
-  });
-  console.log("");
-}
-
-// Simulation flow
-addPatient("Ravi", "Fever");
-addPatient("Anita", "Headache");
-addPatient("Kiran", "Back Pain");
-attendPatient();
-addPatient("Zoya", "Cold");
-attendPatient();
-attendPatient();
-addPatient("Manoj", "Checkup");

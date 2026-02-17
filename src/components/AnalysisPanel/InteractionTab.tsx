@@ -48,6 +48,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<any>(null);
+  const thinkingIntervalRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const editorStore = useEditorStore();
@@ -57,6 +58,20 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
+
+  // 🟠 MUTUAL STOP: Cleanup everything when switching away from Interact Tab
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try { mediaRecorderRef.current.stop(); } catch (e) { }
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
+    };
+  }, []);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -195,8 +210,9 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
 
     let thinkingIndex = 0;
     setThinkingMessage(thinkingMessages[0]);
+    if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
 
-    const thinkingInterval = setInterval(() => {
+    thinkingIntervalRef.current = setInterval(() => {
       thinkingIndex = (thinkingIndex + 1) % thinkingMessages.length;
       setThinkingMessage(thinkingMessages[thinkingIndex]);
     }, 1500);
@@ -216,7 +232,7 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
         (chunk) => {
           // Clear thinking message when first chunk arrives
           if (!accumulatedText) {
-            clearInterval(thinkingInterval);
+            if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
             setThinkingMessage(null);
 
             setMessages(prev => [...prev, {
@@ -230,14 +246,14 @@ const InteractionTab: React.FC<{ analysisData: any }> = ({ analysisData }) => {
           setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: accumulatedText } : m));
         },
         () => {
-          clearInterval(thinkingInterval);
+          if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
           setThinkingMessage(null);
           setIsProcessing(false);
         }
       );
     } catch (err) {
       console.error("AI Error:", err);
-      clearInterval(thinkingInterval);
+      if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
       setThinkingMessage(null);
       setIsProcessing(false);
     }

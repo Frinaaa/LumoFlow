@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useEffect, memo, useState } from 'react';
 import Editor, { DiffEditor, Monaco } from '@monaco-editor/react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useAnalysisStore } from '../../stores/analysisStore';
+import { useVisualStore } from '../../stores/visualStore';
 import { parseLiveCode } from '../../utils/liveParser';
 import FindReplace from './FindReplace';
 import { trackStats, trackActivity } from '../../../utils/statsTracker';
@@ -30,6 +31,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const [modifiedCode, setModifiedCode] = useState('');
   const editorStore = useEditorStore();
   const analysisStore = useAnalysisStore();
+  const visualStore = useVisualStore();
   const fileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'untitled';
 
   // Track Editor Session Start
@@ -80,12 +82,35 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     const timer = setTimeout(() => {
       const visualResult = parseLiveCode(code);
       if (visualResult.type !== 'NONE') {
-        analysisStore.setLiveVisual(visualResult);
+        visualStore.setLiveVisual(visualResult);
       }
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [code, analysisStore]);
+  }, [code, visualStore.setLiveVisual]);
+
+  // 🤖 AUTO-TRIGGER AI VISUALS ON CHANGE
+  const prevCodeRef = useRef<string>("");
+  const lastActiveFile = useRef<string>("");
+
+  useEffect(() => {
+    // 1. INSTANT LOAD ON FILE SWITCH: Cache handles deduplication
+    const isVisible = analysisStore.isVisible && analysisStore.activeTabId === 'visualize';
+    const isVisualizing = visualStore.isVisualizing;
+    const isCoolingDown = Date.now() < visualStore.cooldownUntil;
+    const isDifferentFile = selectedFile !== visualStore.currentVisualFilePath;
+
+    if (isVisible && !isVisualizing && !isCoolingDown && isDifferentFile && code && code.trim().length > 5) {
+      console.log("📂 SYNC: Triggering simulation for", selectedFile);
+      // fetchAiSimulation will check cache first - won't call API if cached
+      visualStore.fetchAiSimulation(code, selectedFile || 'untitled.js');
+      lastActiveFile.current = selectedFile || "";
+      return;
+    }
+
+    // 2. NO AUTO-TRIGGER ON TYPING: Visuals only regenerate after code run or explicit RE-TRACE click
+    // The cache handles same-code detection automatically
+  }, [selectedFile, analysisStore.isVisible, analysisStore.activeTabId, visualStore.isVisualizing, visualStore.cooldownUntil, visualStore.currentVisualFilePath]);
 
   const handleSave = () => {
     onSave();

@@ -6,16 +6,23 @@ export const parseLiveCode = (code: string): { type: VisualType; params: any } =
   const lastLine = cleanCode.split('\n').pop()?.trim() || "";
 
   // 1. Detect Array Push:  arr.push(10)
-  // Regex looks for: word.push(something)
   const pushMatch = lastLine.match(/(\w+)\.push\((['"]?)(.+?)\2\)/);
   if (pushMatch) {
+    const arrayName = pushMatch[1];
+
+    // Attempt to find the array declaration in the rest of the code to avoid hardcoding
+    const arrayDeclMatch = code.match(new RegExp(`(?:let|const|var)\\s+${arrayName}\\s*=\\s*\\[(.*?)\\]`));
+    let existingItems: string[] = [];
+    if (arrayDeclMatch) {
+      existingItems = arrayDeclMatch[1].split(',').map(s => s.trim().replace(/['"]/g, ''));
+    }
+
     return {
       type: 'ARRAY_PUSH',
       params: {
-        arrayName: pushMatch[1],
+        arrayName,
         value: pushMatch[3],
-        // Generate mock previous items for the visual
-        prevItems: ['4', '10', '5']
+        prevItems: existingItems.length > 0 ? existingItems : ['...'], // No longer hardcoded 4, 10, 5
       }
     };
   }

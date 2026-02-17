@@ -12,10 +12,11 @@ const analysisController = require('./controllers/analysisController');
 const visualizationController = require('./controllers/visualizationController');
 const copilotController = require('./controllers/copilotController');
 const voiceController = require('./controllers/voiceController');
+const geminiController = require('./controllers/geminiController');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 console.log("--- STARTUP CHECK ---");
-console.log("Check: Token exists?", !!process.env.GITHUB_TOKEN); 
+console.log("Check: Token exists?", !!process.env.GITHUB_TOKEN);
 console.log("---------------------");
 
 let mainWindow;
@@ -210,15 +211,15 @@ const createWindow = async () => {
 app.on('ready', () => {
   // Grant microphone permissions automatically
   // Inside app.on('ready', ...)
-const { session } = require('electron');
-session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-  const allowedPermissions = ['media', 'audioCapture', 'notifications'];
-  if (allowedPermissions.includes(permission)) {
-    callback(true); // Automatically approve microphone
-  } else {
-    callback(false);
-  }
-});
+  const { session } = require('electron');
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowedPermissions = ['media', 'audioCapture', 'notifications'];
+    if (allowedPermissions.includes(permission)) {
+      callback(true); // Automatically approve microphone
+    } else {
+      callback(false);
+    }
+  });
 
   // Disable Autofill at Chromium level
   app.commandLine.appendSwitch('disable-autofill-keyboard-accessory-view');
@@ -1232,6 +1233,10 @@ session.defaultSession.setPermissionRequestHandler((webContents, permission, cal
       return await copilotController.ping();
     });
     console.log('✅ Registered: copilot:chat, streamChat & ping');
+
+    // Gemini Handlers
+    ipcMain.handle('gemini:getVisuals', (e, data) => geminiController.streamVisuals(e, data));
+    console.log('✅ Registered: gemini:getVisuals');
 
     // Eagerly initialize Copilot on startup
     copilotController.ensureInitialized().catch(err => {

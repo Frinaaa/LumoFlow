@@ -103,6 +103,17 @@ contextBridge.exposeInMainWorld('api', {
   onCopilotError: (callback) => ipcRenderer.on('copilot:error', (event, err) => callback(err)),
   onEditorUpdate: (callback) => ipcRenderer.on('editor:update-content', (event, code) => callback(code)),
   onPreviewDiff: (callback) => ipcRenderer.on('editor:preview-diff', (event, code) => callback(code)),
+
+  // Gemini Visuals
+  geminiGetVisuals: (data) => ipcRenderer.invoke('gemini:getVisuals', data),
+  onVisualChunk: (cb) => ipcRenderer.on('ai:visual-chunk', (event, chunk) => cb(chunk)),
+  onVisualDone: (cb) => ipcRenderer.on('ai:visual-done', (event) => cb()),
+  onVisualError: (cb) => ipcRenderer.on('ai:visual-error', (event, err) => cb(err)),
+  removeVisualListeners: () => {
+    ipcRenderer.removeAllListeners('ai:visual-chunk');
+    ipcRenderer.removeAllListeners('ai:visual-done');
+    ipcRenderer.removeAllListeners('ai:visual-error');
+  },
   removeCopilotListeners: () => {
     // Only remove stream-related listeners (used between chat messages)
     // Do NOT remove editor:preview-diff - it must persist across chats!

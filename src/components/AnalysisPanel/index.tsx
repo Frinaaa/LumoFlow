@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAnalysisStore } from '../../editor/stores/analysisStore';
+import { useAnalysisStore, useVisualStore } from '../../editor/stores';
 import VisualizeTab from './VisualizeTab';
 import ExplanationTab from './ExplanationTab';
 import InteractionTab from './InteractionTab';
@@ -9,16 +9,19 @@ import { useEditorStore } from '../../editor/stores/editorStore';
 import { analysisPanelStyles } from './styles';
 
 const AnalysisPanel: React.FC = () => {
+    // Analysis Store (Static Logic)
     const isVisible = useAnalysisStore(state => state.isVisible);
     const data = useAnalysisStore(state => state.data);
     const isAnalyzing = useAnalysisStore(state => state.isAnalyzing);
     const togglePanel = useAnalysisStore(state => state.togglePanel);
-    const setTraceFrames = useAnalysisStore(state => state.setTraceFrames);
-    const setFrameIndex = useAnalysisStore(state => state.setFrameIndex);
-    const setReplaying = useAnalysisStore(state => state.setReplaying);
     const panelWidth = useAnalysisStore(state => state.panelWidth);
     const storeTabId = useAnalysisStore(state => state.activeTabId);
     const openTab = useAnalysisStore(state => state.openTab);
+
+    // Visual Store (Runtime Logic Theater)
+    const setTraceFrames = useVisualStore(state => state.setTraceFrames);
+    const setFrameIndex = useVisualStore(state => state.setFrameIndex);
+    const setReplaying = useVisualStore(state => state.setReplaying);
 
     const staticProblems = useEditorStore(state => state.staticProblems);
     const activeTabId = useEditorStore(state => state.activeTabId);
@@ -49,11 +52,11 @@ const AnalysisPanel: React.FC = () => {
 
                 if (viz.frames && Array.isArray(viz.frames)) {
                     // This sets isVisible: true in the store!
-                    // And we set a flag so VisualizeTab doesn't overwrite these frames
                     setReplaying(true);
                     setTraceFrames(viz.frames, viz.type || 'UNIVERSAL');
                     setFrameIndex(0);
                     setActiveTab('visualize');
+                    useAnalysisStore.getState().showPanel(true);
                 }
 
                 // Clear the trigger
@@ -65,7 +68,8 @@ const AnalysisPanel: React.FC = () => {
             }
         } else {
             // Not replaying, ensure replay mode is off
-            setReplaying(false);
+            // We set it to false if there's no replay data as a safeguard
+            // But be careful: clearVisuals also resets this
         }
     }, [setTraceFrames, setFrameIndex, setActiveTab, setReplaying]);
 
@@ -171,6 +175,7 @@ const AnalysisPanel: React.FC = () => {
                                 borderColor: '#f14c4c',
                                 color: activeTab === 'debug' ? '#000' : '#f14c4c',
                                 background: activeTab === 'debug' ? '#f14c4c' : 'transparent',
+                                border: '1px solid #f14c4c',
                                 animation: (hasActiveErrors && activeTab !== 'debug') ? 'pulse 2s infinite' : 'none'
                             }}
                         >
@@ -184,29 +189,7 @@ const AnalysisPanel: React.FC = () => {
                     {activeTab === 'visualize' && <VisualizeTab />}
                     {activeTab === 'explain' && <ExplanationTab />}
                     {activeTab === 'interact' && (
-                        data ? (
-                            <InteractionTab analysisData={data} />
-                        ) : (
-                            <div
-                                style={{
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '16px',
-                                    color: '#666',
-                                    textAlign: 'center',
-                                    padding: '20px'
-                                }}
-                            >
-                                <i className="fa-solid fa-bolt" style={{ fontSize: '32px', opacity: 0.2 }}></i>
-                                <div>
-                                    <div style={{ fontSize: '14px', marginBottom: '8px' }}>No Data Available</div>
-                                    <div style={{ fontSize: '12px' }}>Run the code or trigger analysis to see results</div>
-                                </div>
-                            </div>
-                        )
+                        <InteractionTab analysisData={data || {}} />
                     )}
                     {activeTab === 'games' && <GamesTab />}
                     {activeTab === 'debug' && <VirtualDebuggerTab />}
