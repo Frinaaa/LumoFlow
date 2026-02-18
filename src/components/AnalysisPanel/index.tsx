@@ -32,15 +32,9 @@ const AnalysisPanel: React.FC = () => {
     const hasActiveErrors = staticProblems.filter(p => (!activeFileData || p.source === activeFileData.fileName) && p.type === 'error').length > 0;
     const hasAnyErrors = staticProblems.filter(p => p.type === 'error').length > 0;
 
-    const activeTab = (hasAnyErrors && storeTabId === 'debug') ? 'debug' : storeTabId;
+    // Debug tab is always available — AI analyses any file
+    const activeTab = storeTabId;
     const setActiveTab = (tab: any) => openTab(tab);
-
-    // Switch away from debug tab if ALL errors are cleared
-    React.useEffect(() => {
-        if (!hasAnyErrors && activeTab === 'debug') {
-            setActiveTab('visualize');
-        }
-    }, [hasAnyErrors, activeTab]);
 
     // Handle replay visualization from sessionStorage
     React.useEffect(() => {
@@ -167,21 +161,19 @@ const AnalysisPanel: React.FC = () => {
                     >
                         <i className="fa-solid fa-gamepad"></i> Games
                     </button>
-                    {hasAnyErrors && (
-                        <button
-                            className={`analysis-tab-btn ${activeTab === 'debug' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('debug')}
-                            style={{
-                                borderColor: '#f14c4c',
-                                color: activeTab === 'debug' ? '#000' : '#f14c4c',
-                                background: activeTab === 'debug' ? '#f14c4c' : 'transparent',
-                                border: '1px solid #f14c4c',
-                                animation: (hasActiveErrors && activeTab !== 'debug') ? 'pulse 2s infinite' : 'none'
-                            }}
-                        >
-                            <i className="fa-solid fa-bug-slash"></i> Debug
-                        </button>
-                    )}
+                    <button
+                        className={`analysis-tab-btn ${activeTab === 'debug' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('debug')}
+                        style={{
+                            borderColor: hasActiveErrors ? '#f14c4c' : '#555',
+                            color: activeTab === 'debug' ? '#000' : (hasActiveErrors ? '#f14c4c' : '#aaa'),
+                            background: activeTab === 'debug' ? (hasActiveErrors ? '#f14c4c' : '#555') : 'transparent',
+                            border: `1px solid ${hasActiveErrors ? '#f14c4c' : '#444'}`,
+                            animation: (hasActiveErrors && activeTab !== 'debug') ? 'pulse 2s infinite' : 'none'
+                        }}
+                    >
+                        <i className="fa-solid fa-bug-slash"></i> Debug
+                    </button>
                 </div>
 
                 {/* Content */}

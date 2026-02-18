@@ -1,321 +1,429 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useEditorStore } from '../../editor/stores/editorStore';
+import { useAnalysisStore } from '../../editor/stores/analysisStore';
+import { copilotService } from '../../services/CopilotService';
 
-interface FixStep {
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface AICard {
     line: number;
-    error: string;
-    fix: string;
-    explanation: string;
+    severity: 'error' | 'warning' | 'tip';
+    errorMsg: string;
     originalCode: string;
+    fixedCode: string;
+    explanation: string;
     analogy: string;
+    emoji: string;
 }
 
-const VirtualDebuggerTab: React.FC = () => {
-    const problems = useEditorStore(state => state.problems);
-    const activeTabId = useEditorStore(state => state.activeTabId);
-    const tabs = useEditorStore(state => state.tabs);
+// ─── Neon-red palette ─────────────────────────────────────────────────────────
+const P = {
+    bg:          '#0a0a0a',
+    card:        '#0f0a0a',
+    cardBorder:  'rgba(255,23,68,0.12)',
+    strip:       '#ff1744',
+    badge:       'rgba(255,23,68,0.12)',
+    badgeBorder: 'rgba(255,23,68,0.25)',
+    textBright:  '#ffe0e4',
+    textMid:     '#c86070',
+    textDim:     '#5a2030',
+    divider:     'rgba(255,23,68,0.08)',
+    headerBg:    'rgba(0,0,0,0.4)',
+    scrollThumb: '#2e0a10',
+};
 
-    const [selectedFile, setSelectedFile] = useState<string | null>(null);
-    const [fixSteps, setFixSteps] = useState<FixStep[]>([]);
+// ─── Parse AI JSON response ───────────────────────────────────────────────────
+function parseAIResponse(raw: string): { cards: AICard[]; correctedCode: string } | null {
+    try {
+        // Strip markdown code fences if present
+        const cleaned = raw
+            .replace(/^```(?:json)?\s*/im, '')
+            .replace(/\s*```\s*$/im, '')
+            .trim();
 
-    // Group all problems (errors, warnings, etc.) by file
-    const filesWithErrors = useMemo(() => {
-        const groups: Record<string, any[]> = {};
-        problems.forEach(p => {
-            if (!groups[p.source]) groups[p.source] = [];
-            groups[p.source].push(p);
-        });
-        return Object.keys(groups).map(fileName => ({
-            fileName,
-            problems: groups[fileName]
+        const json = JSON.parse(cleaned);
+
+        if (!json || !Array.isArray(json.issues)) return null;
+
+        const cards: AICard[] = json.issues.map((item: any) => ({
+            line:         Number(item.line) || 1,
+            severity:     (['error', 'warning', 'tip'].includes(item.severity) ? item.severity : 'error') as AICard['severity'],
+            errorMsg:     String(item.error || item.message || 'Unknown error'),
+            originalCode: String(item.original || ''),
+            fixedCode:    String(item.fixed || ''),
+            explanation:  String(item.explanation || ''),
+            analogy:      String(item.analogy || ''),
+            emoji:        String(item.emoji || '🔧'),
         }));
-    }, [problems]);
 
-    const activeTab = tabs.find(t => t.id === activeTabId);
+        return { cards, correctedCode: String(json.correctedCode || '') };
+    } catch {
+        return null;
+    }
+}
 
-    // Force strict sync with active tab
-    useEffect(() => {
-        if (activeTab) {
-            setSelectedFile(activeTab.fileName);
-        } else if (filesWithErrors.length > 0 && !selectedFile) {
-            setSelectedFile(filesWithErrors[0].fileName);
-        }
-    }, [activeTabId, activeTab?.fileName, filesWithErrors]);
+// ─── Build the AI prompt ──────────────────────────────────────────────────────
+function buildPrompt(code: string, fileName: string): string {
+    return `You are a coding tutor reviewing a student's code file: "${fileName}".
 
-    const currentFileData = activeTab; // Use activeTab directly for content consistency
-    const currentFileErrors = useMemo(() => {
-        const fileData = filesWithErrors.find(f => f.fileName === selectedFile);
-        return fileData ? fileData.problems : [];
-    }, [selectedFile, filesWithErrors]);
+Analyse EVERY line carefully. Find ALL errors, warnings, bad practices, and potential bugs — even tiny ones like missing semicolons, wrong variable names, typos, unused variables, incorrect indentation, etc.
 
-    // Generate fix visualizations
-    useEffect(() => {
-        if (currentFileErrors.length > 0) {
-            const groupedErrors: Record<number, any[]> = {};
-            currentFileErrors.forEach(err => {
-                if (!groupedErrors[err.line]) groupedErrors[err.line] = [];
-                groupedErrors[err.line].push(err);
-            });
+Return ONLY a valid JSON object (no markdown, no explanation outside JSON) in this exact format:
+{
+  "issues": [
+    {
+      "line": <line number>,
+      "severity": "error" | "warning" | "tip",
+      "error": "<short error title>",
+      "original": "<the exact broken code on that line>",
+      "fixed": "<the corrected version of that line only>",
+      "explanation": "<1-2 sentence plain English explanation for a student>",
+      "analogy": "<a fun real-world analogy>",
+      "emoji": "<single relevant emoji>"
+    }
+  ],
+  "correctedCode": "<the FULL corrected file with ALL fixes applied>"
+}
 
-            const steps = Object.keys(groupedErrors).map(lineNumStr => {
-                const lineNum = parseInt(lineNumStr);
-                const errorsOnLine = groupedErrors[lineNum];
-                const primaryError = errorsOnLine[0];
+Rules:
+- If there are NO issues at all, return { "issues": [], "correctedCode": "<original code>" }
+- "original" and "fixed" must be single-line snippets (the specific line only)
+- "correctedCode" must be the complete working file
+- Be thorough — students learn from every small mistake
+- Do NOT wrap in markdown code fences
 
-                const entireFileContent = currentFileData?.content || '';
-                const lines = entireFileContent.split('\n');
-                const rawLineContent = lines[lineNum - 1] || '';
-                const lineContent = rawLineContent.trim() || '// empty line';
+Here is the code to analyse:
+\`\`\`
+${code}
+\`\`\``;
+}
 
-                const fix = generateFixCode(primaryError.message, rawLineContent.trim());
+// ─── Component ────────────────────────────────────────────────────────────────
+const VirtualDebuggerTab: React.FC = () => {
+    const activeTabId = useEditorStore(s => s.activeTabId);
+    const tabs        = useEditorStore(s => s.tabs);
+    const activeTab   = tabs.find(t => t.id === activeTabId);
+    const fileName    = activeTab?.fileName ?? null;
+    const fileContent = activeTab?.content ?? '';
 
-                return {
-                    line: lineNum,
-                    error: errorsOnLine.map(e => e.message).join(' • '),
-                    originalCode: lineContent,
-                    fix: fix,
-                    explanation: generateStudentExplanation(primaryError.message, fix),
-                    analogy: generateAnalogy(primaryError.message, fix)
-                };
-            }).sort((a, b) => a.line - b.line);
+    const [cards, setCards]               = useState<AICard[]>([]);
+    const [correctedCode, setCorrectedCode] = useState('');
+    const [status, setStatus]             = useState<'idle' | 'analysing' | 'done' | 'error'>('idle');
+    const [errorMsg, setErrorMsg]         = useState('');
+    const [expandedIdx, setExpandedIdx]   = useState<number | null>(null);
+    const [showCorrected, setShowCorrected] = useState(false);
 
-            setFixSteps(steps);
-        } else {
-            setFixSteps([]);
-        }
-    }, [currentFileErrors.length, selectedFile, currentFileData]);
+    // Track which file+content we last analysed to avoid re-running on same code
+    const lastAnalysedRef = useRef<string>('');
+    const rawBufferRef    = useRef<string>('');
 
-    const generateFixCode = (msg: string, code: string) => {
-        const m = msg.toLowerCase();
-        const trimCode = code.trim();
-        const isSingleWord = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimCode);
+    const runAnalysis = useCallback(async (code: string, name: string) => {
+        const key = `${name}::${code}`;
+        if (lastAnalysedRef.current === key) return;
+        lastAnalysedRef.current = key;
 
-        // 🟢 1. EXTRACT TYPO SUGGESTIONS: "Did you mean 'hyena'?"
-        const suggestMatch = msg.match(/did you mean ['"]([^'"]+)['"]/i);
-        if (suggestMatch && suggestMatch[1]) {
-            const suggestion = suggestMatch[1];
-            // If the code is just the variable (e.g., "hyen"), replace with suggested variable ("hyena")
-            if (isSingleWord) return suggestion;
+        setStatus('analysing');
+        setCards([]);
+        setCorrectedCode('');
+        setExpandedIdx(null);
+        setShowCorrected(false);
+        setErrorMsg('');
+        rawBufferRef.current = '';
 
-            // Extract the wrong name from the error message to perform a targeted replacement
-            const wrongNameMatch = msg.match(/name ['"]([^'"]+)['"]/i);
-            if (wrongNameMatch && wrongNameMatch[1]) {
-                const wrongName = wrongNameMatch[1];
-                return trimCode.replace(new RegExp(`\\b${wrongName}\\b`, 'g'), suggestion);
+        copilotService.setContext({
+            currentCode: code,
+            currentFile: name,
+            language: name.split('.').pop() || 'text',
+        });
+
+        await copilotService.streamChat(
+            buildPrompt(code, name),
+            (chunk: string) => {
+                rawBufferRef.current += chunk;
+            },
+            () => {
+                // Stream complete — parse the accumulated JSON
+                const result = parseAIResponse(rawBufferRef.current);
+                if (result) {
+                    setCards(result.cards);
+                    setCorrectedCode(result.correctedCode);
+                    setStatus('done');
+                } else {
+                    // AI returned non-JSON (maybe quota error or plain text)
+                    setErrorMsg('AI returned an unexpected response. Try again.');
+                    setStatus('error');
+                }
+            },
+            (err: string) => {
+                setErrorMsg(err.includes('quota') || err.includes('402')
+                    ? 'AI quota reached. Try again later.'
+                    : `AI error: ${err}`);
+                setStatus('error');
             }
+        );
+    }, []);
 
-            // Fallback: If it's a simple typo in a single word line
-            return suggestion;
-        }
-
-        // 🟢 2. REFERENCE / UNDEFINED ERRORS
-        if (m.includes('undefined') || m.includes('not found') || m.includes('is not defined') || m.includes('referenceerror')) {
-            // Extract the variable name from the error message if possible
-            const varMatch = msg.match(/['"](\w+)['"] is not defined/i) || msg.match(/(\w+) is not defined/i) || msg.match(/variable ['"]?(\w+)['"]?/i);
-            const varName = varMatch ? varMatch[1] : (isSingleWord ? trimCode : 'myVar');
-            return `const ${varName} = "";`;
-        }
-
-        // 🟢 3. BRACKET / PARENTHESIS ERRORS
-        if (m.includes('bracket') || m.includes('parenthesis') || m.includes('unexpected token') || m.includes('closing') || m.includes('missing')) {
-            if (m.includes('unexpected token )') || (m.includes('unexpected token') && !msg.includes('(') && msg.includes(')'))) {
-                return trimCode.replace(/\)/g, '').trim(); // Remove the extra closing parenthesis
-            }
-            if (trimCode.includes('(') && !trimCode.includes(')')) return `${trimCode})`;
-            if (trimCode.includes('{') && !trimCode.includes('}')) return `${trimCode} }`;
-            if (trimCode.includes('[') && !trimCode.includes(']')) return `${trimCode}]`;
-        }
-
-        // 🟢 4. SEMICOLON / TERMINATOR ERRORS
-        if (m.includes('semicolon') || m.includes('expected semicolon') || m.includes('terminate')) {
-            if (trimCode.endsWith(';')) return trimCode;
-            return `${trimCode};`;
-        }
-
-        // 🟢 5. CONSTANT / ASSIGNMENT ERRORS
-        if ((m.includes('const') || m.includes('read-only')) && (m.includes('assign') || m.includes('update'))) {
-            return trimCode.replace('const', 'let');
-        }
-
-        // 🟢 6. TYPE ERRORS
-        if (m.includes('is not a function')) {
-            const funcName = trimCode.split('(')[0].trim();
-            return `const ${funcName} = () => {};\n${trimCode}`;
-        }
-
-        // 🟢 7. LOGIC FALLBACK (Context-Aware)
-        // If it's a single word and no typo was found by compiler, suggest declaring it as a variable
-        if (isSingleWord) {
-            return `const ${trimCode} = "";`;
-        }
-
-        // If no high-confidence fix is found, return the original code to avoid 'random' incorrect guesses
-        return trimCode;
-    };
-
-    const generateStudentExplanation = (msg: string, fix: string) => {
-        const m = msg.toLowerCase();
-        if (msg.toLowerCase().includes('did you mean')) {
-            const suggestion = msg.match(/did you mean ['"]([^'"]+)['"]/i)?.[1];
-            return `You made a small typo! You likely meant to use '${suggestion}' here.`;
-        }
-
-        // Specific for missing opening bracket
-        if (m.includes('unexpected token )') || (m.includes('unexpected token') && !msg.includes('(') && msg.includes(')'))) {
-            return "You tried to close a group that was never started. Every ending needs a beginning!";
-        }
-
-        if (m.includes('undefined') || m.includes('not defined')) return "This word is unknown to the computer. We need to introduce it first.";
-        if (m.includes('bracket') || m.includes('closing')) return "A section was opened but never closed. Every start needs a finish!";
-        if (m.includes('semicolon')) return "Missing an ending mark. Like a period at the end of a sentence.";
-        if (m.includes('const')) return "You tried to change a 'Constant' (permanent) variable. Using 'let' allows changes.";
-        if (m.includes('is not a function')) return "You're trying to use this like a command (function), but it hasn't been set up as one.";
-        return "The grammar of this line is slightly off, making it hard for the computer to follow.";
-    };
-
-    const generateAnalogy = (msg: string, fix: string) => {
-        const m = msg.toLowerCase();
-        if (msg.toLowerCase().includes('did you mean')) return "Like writing 'recpe' in a book when you meant 'recipe'.";
-
-        // Missing opening bracket analogy
-        if (m.includes('unexpected token )') || (m.includes('unexpected token') && !msg.includes('(') && msg.includes(')'))) {
-            return "Like trying to close an umbrella that was never opened.";
-        }
-
-        if (m.includes('undefined')) return "Like trying to call a friend without having their phone number in your contacts.";
-        if (m.includes('bracket')) return "Like putting on a shirt but forgetting to button it up.";
-        if (m.includes('semicolon')) return "Like finishing a sentence but forgetting the period at the end.";
-        if (m.includes('const')) return "Like trying to rewrite a document that was already printed and laminated.";
-        if (m.includes('is not a function')) return "Like trying to use a toaster to make a phone call.";
-        return "Like a piece of furniture with a missing screw.";
-    };
-
-    const [currentStepIdx, setCurrentStepIdx] = useState(0);
-
-    // Reset index when steps change
+    // Auto-run when file changes (or content changes significantly)
     useEffect(() => {
-        setCurrentStepIdx(0);
-    }, [fixSteps.length, selectedFile]);
+        if (!fileName || !fileContent.trim()) {
+            setStatus('idle');
+            setCards([]);
+            return;
+        }
+        // Debounce: wait 800ms after last change before calling AI
+        const timer = setTimeout(() => {
+            runAnalysis(fileContent, fileName);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [fileName, fileContent, runAnalysis]);
 
-    const activeStep = fixSteps[currentStepIdx];
-    const hasNext = currentStepIdx < fixSteps.length - 1;
-    const hasPrev = currentStepIdx > 0;
-
-    if (filesWithErrors.length === 0) {
+    // ── IDLE / no file ──
+    if (!fileName || !fileContent.trim()) {
         return (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#666', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <i className="fa-solid fa-circle-check" style={{ fontSize: '40px', color: '#4caf50', marginBottom: '16px', opacity: 0.5 }}></i>
-                <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#ccc' }}>Workspace Clean</div>
-                <div style={{ fontSize: '12px', marginTop: '8px' }}>No critical errors detected.</div>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: P.bg, gap: 14 }}>
+                <i className="fa-solid fa-bug" style={{ fontSize: 32, color: P.textDim }} />
+                <div style={{ fontSize: 12, color: P.textDim }}>Open a file to start debugging</div>
             </div>
         );
     }
 
+    // ── ANALYSING ──
+    if (status === 'analysing') {
+        return (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: P.bg, gap: 18 }}>
+                <style>{`
+                    @keyframes dbgSpin { to { transform: rotate(360deg); } }
+                    @keyframes dbgPulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+                    @keyframes dbgDot { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
+                `}</style>
+                {/* Spinner ring */}
+                <div style={{ position: 'relative', width: 64, height: 64 }}>
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid rgba(255,23,68,0.1)' }} />
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid transparent', borderTopColor: P.strip, animation: 'dbgSpin 1s linear infinite' }} />
+                    <div style={{ position: 'absolute', inset: 8, borderRadius: '50%', border: '2px solid transparent', borderTopColor: 'rgba(255,23,68,0.4)', animation: 'dbgSpin 1.5s linear infinite reverse' }} />
+                    <i className="fa-solid fa-bug" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: P.strip, animation: 'dbgPulse 2s ease infinite' } as any} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: P.textBright, marginBottom: 6 }}>AI Analysing…</div>
+                    <div style={{ fontSize: 11, color: P.textMid }}>{fileName}</div>
+                </div>
+                {/* Animated dots */}
+                <div style={{ display: 'flex', gap: 5 }}>
+                    {[0, 1, 2].map(i => (
+                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: P.strip, animation: `dbgDot 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    // ── ERROR STATE ──
+    if (status === 'error') {
+        return (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: P.bg, gap: 14, padding: '0 24px' }}>
+                <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: 28, color: P.strip }} />
+                <div style={{ fontSize: 12, color: P.textMid, textAlign: 'center' }}>{errorMsg}</div>
+                <button
+                    onClick={() => { lastAnalysedRef.current = ''; runAnalysis(fileContent, fileName!); }}
+                    style={{ background: P.badge, border: `1px solid ${P.badgeBorder}`, color: P.strip, padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    // ── ALL CLEAR ──
+    if (status === 'done' && cards.length === 0) {
+        return (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: P.bg, gap: 16 }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: P.badge, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${P.badgeBorder}`, boxShadow: `0 0 24px rgba(255,23,68,0.15)` }}>
+                    <i className="fa-solid fa-shield-check" style={{ fontSize: 26, color: P.strip }} />
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: P.textBright }}>All Clear!</div>
+                <div style={{ fontSize: 11, color: P.textDim, textAlign: 'center', maxWidth: 200 }}>
+                    No issues found in {fileName} ✨
+                </div>
+                <button
+                    onClick={() => { lastAnalysedRef.current = ''; runAnalysis(fileContent, fileName!); }}
+                    style={{ background: 'none', border: `1px solid ${P.textDim}`, color: P.textDim, padding: '4px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 10, marginTop: 4 }}
+                >
+                    Re-analyse
+                </button>
+            </div>
+        );
+    }
+
+    // ── MAIN UI ──
+    const errorCount   = cards.filter(c => c.severity === 'error').length;
+    const warningCount = cards.filter(c => c.severity === 'warning').length;
+    const tipCount     = cards.filter(c => c.severity === 'tip').length;
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#1e1e1e', color: '#ccc', fontFamily: 'Inter, system-ui' }}>
-            <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '900', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        Focused Repair: {selectedFile}
-                    </h4>
-                    <span style={{ fontSize: '11px', color: '#f14c4c', fontWeight: 'bold' }}>
-                        ISSUE {currentStepIdx + 1} OF {fixSteps.length}
-                    </span>
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: P.bg, fontFamily: 'Inter, system-ui, sans-serif', color: P.textBright, overflow: 'hidden' }}>
+            <style>{`
+                @keyframes dbgSlide { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+                @keyframes dbgPop   { 0%{transform:scale(.97)} 60%{transform:scale(1.01)} 100%{transform:scale(1)} }
+                .dbg-card { animation: dbgSlide .28s ease both; cursor:pointer; }
+                .dbg-card:hover { box-shadow: 0 0 0 1px rgba(255,23,68,0.3), 0 4px 20px rgba(255,23,68,0.1) !important; }
+                .dbg-scroll::-webkit-scrollbar { width:4px; }
+                .dbg-scroll::-webkit-scrollbar-track { background: transparent; }
+                .dbg-scroll::-webkit-scrollbar-thumb { background:${P.scrollThumb}; border-radius:4px; }
+                .dbg-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,23,68,0.3); }
+                .dbg-rerun:hover { background: rgba(255,23,68,0.15) !important; }
+            `}</style>
 
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
-                    {activeStep ? (
-                        <div style={{
-                            background: '#252526',
-                            borderRadius: '16px',
-                            border: '1px solid #333',
-                            overflow: 'hidden',
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                            animation: 'slideIn 0.3s ease-out',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            maxHeight: '100%'
-                        }}>
-                            {/* Card Header */}
-                            <div style={{ padding: '14px 20px', background: '#1a1a1a', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ background: '#f14c4c', color: '#fff', padding: '3px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>LINE {activeStep.line}</span>
-                                    <span style={{ fontSize: '11px', color: '#aaa', fontWeight: '600' }}>FIX VISUALIZATION</span>
-                                </div>
-                                <i className="fa-solid fa-wand-magic-sparkles" style={{ color: '#00f2ff', fontSize: '14px' }}></i>
-                            </div>
-
-                            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
-                                {/* 1. The Broken Line */}
-                                <div>
-                                    <div style={{ fontSize: '10px', color: '#f14c4c', marginBottom: '8px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Before (Broken)</div>
-                                    <div style={{ background: '#000', padding: '14px', borderRadius: '8px', border: '1px solid rgba(241, 76, 76, 0.2)' }}>
-                                        <code style={{ fontSize: '13px', color: '#ff6b6b', textDecoration: 'line-through', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontFamily: 'monospace' }}>{activeStep.originalCode || "// No code on this line"}</code>
-                                    </div>
-                                </div>
-
-                                {/* 2. Simple Student Analogy */}
-                                <div style={{ background: 'rgba(255, 215, 0, 0.04)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255, 215, 0, 0.1)', textAlign: 'center' }}>
-                                    <i className="fa-solid fa-lightbulb" style={{ color: '#ffd700', fontSize: '18px', marginBottom: '8px' }}></i>
-                                    <div style={{ fontSize: '13px', color: '#eee', fontWeight: '500', marginBottom: '4px', lineHeight: '1.4' }}>{activeStep.explanation}</div>
-                                    <div style={{ fontSize: '11px', color: '#888', fontStyle: 'italic' }}>"{activeStep.analogy}"</div>
-                                </div>
-
-                                {/* 3. The Corrected Line */}
-                                <div>
-                                    <div style={{ fontSize: '10px', color: '#4caf50', marginBottom: '8px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>After (Fixed)</div>
-                                    <div style={{
-                                        background: '#0a0a0a',
-                                        padding: '14px',
-                                        borderRadius: '8px',
-                                        border: '1px solid rgba(76, 175, 80, 0.4)',
-                                        boxShadow: 'inset 0 0 15px rgba(76, 175, 80, 0.05), 0 0 10px rgba(76, 175, 80, 0.1)'
-                                    }}>
-                                        <code style={{ fontSize: '13px', color: '#4caf50', fontWeight: '700', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontFamily: 'monospace' }}>{activeStep.fix || activeStep.originalCode}</code>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div style={{ textAlign: 'center', color: '#444' }}>Ready for Repair Visualization...</div>
-                    )}
-                </div>
-
-                {/* Navigation Controls - Only show if there's more than one issue */}
-                {fixSteps.length > 1 && (
-                    <div style={{ padding: '20px 0', borderTop: '1px solid #333', marginTop: '20px', display: 'flex', gap: '15px' }}>
-                        <button
-                            onClick={() => setCurrentStepIdx(prev => Math.max(0, prev - 1))}
-                            disabled={!hasPrev}
-                            style={{
-                                flex: 1, padding: '14px', borderRadius: '8px', border: '1px solid #333',
-                                background: hasPrev ? '#2d2d2d' : '#1e1e1e', color: hasPrev ? '#fff' : '#444',
-                                cursor: hasPrev ? 'pointer' : 'not-allowed', fontWeight: '600', transition: 'all 0.2s'
-                            }}
-                        >
-                            <i className="fa-solid fa-chevron-left" style={{ marginRight: '8px' }}></i> Previous Issue
-                        </button>
-                        <button
-                            onClick={() => setCurrentStepIdx(prev => Math.min(fixSteps.length - 1, prev + 1))}
-                            disabled={!hasNext}
-                            style={{
-                                flex: 1, padding: '14px', borderRadius: '8px', border: 'none',
-                                background: hasNext ? '#f14c4c' : '#333', color: '#fff',
-                                cursor: hasNext ? 'pointer' : 'not-allowed', fontWeight: '600', transition: 'all 0.2s'
-                            }}
-                        >
-                            Next Issue <i className="fa-solid fa-chevron-right" style={{ marginLeft: '8px' }}></i>
-                        </button>
+            {/* ── Header ── */}
+            <div style={{ padding: '11px 14px', background: P.headerBg, borderBottom: `1px solid ${P.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: P.badge, border: `1px solid ${P.badgeBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 10px rgba(255,23,68,0.2)` }}>
+                        <i className="fa-solid fa-bug" style={{ fontSize: 12, color: P.strip }} />
                     </div>
-                )}
+                    <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: P.textBright }}>Virtual Debugger</div>
+                        <div style={{ fontSize: 10, color: P.textDim }}>{fileName}</div>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* Summary pills */}
+                    {errorCount > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: '#ff4466', background: 'rgba(255,68,102,0.12)', padding: '2px 7px', borderRadius: 4, border: '1px solid rgba(255,68,102,0.2)' }}>{errorCount} err</span>}
+                    {warningCount > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: '#ffaa44', background: 'rgba(255,170,68,0.12)', padding: '2px 7px', borderRadius: 4, border: '1px solid rgba(255,170,68,0.2)' }}>{warningCount} warn</span>}
+                    {tipCount > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: '#aa88ff', background: 'rgba(170,136,255,0.12)', padding: '2px 7px', borderRadius: 4, border: '1px solid rgba(170,136,255,0.2)' }}>{tipCount} tip</span>}
+                    {/* Re-run button */}
+                    <button
+                        className="dbg-rerun"
+                        onClick={() => { lastAnalysedRef.current = ''; runAnalysis(fileContent, fileName!); }}
+                        title="Re-analyse with AI"
+                        style={{ background: P.badge, border: `1px solid ${P.badgeBorder}`, color: P.strip, width: 24, height: 24, borderRadius: 6, cursor: 'pointer', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .2s' }}
+                    >
+                        <i className="fa-solid fa-rotate-right" />
+                    </button>
+                </div>
             </div>
 
-            <style>{`
-                @keyframes slideIn {
-                    from { transform: translateY(10px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-            `}</style>
+            {/* ── Cards ── */}
+            <div className="dbg-scroll" style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 6px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {cards.map((card, idx) => {
+                    const isOpen = expandedIdx === idx;
+                    const sevColor = card.severity === 'error' ? '#ff4466'
+                                   : card.severity === 'warning' ? '#ffaa44'
+                                   : '#aa88ff';
+                    const sevBg = card.severity === 'error' ? 'rgba(255,68,102,0.1)'
+                                : card.severity === 'warning' ? 'rgba(255,170,68,0.1)'
+                                : 'rgba(170,136,255,0.1)';
+
+                    return (
+                        <div
+                            key={idx}
+                            className="dbg-card"
+                            onClick={() => setExpandedIdx(isOpen ? null : idx)}
+                            style={{ borderRadius: 12, background: P.card, border: `1px solid ${P.cardBorder}`, overflow: 'hidden', animationDelay: `${idx * 0.035}s`, transition: 'box-shadow .2s' }}
+                        >
+                            {/* top colour strip */}
+                            <div style={{ height: 2, background: `linear-gradient(90deg, ${sevColor}, transparent)` }} />
+
+                            <div style={{ padding: '10px 13px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                {/* emoji */}
+                                <div style={{ width: 32, height: 32, borderRadius: 9, background: sevBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${sevColor}28`, fontSize: 15 }}>
+                                    {card.emoji}
+                                </div>
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    {/* line + severity */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                        <span style={{ fontSize: 10, fontWeight: 800, color: sevColor, letterSpacing: '.3px', textShadow: `0 0 8px ${sevColor}66` }}>
+                                            LINE {card.line}
+                                        </span>
+                                        <span style={{ fontSize: 9, fontWeight: 700, color: sevColor, background: sevBg, padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+                                            {card.severity}
+                                        </span>
+                                    </div>
+
+                                    {/* error title */}
+                                    <div style={{ fontSize: 10, color: P.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 5 }}>
+                                        {card.errorMsg}
+                                    </div>
+
+                                    {/* explanation — always visible */}
+                                    <div style={{ fontSize: 12, color: P.textBright, lineHeight: 1.55 }}>
+                                        {card.explanation}
+                                    </div>
+
+                                    {/* analogy */}
+                                    <div style={{ fontSize: 10, color: P.textDim, fontStyle: 'italic', marginTop: 3 }}>
+                                        "{card.analogy}"
+                                    </div>
+                                </div>
+
+                                <i className={`fa-solid fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ fontSize: 9, color: P.textDim, flexShrink: 0, marginTop: 7 }} />
+                            </div>
+
+                            {/* expanded: before / after */}
+                            {isOpen && (
+                                <div style={{ padding: '0 12px 13px', display: 'flex', gap: 8, animation: 'dbgPop .22s ease' }}>
+                                    {/* Broken */}
+                                    <div style={{ flex: 1, borderRadius: 9, overflow: 'hidden', border: `1px solid rgba(255,68,102,0.2)` }}>
+                                        <div style={{ padding: '5px 10px', background: 'rgba(255,68,102,0.08)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <i className="fa-solid fa-xmark" style={{ fontSize: 8, color: '#ff4466' }} />
+                                            <span style={{ fontSize: 9, fontWeight: 700, color: '#ff4466', textTransform: 'uppercase', letterSpacing: '.4px' }}>Broken</span>
+                                        </div>
+                                        <div style={{ padding: '9px 11px', background: 'rgba(0,0,0,0.3)' }}>
+                                            <code style={{ fontSize: 11, color: '#ff8899', textDecoration: 'line-through wavy', textDecorationColor: 'rgba(255,68,102,0.5)', whiteSpace: 'pre-wrap', fontFamily: '"Fira Code","Cascadia Code",monospace', wordBreak: 'break-all', lineHeight: 1.65 }}>
+                                                {card.originalCode || '(see error above)'}
+                                            </code>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                        <i className="fa-solid fa-arrow-right" style={{ fontSize: 10, color: P.textDim }} />
+                                    </div>
+
+                                    {/* Fixed */}
+                                    <div style={{ flex: 1, borderRadius: 9, overflow: 'hidden', border: `1px solid rgba(255,23,68,0.18)` }}>
+                                        <div style={{ padding: '5px 10px', background: 'rgba(255,23,68,0.06)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                            <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: 8, color: P.strip }} />
+                                            <span style={{ fontSize: 9, fontWeight: 700, color: P.strip, textTransform: 'uppercase', letterSpacing: '.4px' }}>Fixed</span>
+                                        </div>
+                                        <div style={{ padding: '9px 11px', background: 'rgba(0,0,0,0.3)' }}>
+                                            <code style={{ fontSize: 11, color: '#ffb0bc', fontWeight: 600, whiteSpace: 'pre-wrap', fontFamily: '"Fira Code","Cascadia Code",monospace', wordBreak: 'break-all', lineHeight: 1.65 }}>
+                                                {card.fixedCode || '(no change needed)'}
+                                            </code>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* ── Bottom bar ── */}
+            {correctedCode && (
+                <div style={{ flexShrink: 0, borderTop: `1px solid ${P.divider}`, padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', background: P.headerBg }}>
+                    <button
+                        onClick={e => { e.stopPropagation(); setShowCorrected(p => !p); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: P.textDim, display: 'flex', alignItems: 'center', gap: 5, padding: 0, transition: 'color .2s' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = P.strip)}
+                        onMouseLeave={e => (e.currentTarget.style.color = P.textDim)}
+                    >
+                        <i className="fa-solid fa-file-code" style={{ fontSize: 10 }} />
+                        corrected code
+                        <i className={`fa-solid fa-chevron-${showCorrected ? 'down' : 'up'}`} style={{ fontSize: 8 }} />
+                    </button>
+                </div>
+            )}
+
+            {/* ── Corrected Code Panel ── */}
+            {showCorrected && correctedCode && (
+                <div className="dbg-scroll" style={{ flexShrink: 0, maxHeight: 240, overflowY: 'auto', background: '#050508', borderTop: `1px solid ${P.divider}`, padding: '12px 14px' }}>
+                    <div style={{ fontSize: 9, color: P.textMid, fontWeight: 700, letterSpacing: '.5px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: 9, color: P.strip }} />
+                        AI CORRECTED FILE
+                    </div>
+                    <pre style={{ margin: 0, fontSize: 11, lineHeight: 1.7, color: P.textBright, fontFamily: '"Fira Code","Cascadia Code",monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                        {correctedCode}
+                    </pre>
+                </div>
+            )}
         </div>
     );
 };
