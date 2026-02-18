@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAnalysisStore, TraceFrame } from '../../editor/stores/analysisStore';
+import { TraceFrame } from '../../editor/stores/visualStore';
+import LogicStructure from '../AnalysisPanel/LogicStructure';
 
 interface VisualPlaybackModalProps {
     isOpen: boolean;
@@ -13,434 +14,341 @@ interface VisualPlaybackModalProps {
 }
 
 const VisualPlaybackModal: React.FC<VisualPlaybackModalProps> = ({ isOpen, onClose, viz }) => {
-    const {
-        traceFrames,
-        currentFrameIndex,
-        setFrameIndex,
-        setTraceFrames,
-        isReplaying,
-        setReplaying
-    } = useAnalysisStore();
-
-    const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-    const [soundEnabled, setSoundEnabled] = useState(true);
+    const [frameIndex, setFrameIndex] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [soundEnabled, setSoundEnabled] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const frames = viz.frames || [];
 
-    // Initialize frames in store when modal opens
+    // Reset on open
     useEffect(() => {
-        if (isOpen && viz.frames) {
-            setReplaying(true);
-            setTraceFrames(viz.frames, viz.type as any);
+        if (isOpen) {
             setFrameIndex(0);
-            setIsAutoPlaying(true);
+            setIsPlaying(true);
         }
-
         return () => {
-            if (isOpen) {
-                setReplaying(false);
-                setIsAutoPlaying(false);
-                window.speechSynthesis.cancel();
-            }
+            window.speechSynthesis?.cancel();
+            if (timerRef.current) clearInterval(timerRef.current);
         };
     }, [isOpen, viz]);
 
-    // Playback logic
+    // Auto-play logic
     useEffect(() => {
-        if (!isAutoPlaying || traceFrames.length === 0) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            return;
-        }
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (!isPlaying || frames.length === 0 || isSpeaking) return;
 
-        // Narrate the current frame
-        const currentFrame = traceFrames[currentFrameIndex];
-        if (currentFrame && soundEnabled && !isSpeaking) {
+        const currentFrame = frames[frameIndex];
+        if (soundEnabled && currentFrame) {
             speakDescription(currentFrame.desc);
+            return; // speech will advance the frame on end
         }
 
-        // If not speaking, wait a bit and move to next
-        if (!isSpeaking) {
-            timerRef.current = setInterval(() => {
-                setFrameIndex((prev: number) => {
-                    if (prev < traceFrames.length - 1) return prev + 1;
-                    setIsAutoPlaying(false);
-                    return prev;
-                });
-            }, 3000); // 3 second delay if no speech or speech disabled
-        }
+        timerRef.current = setInterval(() => {
+            setFrameIndex(prev => {
+                if (prev < frames.length - 1) return prev + 1;
+                setIsPlaying(false);
+                return prev;
+            });
+        }, 1800);
 
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, [isAutoPlaying, currentFrameIndex, isSpeaking, soundEnabled, traceFrames]);
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [isPlaying, frameIndex, isSpeaking, soundEnabled, frames]);
 
     const speakDescription = (text: string) => {
-        if ('speechSynthesis' in window && soundEnabled) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.9;
-            utterance.onstart = () => setIsSpeaking(true);
-            utterance.onend = () => {
-                setIsSpeaking(false);
-                // Auto advance after short delay
-                setTimeout(() => {
-                    if (isAutoPlaying) {
-                        setFrameIndex((prev: number) => {
-                            if (prev < traceFrames.length - 1) return prev + 1;
-                            setIsAutoPlaying(false);
-                            return prev;
-                        });
-                    }
-                }, 1000);
-            };
-            window.speechSynthesis.speak(utterance);
-        }
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => {
+            setIsSpeaking(false);
+            setTimeout(() => {
+                setFrameIndex(prev => {
+                    if (prev < frames.length - 1) return prev + 1;
+                    setIsPlaying(false);
+                    return prev;
+                });
+            }, 600);
+        };
+        window.speechSynthesis.speak(utterance);
     };
 
-    if (!isOpen) return null;
+    const stepBack = () => {
+        setIsPlaying(false);
+        window.speechSynthesis?.cancel();
+        setFrameIndex(p => Math.max(0, p - 1));
+    };
+    const stepForward = () => {
+        setIsPlaying(false);
+        window.speechSynthesis?.cancel();
+        setFrameIndex(p => Math.min(frames.length - 1, p + 1));
+    };
+    const restart = () => {
+        window.speechSynthesis?.cancel();
+        setFrameIndex(0);
+        setIsPlaying(true);
+    };
 
-    const currentFrame = traceFrames[currentFrameIndex] || viz.frames[0];
-    if (!currentFrame) return null;
+    if (!isOpen || frames.length === 0) return null;
 
-    // Helper to render array visualization (simplified version of VisualizeTab)
-    const renderBars = () => {
-        const arrayKey = Object.keys(currentFrame.memory).find(k => Array.isArray(currentFrame.memory[k]));
-        if (!arrayKey) return null;
+    const currentFrame = frames[frameIndex];
+    const progress = ((frameIndex + 1) / frames.length) * 100;
 
-        const array = currentFrame.memory[arrayKey];
-        const comparing = currentFrame.memory.comparing || [];
-        const swapping = currentFrame.memory.swapping || [];
-        const sorted = currentFrame.memory.sorted || 0;
-
-        return (
-            <div className="playback-bars-container">
-                {array.map((val: any, idx: number) => {
-                    const isComparing = comparing.includes(idx);
-                    const isSwapping = swapping.includes(idx);
-                    const isSorted = typeof sorted === 'number' && idx >= array.length - sorted;
-
-                    return (
-                        <div
-                            key={idx}
-                            className={`playback-bar ${isComparing ? 'comparing' : ''} ${isSwapping ? 'swapping' : ''} ${isSorted ? 'sorted' : ''}`}
-                            style={{ height: `${Math.min(Math.abs(Number(val)) * 8 || 20, 200)}px` }}
-                        >
-                            <span className="bar-value">{val}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        );
+    const typeIcon: Record<string, string> = {
+        SORTING: 'fa-arrow-up-9-1',
+        SEARCHING: 'fa-magnifying-glass',
+        QUEUE_STACK: 'fa-layer-group',
+        TREE: 'fa-diagram-project',
+        UNIVERSAL: 'fa-brain',
     };
 
     return (
-        <div className="visual-playback-overlay" onClick={onClose}>
-            <div className="visual-playback-content" onClick={e => e.stopPropagation()}>
-                <header className="playback-header">
-                    <div className="title-area">
-                        <i className={`fa-solid ${viz.type === 'SORTING' ? 'fa-arrow-up-9-1' : 'fa-magnifying-glass'}`}></i>
-                        <h2>{viz.title}</h2>
+        <div className="vpm-overlay" onClick={onClose}>
+            <div className="vpm-modal" onClick={e => e.stopPropagation()}>
+
+                {/* HEADER */}
+                <header className="vpm-header">
+                    <div className="vpm-title-area">
+                        <div className="vpm-icon-wrap">
+                            <i className={`fa-solid ${typeIcon[viz.type] || 'fa-eye'}`}></i>
+                        </div>
+                        <div>
+                            <h2 className="vpm-title">{viz.title}</h2>
+                            <div className="vpm-subtitle">{viz.type} · {frames.length} frames</div>
+                        </div>
                     </div>
-                    <div className="playback-actions">
-                        <button onClick={() => setSoundEnabled(!soundEnabled)} className="icon-btn">
+                    <div className="vpm-header-actions">
+                        <button
+                            className={`vpm-icon-btn ${soundEnabled ? 'active' : ''}`}
+                            onClick={() => setSoundEnabled(s => !s)}
+                            title={soundEnabled ? 'Mute narration' : 'Enable narration'}
+                        >
                             <i className={`fa-solid ${soundEnabled ? 'fa-volume-high' : 'fa-volume-xmark'}`}></i>
                         </button>
-                        <button onClick={onClose} className="close-btn">&times;</button>
+                        <button className="vpm-close-btn" onClick={onClose}>
+                            <i className="fa-solid fa-xmark"></i>
+                        </button>
                     </div>
                 </header>
 
-                <div className="playback-body">
-                    <div className="visualization-area">
-                        {renderBars()}
-
-                        <div className="variables-hud">
-                            {Object.entries(currentFrame.memory)
-                                .filter(([k]) => !['comparing', 'swapping', 'sorted', 'activeVariable'].includes(k))
-                                .map(([k, v]) => (
-                                    <div key={k} className="var-item">
-                                        <span className="var-key">{k}:</span>
-                                        <span className="var-val">{JSON.stringify(v)}</span>
-                                    </div>
-                                ))}
-                        </div>
+                {/* BODY */}
+                <div className="vpm-body">
+                    {/* VISUALIZATION */}
+                    <div className="vpm-viz-area">
+                        <LogicStructure frame={currentFrame} />
                     </div>
 
-                    <div className="explanation-bubble">
-                        <div className="action-tag">{currentFrame.action}</div>
-                        <p>{currentFrame.desc}</p>
+                    {/* NARRATION BUBBLE */}
+                    <div className="vpm-narration">
+                        <div className="vpm-action-tag">{currentFrame.action}</div>
+                        <p className="vpm-desc">{currentFrame.desc}</p>
+                        {isSpeaking && (
+                            <div className="vpm-speaking-indicator">
+                                {[1, 2, 3, 4].map(i => <span key={i} style={{ animationDelay: `${i * 0.1}s` }}></span>)}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <footer className="playback-controls">
-                    <div className="progress-bar-container">
-                        <div
-                            className="progress-fill"
-                            style={{ width: `${((currentFrameIndex + 1) / traceFrames.length) * 100}%` }}
-                        ></div>
+                {/* FOOTER CONTROLS */}
+                <footer className="vpm-footer">
+                    {/* PROGRESS BAR */}
+                    <div className="vpm-progress-track" onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const pct = (e.clientX - rect.left) / rect.width;
+                        setIsPlaying(false);
+                        setFrameIndex(Math.round(pct * (frames.length - 1)));
+                    }}>
+                        <div className="vpm-progress-fill" style={{ width: `${progress}%` }}></div>
+                        <div className="vpm-progress-thumb" style={{ left: `${progress}%` }}></div>
                     </div>
-                    <div className="control-buttons">
-                        <button onClick={() => setFrameIndex(Math.max(0, currentFrameIndex - 1))} className="icon-btn">
+
+                    <div className="vpm-controls">
+                        <button className="vpm-ctrl-btn" onClick={restart} title="Restart">
+                            <i className="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button className="vpm-ctrl-btn" onClick={stepBack} disabled={frameIndex === 0}>
                             <i className="fa-solid fa-backward-step"></i>
                         </button>
-                        <button onClick={() => setIsAutoPlaying(!isAutoPlaying)} className="play-btn">
-                            <i className={`fa-solid ${isAutoPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                        <button className="vpm-play-btn" onClick={() => setIsPlaying(p => !p)}>
+                            <i className={`fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}`}></i>
                         </button>
-                        <button onClick={() => setFrameIndex(Math.min(traceFrames.length - 1, currentFrameIndex + 1))} className="icon-btn">
+                        <button className="vpm-ctrl-btn" onClick={stepForward} disabled={frameIndex === frames.length - 1}>
                             <i className="fa-solid fa-forward-step"></i>
                         </button>
-                    </div>
-                    <div className="step-counter">
-                        STEP {currentFrameIndex + 1} / {traceFrames.length}
+                        <div className="vpm-step-counter">
+                            {frameIndex + 1} <span>/ {frames.length}</span>
+                        </div>
                     </div>
                 </footer>
-
-                <style>{`
-                    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
-                    .visual-playback-overlay {
-                        position: fixed;
-                        inset: 0;
-                        background: rgba(0, 0, 0, 0.9);
-                        backdrop-filter: blur(15px);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        z-index: 10000;
-                        padding: 20px;
-                        animation: modalFadeIn 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-                    }
-                    @keyframes modalFadeIn { 
-                        from { opacity: 0; backdrop-filter: blur(0); } 
-                        to { opacity: 1; backdrop-filter: blur(15px); } 
-                    }
-
-                    .visual-playback-content {
-                        width: 100%;
-                        max-width: 1100px;
-                        height: 85vh;
-                        background: #0f0f13;
-                        border: 1px solid rgba(188, 19, 254, 0.4);
-                        border-radius: 24px;
-                        overflow: hidden;
-                        box-shadow: 0 0 80px rgba(188, 19, 254, 0.25), inset 0 0 20px rgba(0, 242, 255, 0.05);
-                        display: flex;
-                        flex-direction: column;
-                        animation: contentSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1);
-                    }
-                    @keyframes contentSlideUp { 
-                        from { transform: translateY(40px) scale(0.95); } 
-                        to { transform: translateY(0) scale(1); } 
-                    }
-
-                    .playback-header {
-                        padding: 24px 40px;
-                        background: linear-gradient(to right, rgba(188, 19, 254, 0.1), rgba(0, 242, 255, 0.05));
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-                    }
-                    .title-area { display: flex; align-items: center; gap: 20px; }
-                    .title-area i { 
-                        background: rgba(188, 19, 254, 0.2);
-                        color: #bc13fe; 
-                        padding: 12px;
-                        border-radius: 12px;
-                        font-size: 1.6rem; 
-                    }
-                    .title-area h2 { 
-                        margin: 0; 
-                        font-size: 1.8rem; 
-                        color: #fff; 
-                        font-family: 'Orbitron', sans-serif;
-                        letter-spacing: 1px;
-                        text-transform: uppercase;
-                    }
-
-                    .playback-actions { display: flex; gap: 20px; align-items: center; }
-                    .icon-btn { 
-                        background: rgba(255,255,255,0.05); 
-                        border: 1px solid rgba(255,255,255,0.1); 
-                        color: #ccc; 
-                        width: 45px; height: 45px; border-radius: 50%;
-                        display: flex; align-items: center; justify-content: center;
-                        cursor: pointer; transition: all 0.3s ease; 
-                    }
-                    .icon-btn:hover { background: rgba(188, 19, 254, 0.2); color: #fff; transform: translateY(-3px); }
-
-                    .playback-body { 
-                        flex: 1;
-                        padding: 40px; 
-                        display: flex; 
-                        flex-direction: column; 
-                        gap: 40px; 
-                        overflow-y: auto;
-                        background-image: radial-gradient(circle at center, rgba(188, 19, 254, 0.05) 0%, transparent 70%);
-                    }
-                    
-                    .visualization-area {
-                        height: 350px;
-                        background: rgba(0, 0, 0, 0.5);
-                        border: 1px solid rgba(255,255,255,0.05);
-                        border-radius: 20px;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        position: relative;
-                        padding: 30px;
-                        box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
-                    }
-
-                    .playback-bars-container {
-                        display: flex;
-                        align-items: flex-end;
-                        justify-content: center;
-                        gap: 15px;
-                        width: 100%;
-                        height: 250px;
-                    }
-                    .playback-bar {
-                        flex: 1;
-                        max-width: 50px;
-                        background: linear-gradient(to top, #7010aa, #bc13fe);
-                        border-radius: 8px 8px 2px 2px;
-                        transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-                        display: flex;
-                        align-items: flex-start;
-                        justify-content: center;
-                        padding-top: 10px;
-                        position: relative;
-                        box-shadow: 0 5px 20px rgba(188, 19, 254, 0.3);
-                    }
-                    .playback-bar.comparing { 
-                        background: linear-gradient(to top, #0088cc, #00f2ff); 
-                        transform: translateY(-10px) scaleX(1.1); 
-                        box-shadow: 0 0 40px rgba(0, 242, 255, 0.6); 
-                    }
-                    .playback-bar.swapping { 
-                        background: linear-gradient(to top, #cc0044, #ff0055); 
-                        transform: translateY(-20px) scale(1.2); 
-                        box-shadow: 0 0 50px rgba(255, 0, 85, 0.8); 
-                        z-index: 10;
-                    }
-                    .playback-bar.sorted { 
-                        background: linear-gradient(to top, #00cc66, #4ade80); 
-                        opacity: 0.9;
-                        box-shadow: 0 5px 15px rgba(74, 222, 128, 0.3);
-                    }
-                    .bar-value { 
-                        color: #fff; 
-                        font-size: 0.9rem; 
-                        font-weight: bold; 
-                        text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-                        font-family: 'Orbitron', sans-serif;
-                    }
-
-                    .variables-hud {
-                        position: absolute;
-                        top: 25px;
-                        right: 25px;
-                        background: rgba(15, 15, 20, 0.85);
-                        padding: 20px;
-                        border-radius: 16px;
-                        border: 1px solid rgba(188, 19, 254, 0.3);
-                        display: flex;
-                        flex-direction: column;
-                        gap: 12px;
-                        min-width: 200px;
-                        backdrop-filter: blur(10px);
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                    }
-                    .var-item { font-size: 0.9rem; display: flex; justify-content: space-between; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
-                    .var-key { color: #bc13fe; font-weight: bold; font-family: 'Orbitron'; font-size: 0.7rem; text-transform: uppercase; }
-                    .var-val { color: #00f2ff; font-weight: bold; font-family: monospace; }
-
-                    .explanation-bubble {
-                        background: linear-gradient(to right, rgba(188, 19, 254, 0.15), rgba(0, 242, 255, 0.05));
-                        border: 1px solid rgba(188, 19, 254, 0.3);
-                        padding: 30px 40px;
-                        border-radius: 20px;
-                        display: flex;
-                        align-items: center;
-                        gap: 30px;
-                        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                        position: relative;
-                        overflow: hidden;
-                    }
-                    .explanation-bubble::before {
-                        content: '';
-                        position: absolute;
-                        top: 0; left: 0; width: 4px; height: 100%;
-                        background: #bc13fe;
-                    }
-                    .action-tag {
-                        background: rgba(188, 19, 254, 0.2);
-                        border: 1px solid #bc13fe;
-                        color: #bc13fe;
-                        padding: 6px 14px;
-                        border-radius: 8px;
-                        font-size: 0.8rem;
-                        font-weight: 900;
-                        letter-spacing: 2px;
-                        font-family: 'Orbitron';
-                        text-shadow: 0 0 10px rgba(188, 19, 254, 0.5);
-                    }
-                    .explanation-bubble p { margin: 0; color: #fff; font-size: 1.3rem; line-height: 1.6; flex: 1; font-weight: 300; }
-
-                    .playback-controls {
-                        padding: 30px 50px;
-                        background: rgba(0, 0, 0, 0.6);
-                        display: flex;
-                        align-items: center;
-                        gap: 30px;
-                        border-top: 1px solid rgba(255, 255, 255, 0.05);
-                    }
-                    .progress-bar-container {
-                        flex: 1;
-                        height: 10px;
-                        background: rgba(255, 255, 255, 0.05);
-                        border-radius: 5px;
-                        overflow: hidden;
-                        position: relative;
-                        box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-                    }
-                    .progress-fill { 
-                        height: 100%; 
-                        background: linear-gradient(to right, #bc13fe, #00f2ff); 
-                        transition: width 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); 
-                        box-shadow: 0 0 15px rgba(188, 19, 254, 0.8);
-                    }
-                    .control-buttons { display: flex; align-items: center; gap: 20px; }
-                    .play-btn {
-                        width: 65px;
-                        height: 65px;
-                        border-radius: 50%;
-                        background: linear-gradient(135deg, #bc13fe, #7010aa);
-                        border: none;
-                        color: #fff;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 1.8rem;
-                        cursor: pointer;
-                        box-shadow: 0 10px 30px rgba(188, 19, 254, 0.5);
-                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    }
-                    .play-btn:hover { transform: scale(1.15) rotate(5deg); box-shadow: 0 15px 40px rgba(188, 19, 254, 0.7); }
-                    .play-btn:active { transform: scale(0.95); }
-                    
-                    .step-counter { 
-                        color: #888; 
-                        font-size: 1.1rem; 
-                        font-weight: 600; 
-                        min-width: 150px; 
-                        text-align: right; 
-                        font-family: 'Orbitron';
-                        letter-spacing: 2px;
-                    }
-                `}</style>
             </div>
+
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+                .vpm-overlay {
+                    position: fixed; inset: 0;
+                    background: rgba(0,0,0,0.88);
+                    backdrop-filter: blur(18px);
+                    display: flex; align-items: center; justify-content: center;
+                    z-index: 10000; padding: 20px;
+                    animation: vpmFadeIn 0.35s ease;
+                }
+                @keyframes vpmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+                .vpm-modal {
+                    width: 100%; max-width: 1100px; height: 88vh;
+                    background: #080810;
+                    border: 1px solid rgba(188,19,254,0.35);
+                    border-radius: 22px; overflow: hidden;
+                    box-shadow: 0 0 80px rgba(188,19,254,0.2), 0 0 200px rgba(0,242,255,0.05);
+                    display: flex; flex-direction: column;
+                    animation: vpmSlideUp 0.4s cubic-bezier(0.19,1,0.22,1);
+                }
+                @keyframes vpmSlideUp { from { transform: translateY(40px) scale(0.97); } to { transform: translateY(0) scale(1); } }
+
+                /* HEADER */
+                .vpm-header {
+                    display: flex; justify-content: space-between; align-items: center;
+                    padding: 20px 32px;
+                    background: linear-gradient(to right, rgba(188,19,254,0.08), rgba(0,242,255,0.04));
+                    border-bottom: 1px solid rgba(255,255,255,0.06);
+                    flex-shrink: 0;
+                }
+                .vpm-title-area { display: flex; align-items: center; gap: 18px; }
+                .vpm-icon-wrap {
+                    width: 48px; height: 48px; border-radius: 14px;
+                    background: rgba(188,19,254,0.15); border: 1px solid rgba(188,19,254,0.3);
+                    display: flex; align-items: center; justify-content: center;
+                    color: #bc13fe; font-size: 1.3rem;
+                }
+                .vpm-title {
+                    margin: 0; font-size: 1.4rem; color: #fff;
+                    font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
+                }
+                .vpm-subtitle { font-size: 11px; color: #555; margin-top: 3px; font-family: 'Orbitron'; letter-spacing: 1px; }
+                .vpm-header-actions { display: flex; gap: 12px; align-items: center; }
+                .vpm-icon-btn {
+                    width: 40px; height: 40px; border-radius: 50%;
+                    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+                    color: #666; cursor: pointer; transition: all 0.25s;
+                    display: flex; align-items: center; justify-content: center; font-size: 14px;
+                }
+                .vpm-icon-btn:hover, .vpm-icon-btn.active { background: rgba(188,19,254,0.2); color: #bc13fe; border-color: rgba(188,19,254,0.4); }
+                .vpm-close-btn {
+                    width: 40px; height: 40px; border-radius: 50%;
+                    background: rgba(255,50,50,0.08); border: 1px solid rgba(255,50,50,0.2);
+                    color: #ff4444; cursor: pointer; transition: all 0.25s;
+                    display: flex; align-items: center; justify-content: center; font-size: 16px;
+                }
+                .vpm-close-btn:hover { background: rgba(255,50,50,0.2); }
+
+                /* BODY */
+                .vpm-body {
+                    flex: 1; overflow-y: auto; overflow-x: hidden;
+                    display: flex; flex-direction: column; gap: 20px;
+                    padding: 24px 32px;
+                    background: radial-gradient(circle at 50% 30%, rgba(188,19,254,0.04) 0%, transparent 70%);
+                    scrollbar-width: thin; scrollbar-color: rgba(188,19,254,0.3) transparent;
+                }
+                .vpm-body::-webkit-scrollbar { width: 4px; }
+                .vpm-body::-webkit-scrollbar-thumb { background: rgba(188,19,254,0.3); border-radius: 4px; }
+
+                .vpm-viz-area {
+                    flex: 1; min-height: 280px;
+                    background: rgba(0,0,0,0.4);
+                    border: 1px solid rgba(255,255,255,0.04);
+                    border-radius: 16px; padding: 24px;
+                    display: flex; align-items: center; justify-content: center;
+                    overflow: auto;
+                }
+
+                /* NARRATION */
+                .vpm-narration {
+                    display: flex; align-items: center; gap: 18px;
+                    background: linear-gradient(to right, rgba(188,19,254,0.1), rgba(0,242,255,0.04));
+                    border: 1px solid rgba(188,19,254,0.2);
+                    border-radius: 14px; padding: 18px 24px;
+                    position: relative; overflow: hidden;
+                }
+                .vpm-narration::before {
+                    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+                    width: 3px; background: #bc13fe;
+                }
+                .vpm-action-tag {
+                    background: rgba(188,19,254,0.15); border: 1px solid rgba(188,19,254,0.4);
+                    color: #bc13fe; padding: 5px 12px; border-radius: 6px;
+                    font-size: 9px; font-weight: 900; letter-spacing: 2px;
+                    font-family: 'Orbitron'; white-space: nowrap;
+                    text-shadow: 0 0 10px rgba(188,19,254,0.5);
+                }
+                .vpm-desc { margin: 0; color: #ddd; font-size: 1rem; line-height: 1.6; flex: 1; }
+                .vpm-speaking-indicator {
+                    display: flex; gap: 3px; align-items: center; margin-left: 8px;
+                }
+                .vpm-speaking-indicator span {
+                    width: 3px; border-radius: 3px; background: #bc13fe;
+                    animation: vpmWave 0.8s ease-in-out infinite alternate;
+                }
+                .vpm-speaking-indicator span:nth-child(1) { height: 8px; }
+                .vpm-speaking-indicator span:nth-child(2) { height: 14px; }
+                .vpm-speaking-indicator span:nth-child(3) { height: 10px; }
+                .vpm-speaking-indicator span:nth-child(4) { height: 6px; }
+                @keyframes vpmWave { from { transform: scaleY(0.5); } to { transform: scaleY(1.5); } }
+
+                /* FOOTER */
+                .vpm-footer {
+                    padding: 16px 32px 20px;
+                    background: rgba(0,0,0,0.5);
+                    border-top: 1px solid rgba(255,255,255,0.05);
+                    flex-shrink: 0;
+                }
+                .vpm-progress-track {
+                    height: 6px; background: rgba(255,255,255,0.06);
+                    border-radius: 3px; margin-bottom: 16px;
+                    position: relative; cursor: pointer; overflow: visible;
+                }
+                .vpm-progress-fill {
+                    height: 100%; border-radius: 3px;
+                    background: linear-gradient(to right, #bc13fe, #00f2ff);
+                    transition: width 0.3s ease;
+                    box-shadow: 0 0 10px rgba(188,19,254,0.6);
+                }
+                .vpm-progress-thumb {
+                    position: absolute; top: 50%; transform: translate(-50%, -50%);
+                    width: 14px; height: 14px; border-radius: 50%;
+                    background: #fff; border: 2px solid #bc13fe;
+                    box-shadow: 0 0 8px rgba(188,19,254,0.8);
+                    transition: left 0.3s ease;
+                }
+                .vpm-controls {
+                    display: flex; align-items: center; gap: 14px; justify-content: center;
+                }
+                .vpm-ctrl-btn {
+                    width: 42px; height: 42px; border-radius: 50%;
+                    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+                    color: #aaa; cursor: pointer; transition: all 0.25s;
+                    display: flex; align-items: center; justify-content: center; font-size: 14px;
+                }
+                .vpm-ctrl-btn:hover:not(:disabled) { background: rgba(188,19,254,0.2); color: #fff; transform: translateY(-2px); }
+                .vpm-ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+                .vpm-play-btn {
+                    width: 60px; height: 60px; border-radius: 50%;
+                    background: linear-gradient(135deg, #bc13fe, #7010aa);
+                    border: none; color: #fff; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+                    box-shadow: 0 8px 25px rgba(188,19,254,0.5);
+                    transition: all 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+                }
+                .vpm-play-btn:hover { transform: scale(1.12); box-shadow: 0 12px 35px rgba(188,19,254,0.7); }
+                .vpm-play-btn:active { transform: scale(0.95); }
+                .vpm-step-counter {
+                    font-family: 'Orbitron'; font-size: 1rem; color: #fff;
+                    font-weight: bold; min-width: 70px; text-align: center;
+                }
+                .vpm-step-counter span { color: #444; font-size: 0.85rem; }
+            `}</style>
         </div>
     );
 };
