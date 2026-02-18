@@ -2,6 +2,36 @@ import { useEditorStore } from '../stores/editorStore';
 import { useFileStore } from '../stores/fileStore';
 import { fileSystemApi, terminalApi } from '../api';
 import { getLanguageFromFile } from '../../config/fileTypes';
+import { copilotService } from '../../services/CopilotService';
+
+// ─── Semantic hint prompt ─────────────────────────────────────────────────────
+function buildSemanticPrompt(code: string, fileName: string, output: string): string {
+  return `You are a coding tutor. A student ran this code and got the output below.
+Look for semantic or logic errors — things that ran without crashing but may be WRONG:
+- Incorrect calculations or results
+- Off-by-one errors
+- Wrong variable used
+- Logic that doesn't match the intended purpose
+- Misleading output
+- Potential edge cases that would break it
+
+File: ${fileName}
+
+Code:
+\`\`\`
+${code}
+\`\`\`
+
+Actual output:
+${output}
+
+Respond ONLY as a JSON array (no markdown fences, no extra text):
+[
+  { "line": <number>, "issue": "<short description>", "hint": "<1 sentence student-friendly fix hint>" }
+]
+If there are NO semantic/logic issues, respond with exactly: []
+Be concise. Max 5 issues.`;
+}
 
 /**
  * File Operations Hook
@@ -241,6 +271,7 @@ export const useFileOperations = () => {
     // 2. Capture the EXACT code being sent to the terminal
     const exactCodeToRun = tab.content;
     const exactFilePath = tab.filePath;
+    const exactFileName = tab.fileName;
 
     const visualStoreImport = await import('../stores/visualStore');
     const visualStore = visualStoreImport.useVisualStore.getState();
@@ -258,11 +289,13 @@ export const useFileOperations = () => {
       const result = await terminalApi.runCode(tab.filePath, exactCodeToRun);
 
       // 6. NOW trigger the AI with the EXACT code AND the result
-      // Doing it after result ensures the AI knows exactly what the code did
       if (result.stdout || result.stderr === "") {
         editorStore.appendOutputData(result.stdout + '\n');
         // Send BOTH code and output in ONE call to ensure they match
         visualStore.fetchAiSimulation(exactCodeToRun, exactFilePath, result.stdout);
+
+        // 7. Background semantic/logic analysis — appends hints below output
+        runSemanticAnalysis(exactCodeToRun, exactFileName, result.stdout);
       } else {
         editorStore.appendOutputData(result.stderr);
       }
@@ -271,6 +304,42 @@ export const useFileOperations = () => {
       editorStore.appendOutputData(`\n❌ Error: ${error.message}\n`);
       return false;
     }
+  };
+
+  // ─── Semantic analysis (fire-and-forget) ─────────────────────────────────────
+  const runSemanticAnalysis = (code: string, fileName: string, output: string) => {
+    if (!output.trim() || !(window as any).api) return;
+
+    let raw = '';
+    copilotService.streamChat(
+      buildSemanticPrompt(code, fileName, output),
+      (chunk: string) => { raw += chunk; },
+      () => {
+        try {
+          // Strip any accidental markdown fences
+          const cleaned = raw.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/im, '').trim();
+          const issues: Array<{ line: number; issue: string; hint: string }> = JSON.parse(cleaned);
+          if (!Array.isArray(issues) || issues.length === 0) return;
+
+          // Build the inline hint block
+          const lines = [
+            '',
+            '─────────────────────────────────────────',
+            `⚠  Semantic/Logic hints for ${fileName}`,
+            '─────────────────────────────────────────',
+            ...issues.map(i =>
+              `  Line ${i.line}: ${i.issue}\n          ↳ ${i.hint}`
+            ),
+            '─────────────────────────────────────────',
+            '',
+          ];
+          useEditorStore.getState().appendOutputData(lines.join('\n'));
+        } catch {
+          // Silently ignore parse failures — don't disrupt the output
+        }
+      },
+      () => { /* silently ignore AI errors for this background call */ }
+    );
   };
 
   const openFileDialog = async (): Promise<boolean> => {

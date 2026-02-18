@@ -30,6 +30,27 @@ interface TerminalProps {
   onNavigateToLine?: (line: number, column?: number, source?: string) => void;
 }
 
+// --- OutputView: renders normal output + semantic hint blocks with distinct styling ---
+const OutputView = ({ outputData }: { outputData: string }) => {
+  if (!outputData) return <pre style={{ color: '#888', margin: 0 }}>No output yet. Run your code with ▶</pre>;
+  const lines = outputData.split('\n');
+  const isHintDivider = (l: string) => /^─{10,}/.test(l.trim());
+  const isHintHeader = (l: string) => l.startsWith('⚠');
+  const isHintLine = (l: string) => /^\s+Line \d+:/.test(l);
+  const isHintArrow = (l: string) => /^\s+↳/.test(l);
+  return (
+    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.55 }}>
+      {lines.map((line, i) => {
+        if (isHintDivider(line)) return <span key={i} style={{ color: '#3a2a10', display: 'block' }}>{line}{'\n'}</span>;
+        if (isHintHeader(line)) return <span key={i} style={{ color: '#cc8800', fontWeight: 700, display: 'block' }}>{line}{'\n'}</span>;
+        if (isHintLine(line)) return <span key={i} style={{ color: '#e8a020', display: 'block' }}>{line}{'\n'}</span>;
+        if (isHintArrow(line)) return <span key={i} style={{ color: '#a07030', fontStyle: 'italic', display: 'block' }}>{line}{'\n'}</span>;
+        return <span key={i} style={{ color: '#cccccc', display: 'block' }}>{line}{'\n'}</span>;
+      })}
+    </pre>
+  );
+};
+
 const Terminal: React.FC<TerminalProps> = ({
   activeTab,
   problems,
@@ -222,7 +243,7 @@ const Terminal: React.FC<TerminalProps> = ({
           />
         )}
 
-        {activeTab === 'Output' && <pre style={{ color: '#cccccc', whiteSpace: 'pre-wrap', margin: 0 }}>{outputData || 'No output'}</pre>}
+        {activeTab === 'Output' && <OutputView outputData={outputData} />}
 
         {activeTab === 'Debug Console' && <pre style={{ color: '#ce9178', whiteSpace: 'pre-wrap', margin: 0 }}>{debugData || 'No debug data'}</pre>}
 
@@ -270,7 +291,7 @@ const Terminal: React.FC<TerminalProps> = ({
 
 const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigate: (line: number, col: number, source: string) => void }) => {
   const [expandedProblems, setExpandedProblems] = React.useState<Set<number>>(new Set());
-  
+
   // Group problems by source (file)
   const grouped = problems.reduce((acc, p) => {
     if (!acc[p.source]) acc[p.source] = [];
@@ -280,9 +301,9 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
 
   if (problems.length === 0) {
     return (
-      <div style={{ 
-        color: 'var(--text-muted)', 
-        textAlign: 'center', 
+      <div style={{
+        color: 'var(--text-muted)',
+        textAlign: 'center',
         marginTop: '20px',
         padding: '20px'
       }}>
@@ -340,9 +361,9 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
             <i className="fa-solid fa-chevron-down" style={{ fontSize: '10px' }}></i>
             <i className="fa-solid fa-file-code" style={{ color: '#00f2ff' }}></i>
             <span>{source}</span>
-            <span style={{ 
-              marginLeft: 'auto', 
-              fontSize: '10px', 
+            <span style={{
+              marginLeft: 'auto',
+              fontSize: '10px',
               color: '#f14c4c',
               background: 'rgba(241, 76, 76, 0.1)',
               padding: '2px 6px',
@@ -355,13 +376,13 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
             {fileProblems.map((p, i) => {
               const currentIndex = globalIndex++;
               const isExpanded = expandedProblems.has(currentIndex);
-              
+
               // Check if this is a detailed explanation (multi-line)
               const isDetailedExplanation = p.message.includes('\n');
               const lines = p.message.split('\n');
               const firstLine = lines[0];
               const detailLines = lines.slice(1);
-              
+
               return (
                 <div
                   key={i}
@@ -384,9 +405,9 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
                       }
                     }}
                     style={{
-                      display: 'flex', 
-                      gap: '10px', 
-                      padding: '8px 10px', 
+                      display: 'flex',
+                      gap: '10px',
+                      padding: '8px 10px',
                       cursor: 'pointer',
                       fontSize: '12px',
                       alignItems: 'flex-start',
@@ -404,9 +425,9 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
                       }
                     }}
                   >
-                    <i 
+                    <i
                       className={p.type === 'error' ? "fa-solid fa-circle-xmark" : "fa-solid fa-triangle-exclamation"}
-                      style={{ 
+                      style={{
                         color: p.type === 'error' ? '#f14c4c' : '#cca700',
                         marginTop: '2px',
                         fontSize: '14px'
@@ -417,9 +438,9 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
                         {firstLine}
                       </div>
                       {isDetailedExplanation && !isExpanded && (
-                        <div style={{ 
-                          fontSize: '10px', 
-                          color: 'var(--text-muted)', 
+                        <div style={{
+                          fontSize: '10px',
+                          color: 'var(--text-muted)',
                           marginTop: '4px',
                           fontStyle: 'italic'
                         }}>
@@ -427,14 +448,14 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
                         </div>
                       )}
                     </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: '10px',
                       marginLeft: '10px'
                     }}>
-                      <span 
-                        style={{ 
+                      <span
+                        style={{
                           color: 'var(--text-muted)',
                           fontSize: '11px',
                           fontFamily: 'monospace'
@@ -443,10 +464,10 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
                         [{p.line}, {p.column || 1}]
                       </span>
                       {isDetailedExplanation && (
-                        <i 
+                        <i
                           className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`}
-                          style={{ 
-                            color: 'var(--text-muted)', 
+                          style={{
+                            color: 'var(--text-muted)',
                             fontSize: '10px',
                             transition: 'transform 0.2s ease'
                           }}
@@ -468,58 +489,58 @@ const ProblemsView = ({ problems, onNavigate }: { problems: Problem[], onNavigat
                       {detailLines.map((line, idx) => {
                         // Style different sections
                         let style: React.CSSProperties = { marginBottom: '8px' };
-                        
-                        if (line.includes('📝 WHAT THIS MEANS:') || 
-                            line.includes('🔍 COMMON CAUSES:') || 
-                            line.includes('✅ HOW TO FIX:') ||
-                            line.includes('💡 EXAMPLE:') ||
-                            line.includes('💡 TIP:')) {
-                          style = { 
-                            ...style, 
-                            color: '#00f2ff', 
+
+                        if (line.includes('📝 WHAT THIS MEANS:') ||
+                          line.includes('🔍 COMMON CAUSES:') ||
+                          line.includes('✅ HOW TO FIX:') ||
+                          line.includes('💡 EXAMPLE:') ||
+                          line.includes('💡 TIP:')) {
+                          style = {
+                            ...style,
+                            color: '#00f2ff',
                             fontWeight: 'bold',
                             marginTop: '12px',
                             marginBottom: '6px'
                           };
                         } else if (line.startsWith('❌ Wrong:')) {
-                          style = { 
-                            ...style, 
+                          style = {
+                            ...style,
                             color: '#f14c4c',
                             paddingLeft: '15px',
                             borderLeft: '2px solid #f14c4c'
                           };
                         } else if (line.startsWith('✅ Correct:') || line.startsWith('✅ Safe:')) {
-                          style = { 
-                            ...style, 
+                          style = {
+                            ...style,
                             color: '#00ff88',
                             paddingLeft: '15px',
                             borderLeft: '2px solid #00ff88'
                           };
                         } else if (line.match(/^\d+\./)) {
                           // Numbered list items
-                          style = { 
-                            ...style, 
+                          style = {
+                            ...style,
                             color: '#ccc',
                             paddingLeft: '15px'
                           };
                         } else if (line.startsWith('•')) {
                           // Bullet points
-                          style = { 
-                            ...style, 
+                          style = {
+                            ...style,
                             color: '#ccc',
                             paddingLeft: '15px'
                           };
                         } else {
                           style = { ...style, color: '#aaa' };
                         }
-                        
+
                         return (
                           <div key={idx} style={style}>
                             {line}
                           </div>
                         );
                       })}
-                      
+
                       {/* Action buttons */}
                       <div style={{
                         marginTop: '15px',

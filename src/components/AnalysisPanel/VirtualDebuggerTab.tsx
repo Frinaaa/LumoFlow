@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useEditorStore } from '../../editor/stores/editorStore';
-import { useAnalysisStore } from '../../editor/stores/analysisStore';
 import { copilotService } from '../../services/CopilotService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -17,104 +16,115 @@ interface AICard {
 
 // ─── Neon-red palette ─────────────────────────────────────────────────────────
 const P = {
-    bg:          '#0a0a0a',
-    card:        '#0f0a0a',
-    cardBorder:  'rgba(255,23,68,0.12)',
-    strip:       '#ff1744',
-    badge:       'rgba(255,23,68,0.12)',
+    bg: '#0a0a0a',
+    card: '#0f0a0a',
+    cardBorder: 'rgba(255,23,68,0.12)',
+    strip: '#ff1744',
+    badge: 'rgba(255,23,68,0.12)',
     badgeBorder: 'rgba(255,23,68,0.25)',
-    textBright:  '#ffe0e4',
-    textMid:     '#c86070',
-    textDim:     '#5a2030',
-    divider:     'rgba(255,23,68,0.08)',
-    headerBg:    'rgba(0,0,0,0.4)',
+    textBright: '#ffe0e4',
+    textMid: '#c86070',
+    textDim: '#5a2030',
+    divider: 'rgba(255,23,68,0.08)',
+    headerBg: 'rgba(0,0,0,0.4)',
     scrollThumb: '#2e0a10',
 };
 
-// ─── Parse AI JSON response ───────────────────────────────────────────────────
+// ─── Parse AI JSON response — multiple fallback strategies ────────────────────
 function parseAIResponse(raw: string): { cards: AICard[]; correctedCode: string } | null {
+    const makeCard = (item: any): AICard => ({
+        line: Math.max(1, Number(item.line) || 1),
+        severity: (['error', 'warning', 'tip'].includes(item.severity) ? item.severity : 'error') as AICard['severity'],
+        errorMsg: String(item.error || item.message || item.issue || 'Unknown issue'),
+        originalCode: String(item.original || item.originalCode || ''),
+        fixedCode: String(item.fixed || item.fixedCode || ''),
+        explanation: String(item.explanation || item.hint || ''),
+        analogy: String(item.analogy || ''),
+        emoji: String(item.emoji || '🔧'),
+    });
+
+    // Strategy 1: strip ALL markdown fences then try full parse
+    const stripped = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
     try {
-        // Strip markdown code fences if present
-        const cleaned = raw
-            .replace(/^```(?:json)?\s*/im, '')
-            .replace(/\s*```\s*$/im, '')
-            .trim();
+        const json = JSON.parse(stripped);
+        if (json && Array.isArray(json.issues)) {
+            return { cards: json.issues.map(makeCard), correctedCode: String(json.correctedCode || '') };
+        }
+        if (Array.isArray(json)) return { cards: json.map(makeCard), correctedCode: '' };
+    } catch { /* fall through */ }
 
-        const json = JSON.parse(cleaned);
-
-        if (!json || !Array.isArray(json.issues)) return null;
-
-        const cards: AICard[] = json.issues.map((item: any) => ({
-            line:         Number(item.line) || 1,
-            severity:     (['error', 'warning', 'tip'].includes(item.severity) ? item.severity : 'error') as AICard['severity'],
-            errorMsg:     String(item.error || item.message || 'Unknown error'),
-            originalCode: String(item.original || ''),
-            fixedCode:    String(item.fixed || ''),
-            explanation:  String(item.explanation || ''),
-            analogy:      String(item.analogy || ''),
-            emoji:        String(item.emoji || '🔧'),
-        }));
-
-        return { cards, correctedCode: String(json.correctedCode || '') };
-    } catch {
-        return null;
+    // Strategy 2: extract outermost { ... } block
+    const objMatch = stripped.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+        try {
+            const json = JSON.parse(objMatch[0]);
+            if (json && Array.isArray(json.issues)) {
+                return { cards: json.issues.map(makeCard), correctedCode: String(json.correctedCode || '') };
+            }
+        } catch { /* fall through */ }
     }
+
+    // Strategy 3: extract JSON array directly
+    const arrMatch = stripped.match(/\[[\s\S]*\]/);
+    if (arrMatch) {
+        try {
+            const arr = JSON.parse(arrMatch[0]);
+            if (Array.isArray(arr) && arr.length > 0 && arr[0].line) {
+                return { cards: arr.map(makeCard), correctedCode: '' };
+            }
+        } catch { /* fall through */ }
+    }
+
+    // Strategy 4: plain-text "no issues" detection
+    const lower = raw.toLowerCase();
+    if (
+        lower.includes('no issue') || lower.includes('no error') ||
+        lower.includes('looks good') || lower.includes('no problem') ||
+        lower.includes('no bugs') || lower.includes('all clear') ||
+        lower.includes('"issues": []') || lower.includes('"issues":[]')
+    ) {
+        return { cards: [], correctedCode: '' };
+    }
+
+    // Could not parse — caller will show error state
+    return null;
 }
 
 // ─── Build the AI prompt ──────────────────────────────────────────────────────
 function buildPrompt(code: string, fileName: string): string {
-    return `You are a coding tutor reviewing a student's code file: "${fileName}".
+    return `IMPORTANT: Respond with ONLY valid JSON. No markdown. No explanation outside JSON.
 
-Analyse EVERY line carefully. Find ALL errors, warnings, bad practices, and potential bugs — even tiny ones like missing semicolons, wrong variable names, typos, unused variables, incorrect indentation, etc.
+You are a code analysis tool reviewing: "${fileName}"
 
-Return ONLY a valid JSON object (no markdown, no explanation outside JSON) in this exact format:
-{
-  "issues": [
-    {
-      "line": <line number>,
-      "severity": "error" | "warning" | "tip",
-      "error": "<short error title>",
-      "original": "<the exact broken code on that line>",
-      "fixed": "<the corrected version of that line only>",
-      "explanation": "<1-2 sentence plain English explanation for a student>",
-      "analogy": "<a fun real-world analogy>",
-      "emoji": "<single relevant emoji>"
-    }
-  ],
-  "correctedCode": "<the FULL corrected file with ALL fixes applied>"
-}
+Find ALL issues: syntax errors, missing semicolons, typos, wrong variable names, unused variables, logic bugs, bad indentation, missing imports, etc.
 
-Rules:
-- If there are NO issues at all, return { "issues": [], "correctedCode": "<original code>" }
-- "original" and "fixed" must be single-line snippets (the specific line only)
-- "correctedCode" must be the complete working file
-- Be thorough — students learn from every small mistake
-- Do NOT wrap in markdown code fences
+Return this exact JSON structure:
+{"issues":[{"line":<number>,"severity":"error","error":"<title>","original":"<broken line>","fixed":"<corrected line>","explanation":"<student-friendly 1-2 sentences>","analogy":"<fun analogy>","emoji":"<emoji>"}],"correctedCode":"<full corrected file>"}
 
-Here is the code to analyse:
-\`\`\`
-${code}
-\`\`\``;
+If no issues: {"issues":[],"correctedCode":""}
+
+CODE:
+${code}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const VirtualDebuggerTab: React.FC = () => {
     const activeTabId = useEditorStore(s => s.activeTabId);
-    const tabs        = useEditorStore(s => s.tabs);
-    const activeTab   = tabs.find(t => t.id === activeTabId);
-    const fileName    = activeTab?.fileName ?? null;
+    const tabs = useEditorStore(s => s.tabs);
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    const fileName = activeTab?.fileName ?? null;
     const fileContent = activeTab?.content ?? '';
 
-    const [cards, setCards]               = useState<AICard[]>([]);
+    const [cards, setCards] = useState<AICard[]>([]);
     const [correctedCode, setCorrectedCode] = useState('');
-    const [status, setStatus]             = useState<'idle' | 'analysing' | 'done' | 'error'>('idle');
-    const [errorMsg, setErrorMsg]         = useState('');
-    const [expandedIdx, setExpandedIdx]   = useState<number | null>(null);
+    const [status, setStatus] = useState<'idle' | 'analysing' | 'done' | 'error'>('idle');
+    const [errorMsg, setErrorMsg] = useState('');
+    const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
     const [showCorrected, setShowCorrected] = useState(false);
 
     // Track which file+content we last analysed to avoid re-running on same code
     const lastAnalysedRef = useRef<string>('');
-    const rawBufferRef    = useRef<string>('');
+    const rawBufferRef = useRef<string>('');
 
     const runAnalysis = useCallback(async (code: string, name: string) => {
         const key = `${name}::${code}`;
@@ -254,9 +264,9 @@ const VirtualDebuggerTab: React.FC = () => {
     }
 
     // ── MAIN UI ──
-    const errorCount   = cards.filter(c => c.severity === 'error').length;
+    const errorCount = cards.filter(c => c.severity === 'error').length;
     const warningCount = cards.filter(c => c.severity === 'warning').length;
-    const tipCount     = cards.filter(c => c.severity === 'tip').length;
+    const tipCount = cards.filter(c => c.severity === 'tip').length;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: P.bg, fontFamily: 'Inter, system-ui, sans-serif', color: P.textBright, overflow: 'hidden' }}>
@@ -305,11 +315,11 @@ const VirtualDebuggerTab: React.FC = () => {
                 {cards.map((card, idx) => {
                     const isOpen = expandedIdx === idx;
                     const sevColor = card.severity === 'error' ? '#ff4466'
-                                   : card.severity === 'warning' ? '#ffaa44'
-                                   : '#aa88ff';
+                        : card.severity === 'warning' ? '#ffaa44'
+                            : '#aa88ff';
                     const sevBg = card.severity === 'error' ? 'rgba(255,68,102,0.1)'
-                                : card.severity === 'warning' ? 'rgba(255,170,68,0.1)'
-                                : 'rgba(170,136,255,0.1)';
+                        : card.severity === 'warning' ? 'rgba(255,170,68,0.1)'
+                            : 'rgba(170,136,255,0.1)';
 
                     return (
                         <div
