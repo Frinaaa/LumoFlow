@@ -227,15 +227,26 @@ const VisualizeTab: React.FC = () => {
 
         .save-viz-btn {
           display: flex; align-items: center; gap: 6px;
-          background: transparent; border: 1px solid #00ff88; color: #00ff88;
+          background: transparent; border: 1px solid #bc13fe; color: #bc13fe;
           font-family: 'Orbitron'; font-size: 9px; letter-spacing: 1.5px;
           padding: 6px 14px; border-radius: 4px; cursor: pointer;
           transition: all 0.3s ease;
         }
-        .save-viz-btn:hover:not(:disabled) { background: rgba(0,255,136,0.12); box-shadow: 0 0 18px rgba(0,255,136,0.35); transform: translateY(-1px); }
+        .save-viz-btn:hover:not(:disabled) { background: rgba(188,19,254,0.1); box-shadow: 0 0 18px rgba(188,19,254,0.35); transform: translateY(-1px); }
         .save-viz-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-      `}</style>
+        .regen-btn {
+          display: flex; align-items: center; gap: 6px;
+          background: transparent; border: 1px solid #00f2ff; color: #00f2ff;
+          font-family: 'Orbitron'; font-size: 9px; letter-spacing: 1.5px;
+          padding: 6px 14px; border-radius: 4px; cursor: pointer;
+          transition: all 0.3s ease;
+          text-shadow: 0 0 5px rgba(0,242,255,0.5);
+        }
+        .regen-btn:hover { background: rgba(0,242,255,0.1); box-shadow: 0 0 18px rgba(0,242,255,0.4); transform: translateY(-1px); }
+
+      `
+      }</style>
     </div>
   );
 };
