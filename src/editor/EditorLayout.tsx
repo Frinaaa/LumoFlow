@@ -237,12 +237,14 @@ export const EditorLayout: React.FC = () => {
 
       // CHORD HANDLING (Ctrl+K ...)
       if (chordState === 'ctrl+k') {
-        setChordState(null); // Reset after next key
-        if (e.key === 'o' && isMod) { // Ctrl+K, Ctrl+O -> Open Folder
-          e.preventDefault();
-          fileOps.openFolder();
-          return;
-        }
+    setChordState(null); 
+    
+    // Ctrl+K, Ctrl+O -> Open Folder
+    if ((e.key === 'o' || e.key === 'O') && isMod) {
+      e.preventDefault();
+      fileOps.openFolder();
+      return;
+    }
         if (e.key === 'f') { // Ctrl+K, F -> Close Folder
           e.preventDefault();
           editorStore.closeAllTabs();
@@ -259,7 +261,28 @@ export const EditorLayout: React.FC = () => {
       }
       // If we didn't match a chord second key, just continue normal processing but clear chord
       if (chordState) setChordState(null);
+    if (isMod && e.key === 's') {
+    e.preventDefault();
+    if (e.shiftKey) { 
+      // Ctrl + Shift + S -> Save As
+      if (activeTab) fileOps.saveFileAs(activeTab.id);
+    } else { 
+      // Ctrl + S -> Save
+      if (activeTab) fileOps.saveFile(activeTab.id);
+    }
+  } 
 
+  // 3. FIX: OPEN FILE (Changed from toggleBreakpoint to openFileDialog)
+  else if (isMod && e.key === 'o') {
+    e.preventDefault();
+    fileOps.openFileDialog();
+  }
+
+  // 4. ADD: TOGGLE BREAKPOINT (Re-assigned to F9 to avoid conflict with Open File)
+  else if (e.key === 'F9') {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'toggleBreakpoint' } }));
+  }
 
       // SINGLE SHORTCUTS
       if (isMod && e.shiftKey && e.key === 'p') {
@@ -321,13 +344,24 @@ export const EditorLayout: React.FC = () => {
       }
 
       // EDIT COMMANDS (Global fallback to editor)
-      if (isMod) {
-        if (e.key === 'z') { // Undo
-          // Don't prevent default if valid input is focused
-          if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
-          e.preventDefault();
-          window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'undo' } }));
-        } else if (e.key === 'y') { // Redo
+     
+        if (isMod) {
+  const key = e.key.toLowerCase();
+  
+  // Check if the focus is inside a sidebar input (like Search or Rename)
+  const isSidebarInputFocused = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
+
+  if (key === 'z') {
+    // If user is NOT in a sidebar input, force the undo to happen in the text editor
+    if (!isSidebarInputFocused) {
+      e.preventDefault(); // Stop the browser from undoing file changes/moves
+      console.log('⚡ Routing Undo to Editor');
+      window.dispatchEvent(new CustomEvent('monaco-cmd', { 
+        detail: { action: 'undo' } 
+      }));
+    }
+  }
+   else if (e.key === 'y') { // Redo
           if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('monaco-cmd', { detail: { action: 'redo' } }));
