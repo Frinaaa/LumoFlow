@@ -127,7 +127,7 @@ const LogicPuzzleScreen: React.FC = () => {
       {/* HEADER */}
       <header className="puzzle-header">
 
-        <div className="level-pill">PUZZLE: LEVEL {level}/∞</div>
+        <div className="level-pill">PUZZLE: LEVEL {level}</div>
         <button className="exit-btn" onClick={() => navigate('/games')}>
           <i className="fa-solid fa-arrow-right-from-bracket"></i> Exit Game
         </button>
@@ -173,7 +173,9 @@ const LogicPuzzleScreen: React.FC = () => {
         <div className="sidebar-panel">
 
           <div className="info-card">
-            <h2 className="fancy-heading">{puzzle.title}</h2>
+            <h2 className="fancy-heading">
+              {puzzle.title.split('#')[0]} #{level}
+            </h2>
             <p className="description">{puzzle.description}</p>
 
             {showHint && (

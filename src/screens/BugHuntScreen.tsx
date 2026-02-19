@@ -103,7 +103,7 @@ const BugHuntScreen: React.FC = () => {
 
 
         <div className="level-pill">
-          BIG HUNT &nbsp;|&nbsp; <span>Level {level} / ∞</span>
+          BUG HUNT &nbsp;|&nbsp; <span>Level {level}</span>
         </div>
 
         <button className="exit-btn" onClick={() => navigate('/games')}>
@@ -148,7 +148,8 @@ const BugHuntScreen: React.FC = () => {
         {/* CARD 2: SIDEBAR */}
         <div className="sidebar-card">
           <div className="mission-header">
-            <i className="fa-solid fa-bug"></i> {data.missionTitle}
+            <i className="fa-solid fa-bug"></i>
+            {data.missionTitle.split('#')[0]} #{level}
           </div>
           <p className="mission-text">{data.missionDesc}</p>
 
