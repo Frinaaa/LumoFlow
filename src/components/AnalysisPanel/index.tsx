@@ -7,6 +7,7 @@ import GamesTab from './GamesTab';
 import VirtualDebuggerTab from './VirtualDebuggerTab';
 import { useEditorStore } from '../../editor/stores/editorStore';
 import { analysisPanelStyles } from './styles';
+import ErrorsTab from './ErrorsTab'; 
 
 const AnalysisPanel: React.FC = () => {
     // Analysis Store (Static Logic)
@@ -161,6 +162,12 @@ const AnalysisPanel: React.FC = () => {
                     >
                         <i className="fa-solid fa-gamepad"></i> Games
                     </button>
+                      <button 
+        className={`analysis-tab-btn ${activeTab === 'errors' ? 'active' : ''}`} 
+        onClick={() => setActiveTab('errors')}
+    >
+        <i className="fa-solid fa-book-open"></i> Samples
+    </button>
                     <button
                         className={`analysis-tab-btn ${activeTab === 'debug' ? 'active' : ''}`}
                         onClick={() => setActiveTab('debug')}
@@ -185,6 +192,7 @@ const AnalysisPanel: React.FC = () => {
                     )}
                     {activeTab === 'games' && <GamesTab />}
                     {activeTab === 'debug' && <VirtualDebuggerTab />}
+                    {activeTab === 'errors' && <ErrorsTab />}
                 </div>
             </div>
         </>

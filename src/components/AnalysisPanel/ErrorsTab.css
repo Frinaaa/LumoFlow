@@ -1,0 +1,137 @@
+.errors-wheel-container {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 60px 20px 200px 20px;
+    /* Extra bottom padding for scrolling */
+    background: #050508;
+    position: relative;
+    /* Hide scrollbar for a clean UI */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    perspective: 1000px;
+}
+
+.errors-wheel-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* The vertical dotted curve line */
+.wheel-axis {
+    position: fixed;
+    left: 55px;
+    /* Aligned with node numbers */
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    border-left: 2px dashed rgba(255, 255, 255, 0.1);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.error-node-wrapper {
+    display: flex;
+    align-items: center;
+    margin-bottom: 50px;
+    position: relative;
+    transition: transform 0.1s linear, opacity 0.2s;
+    will-change: transform, opacity;
+}
+
+/* The Number Circle (01, 02...) */
+.node-number {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #0e0e12;
+    border: 2px solid var(--node-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 5px var(--node-color);
+}
+
+/* Connecting line */
+.node-connector {
+    width: 30px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--node-color), transparent);
+    opacity: 0.6;
+}
+
+/* The Content Card */
+.error-content-card {
+    flex: 1;
+    background: rgba(20, 20, 25, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 3px solid var(--node-color);
+    border-radius: 12px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    min-width: 0;
+    /* Prevents overflow in flex */
+}
+
+.error-title {
+    color: var(--node-color);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.error-desc {
+    font-size: 12px;
+    color: #bbb;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+    /* Ensures the Java comparison appears on a new line */
+}
+
+.error-example-box {
+    background: #000;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #222;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: #e0e0e0;
+    overflow-x: auto;
+}
+
+.error-fix-box {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--node-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+/* Add this to your existing ErrorsTab.css */
+.error-example-box {
+    background: #000000;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #222;
+    margin: 10px 0;
+
+    /* Code appearance */
+    font-family: 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #00f2ff;
+    white-space: pre;
+    /* Keeps line breaks from the data */
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
