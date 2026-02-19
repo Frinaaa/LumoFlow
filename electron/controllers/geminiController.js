@@ -26,11 +26,13 @@ RULE 4: OUTPUT FORMAT - RAW JSON ARRAY ONLY.
 - No markdown. No backticks. No text before or after.
 - Minified. No newlines between frames.
 
+
+
 === FRAME SCHEMA ===
 {
   "id": 0,
   "action": "INIT"|"READ"|"COMPARE"|"SWAP"|"WRITE"|"BRANCH"|"END",
-  "type": "ARRAY"|"VARIABLE"|"QUEUE"|"STACK",
+  "type": "ARRAY"|"VARIABLE"|"QUEUE"|"STACK"|"TOWER_OF_HANOI",
   "memory": {
     "nums": [5, 3, 1],
     "i": 0,
@@ -67,7 +69,14 @@ RULE 4: OUTPUT FORMAT - RAW JSON ARRAY ONLY.
 - Buggy infinite loops: 12 frames then END with explanation`;
 
 
-// Initialize the new Google Gen AI SDK
+`=== TOWER_OF_HANOI CORE RULES ===
+If the user code is Tower of Hanoi, you MUST act as a state machine:
+1. "type" MUST be "TOWER_OF_HANOI".
+2. You MUST maintain three arrays in "memory": "A", "B", and "C".
+3. These arrays contain numbers (3 = large, 1 = small).
+4. Every time a move happens, you MUST update these arrays.
+   Example Frame Memory: {"A": [3, 2], "B": [1], "C": [], "n": 3, "from": "A", "to": "B"}`
+   
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const geminiController = {

@@ -10,11 +10,15 @@ export interface TraceFrame {
     swapping?: any[];
     focusLine?: number;
     // Metadata for better rendering
-    type?: 'ARRAY' | 'TREE' | 'GRAPH' | 'VARIABLE' | 'OBJECT' | 'QUEUE' | 'STACK';
+    type?: 'ARRAY' | 'TREE' | 'GRAPH' | 'VARIABLE' | 'OBJECT' | 'QUEUE' | 'STACK'| 'TOWER_OF_HANOI';
     metadata?: {
         highlightIndex?: number[];
         pointerName?: string;
         depth?: number;
+        // 2. ADD THESE THREE PROPERTIES
+        movingRing?: number; 
+        from?: string;
+        to?: string;
     };
 }
 

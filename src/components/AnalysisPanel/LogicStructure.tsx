@@ -79,8 +79,57 @@ const LOGIC_STYLES = `
   .obj-field { font-size: 10px; color: #888; }
   .obj-key { color: #bc13fe; }
   .obj-val { color: #00f2ff; font-family: 'JetBrains Mono', monospace; }
-`;
+  /* Final Neon Tower of Hanoi Styles */
+  .hanoi-stage { 
+    display: flex; flex-direction: column; align-items: center; width: 100%; 
+    padding: 50px 10px; position: relative;
+  }
+  .hanoi-container { 
+    display: flex; justify-content: space-around; align-items: flex-end; 
+    width: 100%; height: 160px; position: relative; z-index: 2;
+  }
+  .hanoi-pole-wrapper { 
+    display: flex; flex-direction: column; align-items: center; width: 30%; position: relative; 
+  }
+  
+  /* Neon Purple Rods */
+  .hanoi-rod { 
+    width: 10px; height: 140px; background: #bc13fe; 
+    border-radius: 10px 10px 0 0; position: absolute; bottom: 0; z-index: 1; 
+    box-shadow: 0 0 15px rgba(188, 19, 254, 0.6);
+  }
 
+  /* Neon Purple Base */
+  .hanoi-base {
+    width: 90%; height: 12px; background: #bc13fe; 
+    border-radius: 10px; margin-top: -2px; z-index: 3;
+    box-shadow: 0 0 15px rgba(188, 19, 254, 0.4);
+  }
+  
+  /* Neon Cyan Rings (Pill Shape) */
+  .hanoi-discs { 
+    display: flex; flex-direction: column-reverse; align-items: center; 
+    width: 100%; z-index: 4; gap: 2px; padding-bottom: 2px;
+  }
+  .hanoi-disc { 
+    height: 24px; border-radius: 12px; 
+    background: #00f2ff;
+    border: 1px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    color: #000; font-family: 'Orbitron'; font-size: 10px; font-weight: bold;
+    box-shadow: 0 0 12px rgba(0, 242, 255, 0.5);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .hanoi-disc.moving { 
+    transform: translateY(-25px); 
+    box-shadow: 0 15px 25px rgba(0, 242, 255, 0.8);
+  }
+  
+  .pole-label-top { 
+    position: absolute; top: -35px; font-family: 'Orbitron'; 
+    font-size: 16px; font-weight: bold; color: #bc13fe; 
+  }
+`;
 let stylesInjected = false;
 function injectLogicStyles() {
     if (stylesInjected || typeof document === 'undefined') return;
@@ -223,7 +272,63 @@ const LogicStructure: React.FC<LogicStructureProps> = ({ frame }) => {
             </div>
         );
     }
+    // ── TOWER OF HANOI RENDERING ──────────────────────────────────────────────
+    if ((type as string) === 'TOWER_OF_HANOI' || memory.FROM || memory.from) {
+        const poles = ['A', 'B', 'C'];
+        const poleLabels: Record<string, string> = { 'A': '1', 'B': '2', 'C': '3' };
 
+        // 🟢 FIX: Handle case where AI sends variables but no physical ring arrays
+        const poleA = memory.A || (memory.FROM === 'A' || memory.from === 'A' ? [3, 2, 1] : []);
+        const poleB = memory.B || (memory.FROM === 'B' || memory.from === 'B' ? [3, 2, 1] : []);
+        const poleC = memory.C || (memory.FROM === 'C' || memory.from === 'C' ? [3, 2, 1] : []);
+        const hanoiMemory: Record<string, any> = { A: poleA, B: poleB, C: poleC };
+
+        const movingRing = metadata?.movingRing || (memory.N || memory.n || null);
+
+        return (
+            <div className="logic-structure hanoi-view">
+                <div className="action-banner" style={{ borderLeftColor: '#00f2ff' }}>
+                    <span className="action-label" style={{ color: '#00f2ff' }}>RECURSIVE STEP</span>
+                    <span className="step-counter">STEP {frame.id}</span>
+                </div>
+
+                <div className="hanoi-stage">
+                    <div className="hanoi-container">
+                        {poles.map(pID => (
+                            <div key={pID} className="hanoi-pole-wrapper">
+                                <div className="pole-label-top">{poleLabels[pID]}</div>
+                                <div className="hanoi-rod"></div>
+                                <div className="hanoi-discs">
+                                    {(hanoiMemory[pID] || []).map((ringSize: number) => (
+                                        <div
+                                            key={ringSize}
+                                            className={`hanoi-disc ${movingRing === ringSize && (memory.FROM === pID || memory.from === pID) ? 'moving' : ''}`}
+                                            style={{ width: `${ringSize * 35 + 20}px` }}
+                                        >
+                                            {/* Label inside ring */}
+                                            {ringSize === 1 ? 'A' : ringSize === 2 ? 'B' : 'C'}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="hanoi-base"></div>
+                </div>
+
+                <div className="scalar-sidebar">
+                    {Object.entries(memory)
+                        .filter(([k]) => !['A', 'B', 'C', 'poleA', 'poleB', 'poleC'].includes(k))
+                        .map(([k, v]) => (
+                            <div key={k} className="scalar-chip">
+                                <span className="scalar-name">{k}</span>
+                                <span className="scalar-val">{String(v)}</span>
+                            </div>
+                        ))}
+                </div>
+            </div>
+        );
+    }
     // ── DEFAULT: VARIABLE HUD ──────────────────────────────────────────────────
     const allEntries = Object.entries(memory);
     const arrayEntries = allEntries.filter(([, v]) => Array.isArray(v));
