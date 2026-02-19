@@ -15,14 +15,19 @@ const LOGIC_STYLES = `
   .action-label { font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: bold; letter-spacing: 2px; }
   .step-counter { font-size: 9px; color: #555; margin-left: auto; font-family: 'JetBrains Mono', monospace; }
 
-  .array-cells { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; align-items: center; padding: 10px; }
+  .array-cells { 
+    display: flex; gap: 20px; flex-wrap: wrap; 
+    justify-content: center; align-items: flex-start; padding: 20px 10px; 
+  }
+  
   .array-cell {
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, hsla(var(--hue, 270), 70%, 55%, 0.15) 0%, rgba(0,0,0,0.5) 100%);
+    min-width: 60px; height: 60px; padding: 10px;
+    border-radius: 12px; /* Changed from 50% to Rounded Square for objects */
+    background: rgba(255,255,255,0.03);
     border: 2px solid hsla(var(--hue, 270), 70%, 50%, 0.3);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    position: relative; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 5px 20px rgba(0,0,0,0.4), inset 0 0 15px rgba(255,255,255,0.03);
+    position: relative; transition: all 0.4s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   }
   .array-cell.comparing {
     border-color: #ffaa00;
@@ -36,12 +41,26 @@ const LOGIC_STYLES = `
     animation: ls-swap-shake 0.3s infinite alternate;
     box-shadow: 0 0 25px rgba(255,0,85,0.4), inset 0 0 15px rgba(255,0,85,0.1);
   }
-  .array-cell.active { border-color: #00f2ff; box-shadow: 0 0 15px rgba(0,242,255,0.3), inset 0 0 10px rgba(0,242,255,0.05); }
+  .array-cell.active { border-color: #00f2ff; box-shadow: 0 0 20px rgba(0,242,255,0.3); }
   @keyframes ls-swap-shake { 0% { transform: scale(1.1) rotate(3deg); } 100% { transform: scale(1.1) rotate(-3deg); } }
 
-  .cell-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #fff; z-index: 2; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+  .cell-val { 
+    font-family: 'JetBrains Mono', monospace; 
+    font-size: 11px; /* Smaller font for objects */
+    color: #fff; 
+    z-index: 2; 
+    text-align: center;
+    max-width: 150px; /* Prevent text from spreading too wide */
+    word-break: break-word;
+    line-height: 1.2;
+  }
   .cell-idx { position: absolute; bottom: -22px; font-size: 8px; color: #555; font-family: 'Orbitron', sans-serif; }
-  .pointer-tag { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-family: 'Orbitron', sans-serif; font-size: 8px; color: #ff9d00; white-space: nowrap; animation: ls-bounce 0.5s infinite alternate; }
+  /* Pointer names (like "Sara") should be clearly above */
+  .pointer-tag { 
+    position: absolute; top: -25px; left: 50%; transform: translateX(-50%); 
+    font-family: 'Orbitron'; font-size: 9px; color: #ff9d00; 
+    white-space: nowrap; font-weight: bold;
+  }
   @keyframes ls-bounce { from { transform: translateX(-50%) translateY(0); } to { transform: translateX(-50%) translateY(3px); } }
 
   .scalar-sidebar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); }
@@ -150,6 +169,15 @@ const LogicStructure: React.FC<LogicStructureProps> = ({ frame }) => {
         ([, v]) => !Array.isArray(v) && typeof v !== 'object'
     );
 
+    const formatValue = (val: any) => {
+        if (val === null || val === undefined) return "null";
+        if (typeof val === 'object') {
+            // If it's an object, try to show the 'name', 'id', or just 'Object'
+            return val.name || val.id || val.label || "{...}";
+        }
+        return String(val);
+    };
+
     const actionColor = (a: string) => {
         switch (a) {
             case 'COMPARE': return '#ffaa00';
@@ -193,7 +221,7 @@ const LogicStructure: React.FC<LogicStructureProps> = ({ frame }) => {
                                 className={`array-cell ${isComparing ? 'comparing' : ''} ${isSwapping ? 'swapping' : ''} ${isActive && !isComparing && !isSwapping ? 'active' : ''}`}
                                 style={{ width: `${bubbleSize}px`, height: `${bubbleSize}px`, '--hue': hue } as React.CSSProperties}
                             >
-                                <div className="cell-val">{JSON.stringify(val)}</div>
+                                <div className="cell-val">{formatValue(val)}</div>
                                 <div className="cell-idx">{idx}</div>
                                 {isPointer && <div className="pointer-tag">{metadata.pointerName}</div>}
                             </div>
@@ -229,7 +257,7 @@ const LogicStructure: React.FC<LogicStructureProps> = ({ frame }) => {
                 <div className={`sequence-container ${type === 'STACK' ? 'stack-column' : 'queue-row'}`}>
                     {safeSeq.map((val: any, idx: number) => (
                         <div key={idx} className="seq-node" style={{ animationDelay: `${idx * 0.05}s` }}>
-                            <span className="node-val">{JSON.stringify(val)}</span>
+                            <span className="node-val">{formatValue(val)}</span>
                             {type === 'QUEUE' && idx === 0 && <span className="linear-tag">FRONT</span>}
                             {type === 'QUEUE' && idx === safeSeq.length - 1 && <span className="linear-tag">REAR</span>}
                             {type === 'STACK' && idx === safeSeq.length - 1 && <span className="linear-tag">TOP</span>}
@@ -357,7 +385,7 @@ const LogicStructure: React.FC<LogicStructureProps> = ({ frame }) => {
                             <span className="node-label">{k}</span>
                             <div className="inline-arr">
                                 {(v as any[]).map((item, i) => (
-                                    <span key={i} className="inline-arr-item">{JSON.stringify(item)}</span>
+                                    <span key={i} className="inline-arr-item">{formatValue(item)}</span>
                                 ))}
                             </div>
                         </div>
