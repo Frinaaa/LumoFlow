@@ -25,8 +25,7 @@ export const GitHubSidebar: React.FC = () => {
     const [isConnected, setIsConnected] = useState(false);
     const [repositories, setRepositories] = useState<any[]>([]);
     const [loadingRepos, setLoadingRepos] = useState(false);
-    const [cloudProjects, setCloudProjects] = useState<any[]>([]);
-    const [loadingCloud, setLoadingCloud] = useState(false);
+
     const [gitRemotes, setGitRemotes] = useState<any[]>([]);
     const [loadingGitRemotes, setLoadingGitRemotes] = useState(false);
     const [commitMessage, setCommitMessage] = useState('');
@@ -44,9 +43,6 @@ export const GitHubSidebar: React.FC = () => {
             fetchRepos(token);
         }
 
-        if (user?._id || user?.id) {
-            fetchCloudProjects();
-        }
 
         if (isRepo) {
             fetchGitRemotes();
@@ -97,22 +93,6 @@ export const GitHubSidebar: React.FC = () => {
         }
     };
 
-    const fetchCloudProjects = async () => {
-        const userId = user?._id || user?.id;
-        if (!userId || !(window as any).api?.loadUserProjects) return;
-
-        setLoadingCloud(true);
-        try {
-            const res = await (window as any).api.loadUserProjects(userId);
-            if (res.success) {
-                setCloudProjects(res.projects || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch cloud projects:', error);
-        } finally {
-            setLoadingCloud(false);
-        }
-    };
 
     const fetchGitRemotes = async () => {
         if (!workspacePath || !(window as any).api?.gitRemote) return;
@@ -278,7 +258,7 @@ export const GitHubSidebar: React.FC = () => {
             getHistory().then(commits => setHistory(commits || []));
             fetchGitRemotes();
         }
-        fetchCloudProjects();
+
         const token = localStorage.getItem('github_token');
         if (token) fetchRepos(token);
     };
@@ -585,51 +565,6 @@ export const GitHubSidebar: React.FC = () => {
                 </div>
             )}
 
-            {/* 2. CLOUD PROJECTS SECTION (MongoDB) */}
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid #333' }}>
-                <div style={{ ...styles.sectionTitle, marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>CLOUD PROJECTS (MONGODB)</span>
-                    <i
-                        className={`fa-solid fa-arrows-rotate ${loadingCloud ? 'fa-spin' : ''}`}
-                        style={{ cursor: 'pointer', color: '#888' }}
-                        onClick={fetchCloudProjects}
-                    ></i>
-                </div>
-
-                {loadingCloud ? (
-                    <div style={{ padding: '10px 0', textAlign: 'center', color: '#858585' }}>
-                        <i className="fa-solid fa-spinner fa-spin"></i> Loading...
-                    </div>
-                ) : cloudProjects.length === 0 ? (
-                    <div style={{ padding: '10px 0', fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
-                        No cloud projects found. Save code to sync here.
-                    </div>
-                ) : (
-                    <div style={styles.repoList}>
-                        {cloudProjects.map((project: any) => (
-                            <div
-                                key={project._id}
-                                style={{ ...styles.repoItem, background: 'rgba(188, 19, 254, 0.02)' }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(188, 19, 254, 0.05)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(188, 19, 254, 0.02)'}
-                            >
-                                <div style={styles.repoHeader}>
-                                    <div style={styles.repoName}>
-                                        <i className="fa-solid fa-cloud" style={{ marginRight: '8px', color: '#bc13fe', width: '16px', textAlign: 'center' }}></i>
-                                        {project.projectName}
-                                    </div>
-                                    <div style={{ fontSize: '10px', color: '#888' }}>
-                                        {project.files?.length || 0} files
-                                    </div>
-                                </div>
-                                <div style={{ fontSize: '11px', color: '#666' }}>
-                                    Language: {project.language || 'Javascript'}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
 
             {/* 3. GITHUB REPOSITORIES SECTION */}
             <div style={{ padding: '12px 20px' }}>
