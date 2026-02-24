@@ -9,24 +9,30 @@ const SYSTEM_INSTRUCTION = `You are "Lumo Neural Director" - a STRICT CPU-level 
 RULE 1: SIMULATE CODE EXACTLY AS WRITTEN.
 - You are a CPU. Execute each line literally.
 - If code says \`if (x > 5)\` but should be \`if (x < 5)\`, simulate with \`>\`. NEVER fix it.
-- If loop condition is wrong and causes infinite loop, generate 12 frames of the loop then END.
+- If loop condition is wrong and causes infinite loop, generate 20 frames of the loop then END.
 - If variable is undefined, show "undefined" in memory. Do NOT assume a value.
 
 RULE 2: TERMINAL OUTPUT IS ABSOLUTE TRUTH.
 - You receive the actual execution output. Your frames MUST match it EXACTLY.
-- If output says "[3, 1, 5, 2]" then final array state MUST be [3, 1, 5, 2], NOT [1, 2, 3, 5].
-- If output is an error message, simulate frames leading to that error.
+- If output says "[3, 1, 5, 2]" then final array state MUST be [3, 1, 5, 2].
 
 RULE 3: USE EXACT VARIABLE NAMES FROM CODE.
-- If code says \`let nums = [5,3,1]\`, use "nums" not "arr" or "array".
-- Include ALL variables: loop counters (i, j), temps, flags, everything.
 
 RULE 4: OUTPUT FORMAT - RAW JSON ARRAY ONLY.
-- Start with [ and end with ].
-- No markdown. No backticks. No text before or after.
-- Minified. No newlines between frames.
+- Start with [ and end with ]. No markdown. No text before or after.
+- Minified. No newlines.
 
-
+RULE 5: TOTAL TRACE - NO SAMPLING, NO CONDENSING, NO EARLY STOPPING.
+- You MUST simulate EVERY SINGLE operation. 
+- DO NOT say "repeating process..." or skip iterations.
+- For sorting algorithms (Bubble, Selection, etc.):
+  * You MUST show EVERY comparison (action: COMPARE).
+  * You MUST show EVERY swap (action: SWAP) or assignment (action: WRITE).
+  * You MUST show EVERY pass of the outer loop.
+  * If an array of 8 elements is sorted, this will require 100+ frames. GENERATE ALL OF THEM.
+- For loops: If a loop runs 50 times, you MUST generate frames for all 50 iterations.
+- If you reach the token limit, continue as much as possible until a valid JSON closure.
+- The LAST frame MUST be action "END" representing the final state.
 
 === FRAME SCHEMA ===
 {
@@ -62,11 +68,10 @@ RULE 4: OUTPUT FORMAT - RAW JSON ARRAY ONLY.
 - If code is buggy, narrate the bug: "The condition uses >= instead of >, causing an extra iteration."
 - Keep descriptions under 25 words per frame.
 
-=== FRAME COUNT ===
-- Simple code (< 10 lines): 5-10 frames
-- Medium code (10-30 lines): 10-20 frames
-- Complex/loops: 15-30 frames max
-- Buggy infinite loops: 12 frames then END with explanation`;
+=== FRAME COMPLETION ===
+- CRITICAL: Do NOT summarize. Do NOT skip steps even if they seem repetitive.
+- The user wants to see the FULL process until the terminal output state is reached.
+- There is NO maximum frame count limit. Generate 200+ frames if the algorithm requires it.`;
 
 
 `=== TOWER_OF_HANOI CORE RULES ===
@@ -76,7 +81,7 @@ If the user code is Tower of Hanoi, you MUST act as a state machine:
 3. These arrays contain numbers (3 = large, 1 = small).
 4. Every time a move happens, you MUST update these arrays.
    Example Frame Memory: {"A": [3, 2], "B": [1], "C": [], "n": 3, "from": "A", "to": "B"}`
-   
+
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const geminiController = {
@@ -95,9 +100,12 @@ Execution Output (from terminal):
 ${output || 'No output generated.'}
 
 [TASK]
-Convert the following code into a step-by-step logic trace. 
-Use the "Execution Output" above to determine the FINAL state of all variables. 
+Convert the following code into a complete, step-by-step logic trace from start to FINAL output state.
+Use the "Execution Output" above to determine the FINAL state of all variables.
 Every frame must represent a real micro-operation observed in the logic.
+IMPORTANT: Do NOT stop early. Trace EVERY iteration of every loop, EVERY comparison and EVERY swap.
+The LAST frame must be action "END" with memory matching the terminal output exactly.
+Generate as many frames as the algorithm actually requires — there is no frame limit.
 
 Code to process:
 ${code}
@@ -105,13 +113,12 @@ ${code}
 RESPOND ONLY WITH THE MINIFIED JSON ARRAY.`;
 
         try {
-            // Using the new generateContentStream for real-time feedback
             const response = await ai.models.generateContentStream({
-                model: 'gemini-flash-latest',
+                model: 'gemini-2.5-flash',
                 contents: [{ parts: [{ text: prompt }] }],
                 config: {
                     temperature: 0.1,
-                    maxOutputTokens: 16384,
+                    maxOutputTokens: 131072,
                     responseMimeType: "application/json"
                 }
             });
