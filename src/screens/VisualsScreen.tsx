@@ -361,9 +361,9 @@ const VisualsScreen: React.FC = () => {
                 /* SIDEBAR (reuse dashboard styles) */
                 .sidebar { width: 220px; background: #080810; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0; flex-shrink: 0; }
                 .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px; }
-                .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #bc13fe, #7010aa); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
-                .sidebar-brand h2 { margin: 0; font-size: 1rem; font-weight: 800; color: #fff; }
-                .sidebar-brand h2 span { color: #bc13fe; }
+                .logo-icon { width: 36px; height: 36px; background: rgba(0, 242, 255, 0.08); border: 1.5px solid rgba(0, 242, 255, 0.35); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #00f2ff; font-size: 15px; box-shadow: 0 0 12px rgba(0, 242, 255, 0.2); }
+                .sidebar-brand h2 { margin: 0; font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: 1px; }
+                .sidebar-brand h2 span { color: #00f2ff; }
                 nav { display: flex; flex-direction: column; gap: 4px; padding: 0 12px; flex: 1; }
                 .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: none; border: none; color: #666; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; text-align: left; width: 100%; }
                 .nav-item:hover { background: rgba(255,255,255,0.05); color: #ccc; }

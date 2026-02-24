@@ -110,12 +110,16 @@ const VisualPlaybackModal: React.FC<VisualPlaybackModalProps> = ({ isOpen, onClo
                 {/* HEADER */}
                 <header className="vpm-header">
                     <div className="vpm-title-area">
-                        <div className="vpm-icon-wrap">
-                            <i className={`fa-solid ${typeIcon[viz.type] || 'fa-eye'}`}></i>
+                        <div className="vpm-brand">
+                            <div className="vpm-brand-icon">
+                                <i className="fa-solid fa-bolt"></i>
+                            </div>
+                            <span className="vpm-brand-name">LUMO<span>FLOW</span></span>
                         </div>
+                        <div className="vpm-title-divider"></div>
                         <div>
                             <h2 className="vpm-title">{viz.title}</h2>
-                            <div className="vpm-subtitle">{viz.type} · {frames.length} frames</div>
+                            <div className="vpm-subtitle"><i className={`fa-solid ${typeIcon[viz.type] || 'fa-eye'}`} style={{ marginRight: '5px' }}></i>{viz.type} · {frames.length} frames</div>
                         </div>
                     </div>
                     <div className="vpm-header-actions">
@@ -217,14 +221,27 @@ const VisualPlaybackModal: React.FC<VisualPlaybackModalProps> = ({ isOpen, onClo
                     flex-shrink: 0;
                 }
                 .vpm-title-area { display: flex; align-items: center; gap: 18px; }
-                .vpm-icon-wrap {
-                    width: 48px; height: 48px; border-radius: 14px;
-                    background: rgba(188,19,254,0.15); border: 1px solid rgba(188,19,254,0.3);
+                .vpm-brand { display: flex; align-items: center; gap: 10px; }
+                .vpm-brand-icon {
+                    width: 40px; height: 40px; border-radius: 50%;
+                    background: rgba(0, 242, 255, 0.08);
+                    border: 1.5px solid rgba(0, 242, 255, 0.35);
                     display: flex; align-items: center; justify-content: center;
-                    color: #bc13fe; font-size: 1.3rem;
+                    color: #00f2ff; font-size: 16px;
+                    box-shadow: 0 0 14px rgba(0, 242, 255, 0.25);
+                }
+                .vpm-brand-name {
+                    font-family: 'Orbitron', sans-serif; font-weight: 800;
+                    font-size: 15px; color: #fff; letter-spacing: 1px;
+                }
+                .vpm-brand-name span { color: #00f2ff; }
+                .vpm-title-divider {
+                    width: 1px; height: 36px;
+                    background: rgba(255,255,255,0.1);
+                    flex-shrink: 0;
                 }
                 .vpm-title {
-                    margin: 0; font-size: 1.4rem; color: #fff;
+                    margin: 0; font-size: 1.2rem; color: #fff;
                     font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
                 }
                 .vpm-subtitle { font-size: 11px; color: #555; margin-top: 3px; font-family: 'Orbitron'; letter-spacing: 1px; }
