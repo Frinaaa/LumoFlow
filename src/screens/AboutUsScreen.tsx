@@ -1,204 +1,150 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AboutUsScreen.css';
-
-// --- Updated Data for LumoFlow ---
-const officials = [
-  { name: 'Ethan Carter', role: 'Founder & CEO', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ethan' },
-  { name: 'Sophia Bennett', role: 'Lead Architect', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophia' },
-  { name: 'Liam Harper', role: 'AI Researcher', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam' },
-];
-
-const values = [
-  {
-    icon: 'fa-shield-halved',
-    title: 'Security',
-    description: 'Local-first data processing.',
-    fullContent: "LumoFlow ensures that your source code and debug sessions are processed locally. We prioritize end-to-end encryption for any cloud-synced settings, safeguarding your intellectual property."
-  },
-  {
-    icon: 'fa-bolt',
-    title: 'Efficiency',
-    description: 'Smart detection, faster fixes.',
-    fullContent: "Our AI-driven engine identifies bottlenecks in your logic before you even run the code. By visualizing execution flow, we reduce debugging time by up to 60%."
-  },
-  {
-    icon: 'fa-users',
-    title: 'Collaboration',
-    description: 'Shared insights for teams.',
-    fullContent: "Export animated execution flows to share with your team. LumoFlow makes code reviews interactive and educational rather than just static text comparisons."
-  },
-  {
-    icon: 'fa-microscope',
-    title: 'Transparency',
-    description: 'Deep dive into execution.',
-    fullContent: "No more 'black box' execution. See exactly how variables update in real-time with step-by-step neural link visualizations."
-  }
-];
-
-const stories = [
-  {
-    quote: "'LumoFlow found a race condition in minutes.' — Alex",
-    image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=500&auto=format&fit=crop',
-    fullStory: "Alex was struggling with a complex asynchronous bug in a Node.js project. Using LumoFlow's visual debugger, the AI highlighted the exact moment two functions overlapped, saving days of manual logging.",
-  },
-  {
-    quote: "'Perfect for onboarding new junior devs.' — Sarah",
-    image: 'https://images.unsplash.com/photo-1525373612132-b3e277947ef0?q=80&w=500&auto=format&fit=crop',
-    fullStory: "Sarah's team used LumoFlow to visualize their legacy codebase. New hires could 'watch' the code execute, making the complex architecture understandable within hours instead of weeks.",
-  },
-];
+import frinaImg from '../assets/frina.png'; 
 
 const AboutUsScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [modalData, setModalData] = useState<any>(null);
-
-  const closeModal = () => setModalData(null);
 
   return (
-    <div className="about-screen-wrapper">
-      <header className="about-header">
-        <div className="header-left-content">
-          <button className="back-nav-btn-icon" onClick={() => navigate(-1)} title="Go Back">
-            <i className="fa-solid fa-arrow-left"></i>
-          </button>
-          <div className="app-brand small" onClick={() => navigate('/login')} style={{ cursor: 'pointer' }}>
-            <div className="app-brand-icon">
-              <i className="fa-solid fa-bolt"></i>
-            </div>
-            <h1 className="app-brand-text">
-              LUMO<span className="app-brand-highlight">FLOW</span>
-            </h1>
-          </div>
-        </div>
+    <div className="about-modern-wrapper">
+      {/* 1. Header (Floating) */}
+      <header className="modern-header">
+        <button className="icon-btn-back" onClick={() => navigate(-1)}>
+          <i className="fa-solid fa-arrow-left"></i>
+        </button>
+        <span className="page-title">About Us</span>
+        <div className="placeholder"></div> {/* Balances the flex layout */}
       </header>
 
-      <div className="about-scroll-container">
-        {/* Hero Section */}
-        <section className="about-hero-section">
-          <div className="hero-content">
-            <div className="hero-badge">AI-POWERED DEBUGGING</div>
-            <h1 className="about-main-title">Code Smarter, Resolve Faster.</h1>
-            <p className="about-subtitle">
-              LumoFlow is redefining the debugging experience by bridging the gap between raw code and human understanding through advanced AI and real-time visual execution.
+      <div className="about-scroll-content">
+        
+        {/* 2. Hero Section (Text Left, Image Right) */}
+        <section className="section-hero">
+          <div className="hero-text-col">
+            <div className="accent-bar"></div>
+            <h1>Empowering <span className="highlight">Neural</span><br />Coding Workflows</h1>
+            <p>
+              In the rapidly evolving world of development, having seamless logic visualization is crucial. 
+              LumoFlow bridges the gap between raw syntax and human understanding with high-fidelity 3D tracing.
             </p>
           </div>
-          <div className="hero-visual-wrapper">
-            <div className="hero-arch-visual">
-              <i className="fa-solid fa-brain-circuit neon-pulse-icon"></i>
-              <div className="visual-rings">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
+          <div className="hero-img-col">
+            
+            <img 
+              src={frinaImg} 
+              alt="Developer" 
+              className="hero-img"
+            />
+          </div>
+        </section>
+
+        {/* 3. Stats Row */}
+        <section className="section-stats">
+          <div className="stat-item">
+            <h2>55K+</h2>
+            <p>Lines Analyzed</p>
+          </div>
+          <div className="stat-item">
+            <h2>7K+</h2>
+            <p>Bugs Squashed</p>
+          </div>
+          <div className="stat-item">
+            <h2>1K+</h2>
+            <p>Daily Users</p>
+          </div>
+          <div className="stat-item">
+            <h2>4+</h2>
+            <p>Supported Langs</p>
+          </div>
+        </section>
+
+        {/* 4. Why Choose Us (Cards) */}
+        <section className="section-features">
+          <div className="section-head">
+            <h3>Why Choose LumoFlow</h3>
+            <p>Elevate your debugging experience</p>
+          </div>
+          <div className="feature-grid">
+            <div className="feature-card">
+              <div className="icon-circle"><i className="fa-solid fa-shield-halved"></i></div>
+              <h4>Local Security</h4>
+              <p>Your code never leaves your machine. We prioritize local-first processing.</p>
+            </div>
+            <div className="feature-card">
+              <div className="icon-circle"><i className="fa-solid fa-layer-group"></i></div>
+              <h4>Scalability</h4>
+              <p>From snippets to massive monorepos, our engine scales with your logic.</p>
+            </div>
+            <div className="feature-card">
+              <div className="icon-circle"><i className="fa-solid fa-headset"></i></div>
+              <h4>AI Support</h4>
+              <p>Our neural director is available 24/7 to explain complex algorithms.</p>
             </div>
           </div>
         </section>
 
-        <div className="about-content-inner">
-          {/* Officials Section */}
-          <section className="about-section">
-            <h2 className="about-section-title">The Visionaries</h2>
-            <div className="officials-row">
-              {officials.map((off, i) => (
-                <div key={i} className="official-card">
-                  <div className="official-avatar-wrapper">
-                    <img src={off.image} alt={off.name} />
-                  </div>
-                  <h3>{off.name}</h3>
-                  <p className="official-role">{off.role}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Values Section */}
-          <section className="about-section">
-            <h2 className="about-section-title">Our Core Values</h2>
-            <div className="values-grid">
-              {values.map((v, i) => (
-                <div key={i} className="value-box-card" onClick={() => setModalData({ ...v, type: 'value' })}>
-                  <div className="value-icon-box">
-                    <i className={`fa-solid ${v.icon}`}></i>
-                  </div>
-                  <h4>{v.title}</h4>
-                  <p>{v.description}</p>
-                  <div className="value-footer">
-                    <span className="learn-more">EXPLORE <i className="fa-solid fa-plus"></i></span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Stories Section */}
-          <section className="about-section">
-            <h2 className="about-section-title">Impact Stories</h2>
-            <div className="stories-grid">
-              {stories.map((s, i) => (
-                <div key={i} className="story-image-card" onClick={() => setModalData({ ...s, type: 'story' })}>
-                  <div className="story-img-container">
-                    <img src={s.image} alt="story" />
-                  </div>
-                  <div className="story-overlay">
-                    <div className="quote-mark"><i className="fa-solid fa-quote-left"></i></div>
-                    <p>{s.quote}</p>
-                    <div className="read-story">READ FULL STORY <i className="fa-solid fa-arrow-right-long"></i></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <footer className="about-footer">
-            <div className="footer-line"></div>
-            <p>© 2026 LumoFlow Project. Empowering developers worldwide.</p>
-          </footer>
-        </div>
-      </div>
-
-      {/* Modal Overlay */}
-      {modalData && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-card premium" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={closeModal}><i className="fa-solid fa-xmark"></i></button>
-
-            <div className="modal-inner">
-              {modalData.type === 'story' ? (
-                <div className="modal-story-content">
-                  <div className="modal-img-wrapper">
-                    <img src={modalData.image} className="modal-hero-img" alt="Success Story" />
-                    <div className="img-overlay-accent"></div>
-                  </div>
-                  <div className="modal-header-box">
-                    <span className="modal-label">SUCCESS STORY</span>
-                    <h2>Community Insight</h2>
-                  </div>
-                  <p className="modal-quote">{modalData.quote}</p>
-                  <div className="modal-divider"></div>
-                  <p className="modal-text">{modalData.fullStory}</p>
-                </div>
-              ) : (
-                <div className="modal-value-content">
-                  <div className="modal-icon-container">
-                    <div className="modal-icon-circle">
-                      <i className={`fa-solid ${modalData.icon}`}></i>
-                    </div>
-                  </div>
-                  <div className="modal-header-box centered">
-                    <span className="modal-label">CORE VALUE</span>
-                    <h2>{modalData.title}</h2>
-                  </div>
-                  <div className="modal-divider centered"></div>
-                  <p className="modal-text large">{modalData.fullContent}</p>
-                </div>
-              )}
-            </div>
-
-            <button className="modal-action-btn premium" onClick={closeModal}>UNDERSTOOD</button>
+        {/* 5. How It Works (Image Left, Steps Right) */}
+        <section className="section-steps">
+          <div className="steps-img-col">
+            <img 
+              src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop" 
+              alt="Workflow" 
+              className="steps-img"
+            />
           </div>
-        </div>
-      )}
+          <div className="steps-text-col">
+            <span className="sub-label">HOW IT WORKS</span>
+            <h3>Use only with 4 easy steps</h3>
+            <p className="desc">Discover the effortless way to handle complex logic.</p>
+
+            <ul className="steps-list">
+              <li>
+                <div className="step-num">1</div>
+                <div className="step-info">
+                  <h5>Open Project</h5>
+                  <p>Open any folder or file to begin your session instantly.</p>
+                </div>
+              </li>
+              <li>
+                <div className="step-num">2</div>
+                <div className="step-info">
+                  <h5>Analyze Code</h5>
+                  <p>Let the AI scan your syntax for structural patterns.</p>
+                </div>
+              </li>
+              <li>
+                <div className="step-num">3</div>
+                <div className="step-info">
+                  <h5>Generate Visuals</h5>
+                  <p>Watch your logic come to life in the 3D theater.</p>
+                </div>
+              </li>
+              <li>
+                <div className="step-num">4</div>
+                <div className="step-info">
+                  <h5>Fix & Optimize</h5>
+                  <p>Identify bottlenecks and apply AI-suggested fixes.</p>
+                </div>
+              </li>
+            </ul>
+            
+            <button className="btn-get-started" onClick={() => navigate('/editor')}>
+              Get Started
+            </button>
+          </div>
+        </section>
+
+        {/* 6. Partners Strip */}
+        <section className="section-partners">
+          
+          <i className="fa-brands fa-js"></i>
+          
+        </section>
+
+        
+
+      </div>
     </div>
   );
 };
