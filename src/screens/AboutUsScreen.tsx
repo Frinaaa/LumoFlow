@@ -1,7 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AboutUsScreen.css';
-import frinaImg from '../assets/frina.png'; 
+import frinaImg from '../assets/frina.png';
+import workflowImg from '../assets/workflow.png';
+import ajayaImg from '../assets/ajaya.png';
 
 const AboutUsScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -18,22 +20,21 @@ const AboutUsScreen: React.FC = () => {
       </header>
 
       <div className="about-scroll-content">
-        
+
         {/* 2. Hero Section (Text Left, Image Right) */}
         <section className="section-hero">
           <div className="hero-text-col">
             <div className="accent-bar"></div>
             <h1>Empowering <span className="highlight">Neural</span><br />Coding Workflows</h1>
             <p>
-              In the rapidly evolving world of development, having seamless logic visualization is crucial. 
+              In the rapidly evolving world of development, having seamless logic visualization is crucial.
               LumoFlow bridges the gap between raw syntax and human understanding with high-fidelity 3D tracing.
             </p>
           </div>
           <div className="hero-img-col">
-            
-            <img 
-              src={frinaImg} 
-              alt="Developer" 
+            <img
+              src={frinaImg}
+              alt="Developer"
               className="hero-img"
             />
           </div>
@@ -56,6 +57,35 @@ const AboutUsScreen: React.FC = () => {
           <div className="stat-item">
             <h2>4+</h2>
             <p>Supported Langs</p>
+          </div>
+        </section>
+
+        {/* PROJECT GUIDE Section */}
+        <section className="section-guide">
+          <div className="section-head">
+            <span className="guide-label">PROJECT GUIDE</span>
+            <h3>How LumoFlow Works</h3>
+            <p>A complete visual walkthrough of the LumoFlow pipeline</p>
+          </div>
+          <div className="guide-img-wrap">
+            <div className="guide-img-right">
+              <img src={ajayaImg} alt="LumoFlow Project Guide" className="guide-img" />
+              <div className="guide-appreciation">
+                <strong>Ajaya Kumar</strong>
+                "Code should be felt, not just read."
+              </div>
+            </div>
+            <div className="guide-img-left">
+              <p style={{ color: '#777', fontSize: '0.95rem', lineHeight: 1.7, maxWidth: 480 }}>
+                LumoFlow was built to make complex code understandable at a glance.
+                From real-time trace visualizations to AI-assisted debugging, every feature
+                is designed to illuminate your workflow — step by step.
+              </p>
+              <div className="guide-caption">
+                <i className="fa-solid fa-circle-info"></i>
+                Full end-to-end workflow — from code input to visual trace output
+              </div>
+            </div>
           </div>
         </section>
 
@@ -87,9 +117,9 @@ const AboutUsScreen: React.FC = () => {
         {/* 5. How It Works (Image Left, Steps Right) */}
         <section className="section-steps">
           <div className="steps-img-col">
-            <img 
-              src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop" 
-              alt="Workflow" 
+            <img
+              src={workflowImg}
+              alt="Workflow"
               className="steps-img"
             />
           </div>
@@ -128,7 +158,7 @@ const AboutUsScreen: React.FC = () => {
                 </div>
               </li>
             </ul>
-            
+
             <button className="btn-get-started" onClick={() => navigate('/editor')}>
               Get Started
             </button>
@@ -137,12 +167,12 @@ const AboutUsScreen: React.FC = () => {
 
         {/* 6. Partners Strip */}
         <section className="section-partners">
-          
+
           <i className="fa-brands fa-js"></i>
-          
+
         </section>
 
-        
+
 
       </div>
     </div>
