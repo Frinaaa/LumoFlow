@@ -82,7 +82,14 @@ If the user code is Tower of Hanoi, you MUST act as a state machine:
 4. Every time a move happens, you MUST update these arrays.
    Example Frame Memory: {"A": [3, 2], "B": [1], "C": [], "n": 3, "from": "A", "to": "B"}`
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let ai = null;
+function getAI() {
+    if (!ai) {
+        if (!process.env.GEMINI_API_KEY) return null;
+        ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
+    }
+    return ai;
+}
 
 const geminiController = {
     async streamVisuals(event, { code, output }) {
@@ -112,8 +119,14 @@ ${code}
 
 RESPOND ONLY WITH THE MINIFIED JSON ARRAY.`;
 
+        const aiClient = getAI();
+        if (!aiClient) {
+            webContents.send('ai:visual-error', "Gemini API Client could not be initialized. Check your API Key.");
+            return;
+        }
+
         try {
-            const response = await ai.models.generateContentStream({
+            const response = await aiClient.models.generateContentStream({
                 model: 'gemini-2.5-flash',
                 contents: [{ parts: [{ text: prompt }] }],
                 config: {

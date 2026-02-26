@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, shell, protocol, dialog } = require('electron');
+const url = require('url');
 const isDev = require('electron-is-dev');
-const isProd = process.env.NODE_ENV === 'production';
-const actualIsDev = isDev && !isProd;
+const isProd = process.env.NODE_ENV === 'production' || app.isPackaged;
+const actualIsDev = isDev && !isProd && !app.isPackaged;
 const path = require('path');
 const mongoose = require('mongoose');
 const axios = require('axios');
@@ -15,10 +16,47 @@ const visualizationController = require('./controllers/visualizationController')
 const copilotController = require('./controllers/copilotController');
 const voiceController = require('./controllers/voiceController');
 const geminiController = require('./controllers/geminiController');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const logPath = path.join(require('os').homedir(), 'lumoflow-debug.log');
+function log(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try {
+    fs.appendFileSync(logPath, line);
+  } catch (e) {
+    // Fallback to original write sync if possible
+    process.stderr.write('Logging failed: ' + e.message + '\n');
+  }
+}
+fs.writeFileSync(logPath, '--- APP STARTUP ---\n');
+
+// 🟢 OVERRIDE CONSOLE GLOBALLY
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = function (...args) {
+  const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+  log(msg);
+  originalLog.apply(console, args);
+};
+
+console.error = function (...args) {
+  const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+  log('❌ ERROR: ' + msg);
+  originalError.apply(console, args);
+};
+
+// Load environment variables
+const envPath = app.isPackaged
+  ? path.join(path.dirname(process.execPath), '.env')
+  : path.join(__dirname, '../.env');
+
+require('dotenv').config({ path: envPath });
+console.log(`📂 Loading .env from: ${envPath}`);
+if (!fs.existsSync(envPath)) {
+  console.log(`⚠️ .env file NOT FOUND at ${envPath}`);
+}
 
 console.log("--- STARTUP CHECK ---");
-console.log("Check: Token exists?", !!process.env.GITHUB_TOKEN);
+console.log("Check: Token exists? " + !!process.env.GITHUB_TOKEN);
 console.log("---------------------");
 
 let mainWindow;
@@ -139,7 +177,12 @@ async function handleGitHubOAuth(code) {
 
 const createWindow = async () => {
   const dbURI = process.env.MONGO_URI || 'mongodb://localhost:27017/lumoflow';
-  await mongoose.connect(dbURI);
+  console.log('🔌 Connecting to MongoDB...');
+  mongoose.connect(dbURI).then(() => {
+    console.log('✅ Connected to MongoDB at ' + dbURI.split('@').pop());
+  }).catch(err => {
+    console.error('❌ MongoDB Connection Error:', err.message);
+  });
 
   const newWindow = new BrowserWindow({
     width: 1200, height: 800,
@@ -147,10 +190,10 @@ const createWindow = async () => {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      devTools: actualIsDev, // Enable devTools in development
+      devTools: true, // Temporarily enabled for debugging production blank screen
       enableRemoteModule: false,
-      sandbox: false, // Disable sandbox to help with preload loading
-      webSecurity: !actualIsDev // Disable web security in dev for easier debugging
+      sandbox: false,
+      webSecurity: false // Temporarily disabled for better debugging
     },
     titleBarStyle: 'hidden',
     icon: path.join(__dirname, 'assets/icon.png'),
@@ -198,9 +241,56 @@ const createWindow = async () => {
     callback(0); // 0 = verification success
   });
 
-  const startUrl = actualIsDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
-  newWindow.loadURL(startUrl);
-  newWindow.once('ready-to-show', () => newWindow.show());
+  // LOG LOAD FAILURES
+  newWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    log(`❌ LOAD FAILED: ${errorDescription} (${errorCode})`);
+    log(`Target URL: ${validatedURL}`);
+  });
+
+  if (actualIsDev) {
+    log('🌐 Loading development URL: http://localhost:5173');
+    newWindow.loadURL('http://localhost:5173');
+  } else {
+    // Standard Electron production path resolution
+    const appPath = app.getAppPath();
+    log('📦 App Path Contents: ' + fs.readdirSync(appPath).join(', '));
+    try {
+      if (fs.existsSync(path.join(appPath, 'dist'))) {
+        log('📦 Dist Folder Contents: ' + fs.readdirSync(path.join(appPath, 'dist')).join(', '));
+      }
+    } catch (e) { }
+
+    const indexPath = path.join(appPath, 'dist', 'index.html');
+
+    log('📦 App Path: ' + appPath);
+    log('📄 Target Path: ' + indexPath);
+
+    if (fs.existsSync(indexPath)) {
+      const formattedUrl = url.format({
+        pathname: indexPath,
+        protocol: 'file:',
+        slashes: true
+      });
+      log('🚀 Loading URL: ' + formattedUrl);
+      newWindow.loadURL(formattedUrl);
+    } else {
+      log('❌ index.html NOT FOUND at: ' + indexPath);
+      // Fallback check
+      const fallback = path.join(__dirname, '..', 'dist', 'index.html');
+      if (fs.existsSync(fallback)) {
+        log('🔄 Fallback found: ' + fallback);
+        newWindow.loadFile(fallback);
+      } else {
+        const errorHtml = `<html><body style="background:#1e1e1e;color:white;padding:20px;"><h1>Fatal Error</h1><p>index.html not found.<br>Checked: ${indexPath}<br>Checked: ${fallback}</p></body></html>`;
+        newWindow.loadURL(`data:text/html,${errorHtml}`);
+      }
+    }
+  }
+
+  newWindow.once('ready-to-show', () => {
+    console.log('✨ Window ready to show');
+    newWindow.show();
+  });
 
   // Handle any uncaught exceptions
   newWindow.webContents.on('crashed', () => {

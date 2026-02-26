@@ -75,7 +75,7 @@ const authController = {
       };
     } catch (err) {
       console.error(`❌ LOGIN ERROR:`, err);
-      return { success: false, msg: 'Login error' };
+      return { success: false, msg: 'Login error: ' + err.message };
     }
   },
 

@@ -70,9 +70,16 @@
   "build": {
     "appId": "com.lumoflow.app",
     "productName": "LumoFlow",
+    "asar": true,
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
     "win": {
       "icon": "build/icon.png"
     },
