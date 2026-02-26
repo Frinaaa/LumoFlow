@@ -69,13 +69,18 @@ interface Window {
     gitClone: (data: { url: string; targetPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
     gitAdd: (data: { files: string[]; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
     gitCommit: (data: { message: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
-    gitPush: (data: { remote?: string; branch?: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
-    gitPull: (data: { remote?: string; branch?: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitPush: (data: { remote?: string; branch?: string; repoPath?: string; token?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitPull: (data: { remote?: string; branch?: string; repoPath?: string; token?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
     gitCheckout: (data: { branch: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
     gitCreateBranch: (data: { branch: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
     gitLog: (data: { limit?: number; repoPath?: string }) => Promise<{ success: boolean; commits?: Array<{ hash: string; message: string }>; error?: string }>;
     gitDiff: (data: { file?: string; repoPath?: string }) => Promise<{ success: boolean; diff?: string; error?: string }>;
     gitRemote: (data: { action: 'add' | 'remove' | 'list'; name?: string; url?: string; repoPath?: string }) => Promise<{ success: boolean; remotes?: Array<{ name: string; url: string }>; message?: string; error?: string }>;
+    gitConfig: (data: { key: string; value: string; repoPath?: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
+    gitAheadBehind: (data: { repoPath: string }) => Promise<{ success: boolean; ahead?: number; behind?: number; error?: string }>;
+    gitStageFile: (data: { file: string; repoPath: string }) => Promise<{ success: boolean; error?: string }>;
+    gitUnstageFile: (data: { file: string; repoPath: string }) => Promise<{ success: boolean; error?: string }>;
+    gitDiscardFile: (data: { file: string; repoPath: string }) => Promise<{ success: boolean; error?: string }>;
 
     // --- System ---
     getAppInfo: () => Promise<any>;

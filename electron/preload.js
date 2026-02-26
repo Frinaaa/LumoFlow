@@ -92,6 +92,10 @@ contextBridge.exposeInMainWorld('api', {
   gitDiff: (data) => ipcRenderer.invoke('git:diff', data).catch(err => ({ success: false, error: err.message })),
   gitRemote: (data) => ipcRenderer.invoke('git:remote', data).catch(err => ({ success: false, error: err.message })),
   gitConfig: (data) => ipcRenderer.invoke('git:config', data).catch(err => ({ success: false, error: err.message })),
+  gitAheadBehind: (data) => ipcRenderer.invoke('git:ahead-behind', data).catch(err => ({ success: true, ahead: 0, behind: 0 })),
+  gitStageFile: (data) => ipcRenderer.invoke('git:stageFile', data).catch(err => ({ success: false, error: err.message })),
+  gitUnstageFile: (data) => ipcRenderer.invoke('git:unstageFile', data).catch(err => ({ success: false, error: err.message })),
+  gitDiscardFile: (data) => ipcRenderer.invoke('git:discardFile', data).catch(err => ({ success: false, error: err.message })),
 
   // Copilot AI
   copilotChat: (data) => ipcRenderer.invoke('copilot:chat', data),

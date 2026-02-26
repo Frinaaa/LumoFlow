@@ -892,23 +892,146 @@ app.on('ready', () => {
     });
     console.log('✅ Registered: git:commit');
 
-    ipcMain.handle('git:push', async (event, { remote, branch, repoPath }) => {
+    ipcMain.handle('git:push', async (event, { remote, branch, repoPath, token }) => {
       return new Promise((resolve) => {
         try {
           const safePath = resolveSafePath(repoPath);
-          // FIX: Added -u to set upstream tracking, otherwise subsequent pulls fail
           const targetRemote = remote || 'origin';
-          const targetBranch = branch || 'main';
-          const cmd = `git push -u ${targetRemote} ${targetBranch}`;
+          const targetBranch = branch || '';
 
-          console.log(`Executing: ${cmd}`);
+          // First get the current branch if not specified
+          const getBranch = targetBranch
+            ? Promise.resolve(targetBranch)
+            : new Promise((res) => {
+              exec('git branch --show-current', { cwd: safePath }, (err, stdout) => {
+                const detected = stdout?.trim();
+                if (detected) {
+                  res(detected);
+                } else {
+                  // Fallback: try symbolic-ref for detached HEAD or older git
+                  exec('git rev-parse --abbrev-ref HEAD', { cwd: safePath }, (err2, stdout2) => {
+                    res(stdout2?.trim() || 'HEAD');
+                  });
+                }
+              });
+            });
 
-          exec(cmd, { cwd: safePath }, (error, stdout, stderr) => {
-            if (error) {
-              // Send back stderr because git often puts status info there
-              resolve({ success: false, error: stderr || error.message });
+          getBranch.then((branchName) => {
+            // If token provided, temporarily set credential helper to inject token
+            const pushWithAuth = () => {
+              if (token) {
+                // Get remote URL and inject token
+                exec(`git remote get-url ${targetRemote}`, { cwd: safePath }, (err, remoteUrl) => {
+                  if (err) {
+                    resolve({ success: false, error: 'Could not get remote URL: ' + (err.message || '') });
+                    return;
+                  }
+                  const url = remoteUrl.trim();
+                  let authUrl = url;
+                  // Inject token into HTTPS URL
+                  if (url.startsWith('https://')) {
+                    // Strip any existing credentials from URL first
+                    const cleanUrl = url.replace(/https:\/\/[^@]+@/, 'https://');
+                    authUrl = cleanUrl.replace('https://', `https://${token}@`);
+                  }
+
+                  const cmd = `git push -u "${authUrl}" ${branchName}`;
+                  console.log(`Executing git push with token auth to branch: ${branchName}`);
+
+                  exec(cmd, { cwd: safePath, timeout: 60000 }, (error, stdout, stderr) => {
+                    if (error) {
+                      // Clean token from error messages
+                      const cleanError = (stderr || error.message || '').replace(new RegExp(token, 'g'), '***');
+                      resolve({ success: false, error: cleanError });
+                    } else {
+                      resolve({ success: true, message: 'Changes pushed to remote' });
+                    }
+                  });
+                });
+              } else {
+                // No token - use system Git credential manager
+                const cmd = `git push -u ${targetRemote} ${branchName}`;
+                console.log(`Executing: ${cmd}`);
+
+                exec(cmd, { cwd: safePath, timeout: 60000 }, (error, stdout, stderr) => {
+                  if (error) {
+                    resolve({ success: false, error: stderr || error.message });
+                  } else {
+                    resolve({ success: true, message: 'Changes pushed to remote' });
+                  }
+                });
+              }
+            };
+
+            pushWithAuth();
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
+      });
+    });
+
+    ipcMain.handle('git:pull', async (event, { remote, branch, repoPath, token }) => {
+      return new Promise((resolve) => {
+        try {
+          const safePath = resolveSafePath(repoPath);
+          const targetRemote = remote || 'origin';
+          const targetBranch = branch || '';
+
+          // First get the current branch if not specified
+          const getBranch = targetBranch
+            ? Promise.resolve(targetBranch)
+            : new Promise((res) => {
+              exec('git branch --show-current', { cwd: safePath }, (err, stdout) => {
+                const detected = stdout?.trim();
+                if (detected) {
+                  res(detected);
+                } else {
+                  exec('git rev-parse --abbrev-ref HEAD', { cwd: safePath }, (err2, stdout2) => {
+                    res(stdout2?.trim() || 'HEAD');
+                  });
+                }
+              });
+            });
+
+          getBranch.then((branchName) => {
+            if (token) {
+              // Get remote URL and inject token
+              exec(`git remote get-url ${targetRemote}`, { cwd: safePath }, (err, remoteUrl) => {
+                if (err) {
+                  resolve({ success: false, error: 'Could not get remote URL: ' + (err.message || '') });
+                  return;
+                }
+                const url = remoteUrl.trim();
+                let authUrl = url;
+                if (url.startsWith('https://')) {
+                  const cleanUrl = url.replace(/https:\/\/[^@]+@/, 'https://');
+                  authUrl = cleanUrl.replace('https://', `https://${token}@`);
+                }
+
+                const cmd = `git pull "${authUrl}" ${branchName}`;
+                console.log(`Executing git pull with token auth from branch: ${branchName}`);
+
+                exec(cmd, { cwd: safePath, timeout: 60000 }, (error, stdout, stderr) => {
+                  if (error) {
+                    const cleanError = (stderr || error.message || '').replace(new RegExp(token, 'g'), '***');
+                    resolve({ success: false, error: cleanError });
+                  } else {
+                    resolve({ success: true, message: 'Changes pulled from remote' });
+                  }
+                });
+              });
             } else {
-              resolve({ success: true, message: 'Changes pushed to remote' });
+              const cmd = `git pull ${targetRemote} ${branchName}`;
+              console.log(`Executing: ${cmd}`);
+
+              exec(cmd, { cwd: safePath, timeout: 60000 }, (error, stdout, stderr) => {
+                if (error) {
+                  resolve({ success: false, error: stderr || error.message });
+                } else {
+                  resolve({ success: true, message: 'Changes pulled from remote' });
+                }
+              });
             }
           });
         } catch (e) {
@@ -917,21 +1040,45 @@ app.on('ready', () => {
       });
     });
 
-    ipcMain.handle('git:pull', async (event, { remote, branch, repoPath }) => {
+    // Ahead/Behind tracking
+    ipcMain.handle('git:ahead-behind', async (event, { repoPath }) => {
       return new Promise((resolve) => {
         try {
           const safePath = resolveSafePath(repoPath);
-          const targetRemote = remote || 'origin';
-          const targetBranch = branch || 'main';
-          const cmd = `git pull ${targetRemote} ${targetBranch}`;
+          // First fetch to update remote tracking refs (silent)
+          exec('git fetch --quiet 2>&1 || true', { cwd: safePath, timeout: 15000 }, () => {
+            // Then check ahead/behind
+            exec('git rev-list --left-right --count HEAD...@{upstream} 2>&1', { cwd: safePath }, (error, stdout) => {
+              if (error || !stdout.trim()) {
+                // No upstream or error - just return 0s
+                resolve({ success: true, ahead: 0, behind: 0 });
+              } else {
+                const parts = stdout.trim().split(/\s+/);
+                resolve({
+                  success: true,
+                  ahead: parseInt(parts[0]) || 0,
+                  behind: parseInt(parts[1]) || 0
+                });
+              }
+            });
+          });
+        } catch (e) {
+          resolve({ success: true, ahead: 0, behind: 0 });
+        }
+      });
+    });
+    console.log('✅ Registered: git:ahead-behind');
 
-          console.log(`Executing: ${cmd}`);
-
-          exec(cmd, { cwd: safePath }, (error, stdout, stderr) => {
+    // Stage individual file
+    ipcMain.handle('git:stageFile', async (event, { file, repoPath }) => {
+      return new Promise((resolve) => {
+        try {
+          const safePath = resolveSafePath(repoPath);
+          exec(`git add -- "${file}"`, { cwd: safePath }, (error, stdout, stderr) => {
             if (error) {
               resolve({ success: false, error: stderr || error.message });
             } else {
-              resolve({ success: true, message: 'Changes pulled from remote' });
+              resolve({ success: true, message: 'File staged' });
             }
           });
         } catch (e) {
@@ -939,6 +1086,46 @@ app.on('ready', () => {
         }
       });
     });
+    console.log('✅ Registered: git:stageFile');
+
+    // Unstage individual file
+    ipcMain.handle('git:unstageFile', async (event, { file, repoPath }) => {
+      return new Promise((resolve) => {
+        try {
+          const safePath = resolveSafePath(repoPath);
+          exec(`git reset HEAD -- "${file}"`, { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'File unstaged' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
+      });
+    });
+    console.log('✅ Registered: git:unstageFile');
+
+    // Discard changes to individual file
+    ipcMain.handle('git:discardFile', async (event, { file, repoPath }) => {
+      return new Promise((resolve) => {
+        try {
+          const safePath = resolveSafePath(repoPath);
+          // For untracked files, remove them; for modified, checkout
+          exec(`git checkout -- "${file}" 2>&1 || git clean -fd -- "${file}"`, { cwd: safePath }, (error, stdout, stderr) => {
+            if (error) {
+              resolve({ success: false, error: stderr || error.message });
+            } else {
+              resolve({ success: true, message: 'Changes discarded' });
+            }
+          });
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
+      });
+    });
+    console.log('✅ Registered: git:discardFile');
 
     // ADD THIS NEW HANDLER: To allow setting the remote URL
     ipcMain.handle('git:addRemote', async (event, { url }) => {
