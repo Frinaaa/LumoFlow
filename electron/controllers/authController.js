@@ -12,15 +12,23 @@ const authController = {
     try {
       const { name, email, password } = data;
       if (!email || !password || !name) return { success: false, msg: 'All fields required' };
+
+      console.log(`👤 NEW SIGNUP: ${email} (${name})`);
+      console.log(`👤 Password length: ${password?.length}, type: ${typeof password}`);
+
       let user = await User.findOne({ email: email.toLowerCase().trim() });
       if (user) return { success: false, msg: 'User already exists' };
 
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-      console.log(`👤 NEW SIGNUP: ${email} (${name})`);
+
+      // Verify the hash works right after creation
+      const verifyHash = await bcrypt.compare(password, hashedPassword);
+      console.log(`👤 Hash verification immediately after creation: ${verifyHash}`);
+
       user = new User({ name, email: email.toLowerCase().trim(), password: hashedPassword, role: 'student' });
       await user.save();
-      console.log(`✅ SIGNUP SUCCESS: ${user._id}`);
+      console.log(`✅ SIGNUP SUCCESS: ${user._id}, hash length: ${hashedPassword.length}`);
       return { success: true, msg: 'User registered successfully' };
     } catch (err) {
       console.error(`❌ SIGNUP ERROR:`, err);
@@ -33,12 +41,21 @@ const authController = {
     try {
       const { email, password } = data;
       console.log(`🔑 LOGIN ATTEMPT: ${email}`);
+      console.log(`🔑 Password length: ${password?.length}, type: ${typeof password}`);
+      console.log(`🔑 Password chars: [${password?.split('').map(c => c.charCodeAt(0)).join(', ')}]`);
+
       const user = await User.findOne({ email: email.toLowerCase().trim() });
       if (!user) {
         console.warn(`❌ LOGIN FAIL: User not found - ${email}`);
         return { success: false, msg: 'Invalid credentials' };
       }
+
+      console.log(`🔑 User found: ${user.email}, stored hash length: ${user.password?.length}`);
+      console.log(`🔑 Stored hash starts with: ${user.password?.substring(0, 10)}...`);
+
       const isMatch = await bcrypt.compare(password, user.password);
+      console.log(`🔑 bcrypt.compare result: ${isMatch}`);
+
       if (!isMatch) {
         console.warn(`❌ LOGIN FAIL: Password mismatch - ${email}`);
         return { success: false, msg: 'Invalid credentials' };

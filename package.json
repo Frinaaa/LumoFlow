@@ -66,5 +66,18 @@
     "typescript-language-server": "^4.3.3",
     "vite": "^7.3.1",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.lumoflow.app",
+    "productName": "LumoFlow",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "build/icon.png"
+    },
+    "mac": {
+      "icon": "build/icon.png"
+    }
   }
 }

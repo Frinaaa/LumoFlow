@@ -1,5 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell, protocol, dialog } = require('electron');
 const isDev = require('electron-is-dev');
+const isProd = process.env.NODE_ENV === 'production';
+const actualIsDev = isDev && !isProd;
 const path = require('path');
 const mongoose = require('mongoose');
 const axios = require('axios');
@@ -145,12 +147,13 @@ const createWindow = async () => {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      devTools: isDev, // Enable devTools in development
+      devTools: actualIsDev, // Enable devTools in development
       enableRemoteModule: false,
       sandbox: false, // Disable sandbox to help with preload loading
-      webSecurity: !isDev // Disable web security in dev for easier debugging
+      webSecurity: !actualIsDev // Disable web security in dev for easier debugging
     },
     titleBarStyle: 'hidden',
+    icon: path.join(__dirname, 'assets/icon.png'),
     show: false,
   });
 
@@ -195,7 +198,7 @@ const createWindow = async () => {
     callback(0); // 0 = verification success
   });
 
-  const startUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
+  const startUrl = actualIsDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
   newWindow.loadURL(startUrl);
   newWindow.once('ready-to-show', () => newWindow.show());
 
@@ -1496,6 +1499,14 @@ app.on('ready', () => {
     else {
       res.writeHead(404);
       res.end('Not Found');
+    }
+  });
+
+  server.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+      console.warn('⚠️ OAuth callback server port 3000 is already in use. This might happen if another instance is running.');
+    } else {
+      console.error('❌ OAuth callback server error:', e);
     }
   });
 

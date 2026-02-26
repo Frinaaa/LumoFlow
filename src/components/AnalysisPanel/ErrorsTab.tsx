@@ -5,7 +5,7 @@ import './ErrorsTab.css';
 const ErrorsTab: React.FC = () => {
     const [errors, setErrors] = useState<ErrorSample[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
-    const requestRef = useRef<number>();
+    const requestRef = useRef<number | undefined>(undefined);
 
     useEffect(() => {
         // Load data on mount
@@ -15,7 +15,7 @@ const ErrorsTab: React.FC = () => {
     // The Wheel Effect Logic
     const updateWheel = () => {
         if (!containerRef.current) return;
-        
+
         const container = containerRef.current;
         const nodes = container.querySelectorAll('.error-node-wrapper');
         const containerHeight = container.clientHeight;
@@ -27,16 +27,16 @@ const ErrorsTab: React.FC = () => {
             // Get position relative to the container viewport
             const nodeTop = rect.top - container.getBoundingClientRect().top;
             const nodeCenter = nodeTop + (rect.height / 2);
-            
+
             // Distance from vertical center
             const dist = Math.abs(centerPoint - nodeCenter);
-            
+
             // Math: Calculate curve
             // Closer to center = X is 0
             // Further from center = X increases (pushes right)
             // Scale factor 1000 controls the "steepness" of the curve
             const translateX = Math.pow(dist, 2) / 1000;
-            
+
             // Optional: Fade out items at the very top/bottom
             const opacity = Math.max(0.3, 1 - (dist / (containerHeight * 0.6)));
 
@@ -61,24 +61,24 @@ const ErrorsTab: React.FC = () => {
     return (
         <div className="errors-wheel-container" ref={containerRef}>
             <div className="wheel-axis"></div>
-            
+
             {errors.map((item) => (
-                <div 
-                    key={item.id} 
+                <div
+                    key={item.id}
                     className="error-node-wrapper"
                     style={{ '--node-color': item.color } as any}
                 >
                     <div className="node-number">{item.id}</div>
                     <div className="node-connector"></div>
-                    
+
                     <div className="error-content-card">
                         <span className="error-title">{item.title}</span>
                         <div className="error-desc">{item.explanation}</div>
-                        
+
                         <div className="error-example-box">
                             <code>{item.example}</code>
                         </div>
-                        
+
                         <div className="error-fix-box">
                             <i className="fa-solid fa-wrench"></i>
                             {item.fix}

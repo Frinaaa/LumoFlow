@@ -178,7 +178,7 @@ export const GitHubSidebar: React.FC = () => {
             getHistory().then(commits => setHistory(commits || []));
             showStatus('✅ Changes committed locally!');
         } else {
-            let errorMsg = res.error || res.message || 'Unknown error';
+            let errorMsg = (res as any).error || (res as any).message || 'Unknown error';
             if (errorMsg.includes('nothing to commit')) {
                 showStatus('ℹ️ No changes to commit');
             } else if (errorMsg.includes('Author identity unknown') || errorMsg.includes('Please tell me who you are')) {

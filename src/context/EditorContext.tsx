@@ -28,12 +28,12 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           // 🧠 INTELLIGENT PATH DETECTION
           // If a folder is selected in the file tree, use it. Otherwise use root.
           const parentFolder = fileStore.selectedFolder || null;
-          
+
           console.log(`Creating file '${fileName}' in: ${parentFolder || 'ROOT'}`);
-          
+
           // Call createFile with the determined parent
-          await fileOps.createFile(fileName.trim(), parentFolder);
-          
+          await fileOps.createFile(fileName.trim(), parentFolder ?? undefined);
+
         } catch (error) {
           console.error('Error creating file:', error);
         }

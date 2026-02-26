@@ -35,7 +35,7 @@ const SignUpScreen: React.FC = () => {
   useEffect(() => {
     const newErrors: any = {};
     const criteria = {
-      length: formData.password.length >= 6,
+      length: formData.password.length >= 8,
       upper: /[A-Z]/.test(formData.password),
       number: /\d/.test(formData.password),
       special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password)
@@ -50,10 +50,11 @@ const SignUpScreen: React.FC = () => {
     if (!formData.email) newErrors.email = "Email is required";
     else if (!emailRegex.test(formData.email)) newErrors.email = "Invalid email format";
 
-    // Password Validation
-    if (!criteria.length) newErrors.password = "Password must be 6+ chars";
-    else if (!criteria.upper) newErrors.password = "Add an uppercase letter";
-    else if (!criteria.number) newErrors.password = "Add a number";
+    // Password Validation - ALL criteria must pass
+    if (!criteria.length) newErrors.password = "Password must be 8+ characters";
+    else if (!criteria.upper) newErrors.password = "Password needs an uppercase letter";
+    else if (!criteria.number) newErrors.password = "Password needs a number";
+    else if (!criteria.special) newErrors.password = "Password needs a symbol (!@#$%...)";
 
     // Confirm Password
     if (formData.confirmPassword !== formData.password) newErrors.confirmPassword = "Passwords do not match";

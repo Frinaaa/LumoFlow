@@ -15,80 +15,80 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   // --- VALIDATION STATE ---
   const [emailError, setEmailError] = useState('');
   const [passError, setPassError] = useState('');
   const [serverError, setServerError] = useState('');
 
   // 1. EFFECT: Real-time validation
- // 1. EFFECT: Real-time validation
+  // 1. EFFECT: Real-time validation
   useEffect(() => {
     // Only validate if user has started typing
     if (email.length > 0) {
-      // ⬇️ STRICT REGEX: Only allows emails ending in .com
-      const emailRegex = /^[^\s@]+@[^\s@]+\.com$/;
-      
+      // ⬇️ Standard email validation - matches signup regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
       if (!emailRegex.test(email)) {
-        setEmailError("Only .com domains are accepted.");
+        setEmailError("Please enter a valid email address.");
       } else {
         setEmailError("");
       }
     } else {
-        setEmailError("");
+      setEmailError("");
     }
 
     if (password.length > 0) {
-        if (password.length < 6) {
-            setPassError("Security key must be 6+ characters.");
-        } else {
-            setPassError("");
-        }
-    } else {
+      if (password.length < 6) {
+        setPassError("Security key must be 6+ characters.");
+      } else {
         setPassError("");
+      }
+    } else {
+      setPassError("");
     }
   }, [email, password]);
 
-  
+
 
   // --- 2. GOOGLE LOGIN (Browser Flow) ---
   const handleGoogleLogin = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setLoading(true);
     setServerError('');
-    
+
     try {
       const GOOGLE_CLIENT_ID = '505727448182-5vg28l0f31h1cfnrmv5unun52g8tgebd.apps.googleusercontent.com';
       const redirectUri = 'http://localhost:3000/auth/google/callback';
       const scope = 'openid profile email';
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
-      
+
       // Open in default browser
       await window.api.openExternalURL(authUrl);
-      
+
       // Listen for callback from IPC
       const handleCallback = (data: any) => {
         const { code, error } = data;
         window.api.removeAuthListener?.('google');
-        
+
         if (error) {
           setServerError('Google login cancelled');
           setLoading(false);
           return;
         }
-        
+
         (async () => {
           try {
             // Send code to Electron backend
             const res = await window.api.googleOAuth(code);
-            
+
             if (res.success && res.token && res.user) {
               // Store session data
               localStorage.setItem('authToken', res.token);
               localStorage.setItem('user_info', JSON.stringify(res.user));
-              
+
               setIsAuthenticated(true);
               navigate('/dashboard');
             } else {
@@ -101,10 +101,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
           }
         })();
       };
-      
+
       // Register listener for auth callback
       window.api.onAuthCallback?.('google', handleCallback);
-      
+
       // Timeout after 5 minutes
       setTimeout(() => {
         window.api.removeAuthListener?.('google');
@@ -113,7 +113,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
           setServerError('Login timeout');
         }
       }, 300000);
-      
+
     } catch (err) {
       setServerError("Google login failed.");
       setLoading(false);
@@ -124,39 +124,39 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
   const handleGitHubLogin = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setLoading(true);
     setServerError('');
-    
+
     try {
       const GITHUB_CLIENT_ID = 'Ov23liH24VR3ImiPJBlv';
       const redirectUri = 'http://localhost:3000/auth/github/callback';
       const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
-      
+
       // Open in default browser
       await window.api.openExternalURL(authUrl);
-      
+
       // Listen for callback from IPC
       const handleCallback = (data: any) => {
         const { code, error } = data;
         window.api.removeAuthListener?.('github');
-        
+
         if (error) {
           setServerError('GitHub login cancelled');
           setLoading(false);
           return;
         }
-        
+
         (async () => {
           try {
             // Send code to Electron backend
             const res = await window.api.githubOAuth(code);
-            
+
             if (res.success && res.token && res.user) {
               // Store session data
               localStorage.setItem('authToken', res.token);
               localStorage.setItem('user_info', JSON.stringify(res.user));
-              
+
               setIsAuthenticated(true);
               navigate('/dashboard');
             } else {
@@ -169,10 +169,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
           }
         })();
       };
-      
+
       // Register listener for auth callback
       window.api.onAuthCallback?.('github', handleCallback);
-      
+
       // Timeout after 5 minutes
       setTimeout(() => {
         window.api.removeAuthListener?.('github');
@@ -181,7 +181,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
           setServerError('Login timeout');
         }
       }, 300000);
-      
+
     } catch (err) {
       setServerError("GitHub login failed.");
       setLoading(false);
@@ -191,7 +191,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
   // --- 3. STANDARD LOGIN (DEBUG VERSION) ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // DEBUG LOGS: Check your console for these
     console.log("--- LOGIN ATTEMPT ---");
     console.log("Email:", email);
@@ -204,7 +204,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
       console.warn("🛑 BLOCKED: Validation errors exist.");
       return;
     }
-    
+
     // 2. Check Empty Fields
     if (!email || !password) {
       console.warn("🛑 BLOCKED: Fields are empty.");
@@ -217,17 +217,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
     setServerError('');
 
     try {
-      const res = await authService.login({ 
-        email: email.toLowerCase().trim(), 
-        password 
+      const res = await authService.login({
+        email: email.toLowerCase().trim(),
+        password
       });
-      
+
       console.log("Server Response:", res);
 
       if (res.success) {
         console.log("🚀 Success! Navigating to Dashboard...");
         setIsAuthenticated(true);
-        navigate('/dashboard'); 
+        navigate('/dashboard');
       } else {
         console.error("❌ Login Failed:", res.msg);
         setServerError(res.msg || "Access denied.");
@@ -243,7 +243,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
     <div className="login-screen-wrapper">
       <div className="bg-grid"></div>
 
-      
+
 
       <div className="login-content-container">
         <div className="login-card">
@@ -260,21 +260,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
 
           <form onSubmit={handleLogin}>
             <div className="input-group">
-              <input 
+              <input
                 type="text" className={`lumo-input ${emailError ? 'input-error' : ''}`}
-                placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required 
+                placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} required
               />
               <i className="fa-regular fa-user input-icon"></i>
               {emailError && <span className="field-validation-msg">{emailError}</span>}
             </div>
 
             <div className="input-group">
-              <input 
+              <input
                 type={showPassword ? 'text' : 'password'} className={`lumo-input ${passError ? 'input-error' : ''}`}
-                placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required 
+                placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required
               />
               <i className={`fa-regular ${showPassword ? 'fa-eye-slash' : 'fa-eye'} input-icon`}
-                 onClick={() => setShowPassword(!showPassword)} style={{cursor:'pointer', zIndex:10}}></i>
+                onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer', zIndex: 10 }}></i>
               {passError && <span className="field-validation-msg">{passError}</span>}
             </div>
 
@@ -285,7 +285,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
                 <>LOGIN <i className="fa-solid fa-arrow-right"></i></>
               )}
             </button>
-            
+
             <div className="links-row">
               <button type="button" className="text-link" onClick={() => navigate('/forgot-password')}>Forgot Password?</button>
               <button type="button" className="text-link" style={{ color: 'var(--accent-cyan)' }} onClick={() => navigate('/signup')}>Sign Up</button>
@@ -296,20 +296,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
 
           <div className="social-login">
             {/* 🟢 GOOGLE LOGIN - FIXED CLICK HANDLER */}
-            <button 
+            <button
               type="button"
-              className="social-btn" 
+              className="social-btn"
               onClick={handleGoogleLogin}
               disabled={loading}
               title="Login with Google"
             >
               <i className="fa-brands fa-google"></i>
             </button>
-            
+
             {/* 🟢 GITHUB LOGIN - OPENS IN BROWSER */}
-            <button 
+            <button
               type="button"
-              className="social-btn" 
+              className="social-btn"
               onClick={handleGitHubLogin}
               disabled={loading}
               title="Login with GitHub"
