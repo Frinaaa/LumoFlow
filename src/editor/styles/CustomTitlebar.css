@@ -379,6 +379,44 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Prev / Next navigation arrow buttons */
+.find-nav-arrows {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.find-nav-btn {
+  background: transparent;
+  border: 1px solid #3e3e42;
+  color: #cccccc;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.find-nav-btn:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: #a855f7;
+  color: #ffffff;
+}
+
+.find-nav-btn:active:not(:disabled) {
+  background: rgba(168, 85, 247, 0.3);
+}
+
+.find-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 
 /* Debug Race Custom Titlebar */
 .debug-titlebar {

@@ -10,12 +10,14 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
   const [searchText, setSearchText] = useState('');
   const [replaceText, setReplaceText] = useState('');
   const [matchCount, setMatchCount] = useState(0);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
   const [regex, setRegex] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const decorationsRef = useRef<string[]>([]);
+  const allMatchesRef = useRef<any[]>([]);
 
   // Clear decorations on unmount or close
   useEffect(() => {
@@ -78,136 +80,84 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isVisible, searchText]);
 
-  const handleSearch = () => {
+  const getMatches = () => {
+    if (!editorRef.current || !searchText) return [];
+    const model = editorRef.current.getModel();
+    if (!model) return [];
+    try {
+      return model.findMatches(
+        searchText,
+        false,
+        regex,          // isRegex
+        caseSensitive,  // matchCase
+        wholeWord ? ' `~!@#$%^&*()-=+[{]}\\|;:\'",.<>/?' : null,
+        true
+      );
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const applyDecorations = (matches: any[], activeIdx: number) => {
+    if (!editorRef.current) return;
+    const editor = editorRef.current;
+    const newDecorations = matches.map((match: any, i: number) => ({
+      range: match.range,
+      options: {
+        className: i === activeIdx ? 'find-current-match-highlight' : 'find-match-highlight',
+        inlineClassName: i === activeIdx ? 'find-current-match-highlight' : 'find-match-highlight',
+        stickiness: 1,
+      }
+    }));
+    decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
+  };
+
+  const handleSearch = (activeIdx = 0) => {
     if (!editorRef.current || !searchText) {
       if (editorRef.current) {
         decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, []);
       }
       setMatchCount(0);
+      setCurrentMatchIndex(-1);
+      allMatchesRef.current = [];
       return;
     }
-
-    const editor = editorRef.current;
-    const model = editor.getModel();
-    if (!model) return;
-
-    try {
-      const matches = model.findMatches(
-        searchText,
-        false, // searchOnlyEditableRange
-        regex,
-        caseSensitive,
-        wholeWord ? " `~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?" : null,
-        true // captureMatches
-      );
-
-      setMatchCount(matches.length);
-
-      // Apply highlighting
-      const newDecorations = matches.map((match: any) => ({
-        range: match.range,
-        options: {
-          className: 'find-match-highlight',
-          inlineClassName: 'find-match-highlight',
-          stickiness: 1 // NeverGrowsWhenTypingAtEdges
-        }
-      }));
-
-      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
-    } catch (e) {
-      console.error('Find error:', e);
-      setMatchCount(0);
+    const matches = getMatches();
+    allMatchesRef.current = matches;
+    setMatchCount(matches.length);
+    const idx = matches.length > 0 ? Math.min(activeIdx, matches.length - 1) : -1;
+    setCurrentMatchIndex(idx);
+    applyDecorations(matches, idx);
+    if (matches.length > 0 && idx >= 0) {
+      editorRef.current.setSelection(matches[idx].range);
+      editorRef.current.revealRangeInCenter(matches[idx].range);
     }
   };
 
   useEffect(() => {
-    handleSearch();
+    handleSearch(0);
   }, [searchText, caseSensitive, wholeWord, regex]);
 
   const findNext = () => {
     if (!editorRef.current || !searchText) return;
-
-    const editor = editorRef.current;
-    const model = editor.getModel();
-    if (!model) return;
-
-    const matches = model.findMatches(
-      searchText,
-      false,
-      regex,
-      caseSensitive,
-      wholeWord ? " `~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?" : null,
-      true
-    );
-
+    const matches = allMatchesRef.current;
     if (matches.length === 0) return;
-
-    const currentPos = editor.getPosition();
-    let nextMatch = matches.find((m: any) =>
-      m.range.startLineNumber > currentPos.lineNumber ||
-      (m.range.startLineNumber === currentPos.lineNumber && m.range.startColumn > currentPos.column)
-    );
-
-    if (!nextMatch) nextMatch = matches[0]; // Wrap around
-
-    if (nextMatch) {
-      editor.setSelection(nextMatch.range);
-      editor.revealRangeInCenter(nextMatch.range);
-
-      // Update decorations to highlight current match specifically
-      const newDecorations = matches.map((match: any) => ({
-        range: match.range,
-        options: {
-          className: match === nextMatch ? 'find-current-match-highlight' : 'find-match-highlight',
-          inlineClassName: match === nextMatch ? 'find-current-match-highlight' : 'find-match-highlight',
-          stickiness: 1
-        }
-      }));
-      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
-    }
+    const next = (currentMatchIndex + 1) % matches.length;
+    setCurrentMatchIndex(next);
+    applyDecorations(matches, next);
+    editorRef.current.setSelection(matches[next].range);
+    editorRef.current.revealRangeInCenter(matches[next].range);
   };
 
   const findPrevious = () => {
     if (!editorRef.current || !searchText) return;
-
-    const editor = editorRef.current;
-    const model = editor.getModel();
-    if (!model) return;
-
-    const matches = model.findMatches(
-      searchText,
-      false,
-      regex,
-      caseSensitive,
-      wholeWord ? " `~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?" : null,
-      true
-    );
-
+    const matches = allMatchesRef.current;
     if (matches.length === 0) return;
-
-    const currentPos = editor.getPosition();
-    let prevMatch = [...matches].reverse().find((m: any) =>
-      m.range.startLineNumber < currentPos.lineNumber ||
-      (m.range.startLineNumber === currentPos.lineNumber && m.range.startColumn < currentPos.column)
-    );
-
-    if (!prevMatch) prevMatch = matches[matches.length - 1]; // Wrap around
-
-    if (prevMatch) {
-      editor.setSelection(prevMatch.range);
-      editor.revealRangeInCenter(prevMatch.range);
-
-      // Update decorations
-      const newDecorations = matches.map((match: any) => ({
-        range: match.range,
-        options: {
-          className: match === prevMatch ? 'find-current-match-highlight' : 'find-match-highlight',
-          inlineClassName: match === prevMatch ? 'find-current-match-highlight' : 'find-match-highlight',
-          stickiness: 1
-        }
-      }));
-      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
-    }
+    const prev = ((currentMatchIndex - 1) + matches.length) % matches.length;
+    setCurrentMatchIndex(prev);
+    applyDecorations(matches, prev);
+    editorRef.current.setSelection(matches[prev].range);
+    editorRef.current.revealRangeInCenter(matches[prev].range);
   };
 
   const replaceOne = () => {
@@ -298,8 +248,27 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
           </button>
         </div>
         <span className="find-replace-counter">
-          {matchCount > 0 ? matchCount : 'No results'}
+          {searchText
+            ? (matchCount > 0
+              ? `${currentMatchIndex + 1} / ${matchCount}`
+              : 'No results')
+            : ''}
         </span>
+        {/* Prev / Next arrows */}
+        <div className="find-nav-arrows">
+          <button
+            className="find-nav-btn"
+            onClick={findPrevious}
+            disabled={matchCount === 0}
+            title="Previous Match (Shift+Enter)"
+          >&#8593;</button>
+          <button
+            className="find-nav-btn"
+            onClick={findNext}
+            disabled={matchCount === 0}
+            title="Next Match (Enter)"
+          >&#8595;</button>
+        </div>
         <button
           className="find-replace-button close"
           onClick={onClose}
@@ -315,17 +284,10 @@ const FindReplace: React.FC<FindReplaceProps> = ({ editorRef, isVisible, onClose
           <input
             type="text"
             className="find-replace-input"
-            placeholder="Replace"
+            placeholder="Replace with..."
             value={replaceText}
             onChange={(e) => setReplaceText(e.target.value)}
           />
-          <button
-            className="find-replace-button"
-            onClick={replaceOne}
-            title="Replace (Ctrl+Shift+1)"
-          >
-            Replace
-          </button>
           <button
             className="find-replace-button"
             onClick={replaceAll}
