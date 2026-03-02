@@ -1,5 +1,4 @@
 const { GoogleGenAI } = require('@google/genai');
-require('dotenv').config();
 
 // 🎬 STRICT SYSTEM INSTRUCTION - CPU SIMULATOR (NO CORRECTIONS ALLOWED)
 const SYSTEM_INSTRUCTION = `You are "Lumo Neural Director" - a STRICT CPU-level Code Simulator.

@@ -45,14 +45,22 @@ console.error = function (...args) {
 };
 
 // Load environment variables
-const envPath = app.isPackaged
-  ? path.join(path.dirname(process.execPath), '.env')
-  : path.join(__dirname, '../.env');
+const getEnvPath = () => {
+  if (!app.isPackaged) return path.join(__dirname, '../.env');
 
+  // Check next to .exe first (for user overrides)
+  const externalPath = path.join(path.dirname(process.execPath), '.env');
+  if (fs.existsSync(externalPath)) return externalPath;
+
+  // Fallback to bundled .env inside resources/app.asar
+  return path.join(app.getAppPath(), '.env');
+};
+
+const envPath = getEnvPath();
 require('dotenv').config({ path: envPath });
 console.log(`📂 Loading .env from: ${envPath}`);
 if (!fs.existsSync(envPath)) {
-  console.log(`⚠️ .env file NOT FOUND at ${envPath}`);
+  console.log(`⚠️ .env file NOT FOUND at any expected location`);
 }
 
 console.log("--- STARTUP CHECK ---");
