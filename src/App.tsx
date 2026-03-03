@@ -24,9 +24,11 @@ import ErrorMatchScreen from './screens/ErrorMatchScreen';
 import VisualsScreen from './screens/VisualsScreen';
 import SimpleTitlebar from './components/SimpleTitlebar';
 
+import { useUserStore } from './stores/userStore';
+
 function AppLayout() {
   const [showSplash, setShowSplash] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, setAuthenticated } = useUserStore();
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
@@ -39,23 +41,23 @@ function AppLayout() {
         try {
           const res = await authService.getProfile();
           if (res.success && res.user) {
-            setIsAuthenticated(true);
+            setAuthenticated(true);
           } else if (userInfo) {
             // If getProfile fails but we have cached user data, still authenticate
             console.log('⚠️ Using cached authentication');
-            setIsAuthenticated(true);
+            setAuthenticated(true);
           } else {
             await authService.logout();
-            setIsAuthenticated(false);
+            setAuthenticated(false);
           }
         } catch (err) {
           // If error but we have cached data, still authenticate
           if (userInfo) {
             console.log('⚠️ Error during init, using cached authentication');
-            setIsAuthenticated(true);
+            setAuthenticated(true);
           } else {
             await authService.logout();
-            setIsAuthenticated(false);
+            setAuthenticated(false);
           }
         }
       }
@@ -104,7 +106,7 @@ function AppLayout() {
 
           <Route
             path="/login"
-            element={!isAuthenticated ? <LoginScreen setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/dashboard" replace />}
+            element={!isAuthenticated ? <LoginScreen setIsAuthenticated={setAuthenticated} /> : <Navigate to="/dashboard" replace />}
           />
 
           <Route

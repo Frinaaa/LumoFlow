@@ -102,7 +102,10 @@ const VisualsScreen: React.FC = () => {
                     <button className="nav-item" onClick={() => { sessionStorage.setItem('settingsReferrer', '/visuals'); navigate('/settings'); }}>
                         <i className="fa-solid fa-gear"></i> Settings
                     </button>
-                    <button className="nav-item logout" onClick={() => navigate('/')}>
+                    <button className="nav-item logout" onClick={async () => {
+                        await useUserStore.getState().logout();
+                        navigate('/login');
+                    }}>
                         <i className="fa-solid fa-right-from-bracket"></i> Logout
                     </button>
                 </div>

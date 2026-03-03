@@ -23,26 +23,30 @@ interface RecentActivity {
 
 interface UserState {
     user: any | null;
+    isAuthenticated: boolean;
     stats: UserStats;
     recentActivity: RecentActivity[];
     skillMatrix: any[];
     loading: boolean;
-    isSyncing: boolean; // Add this
+    isSyncing: boolean;
 
     // Actions
     setUser: (user: any) => void;
+    setAuthenticated: (value: boolean) => void;
     updateStats: (updates: Partial<UserStats>) => void;
     addActivity: (activity: RecentActivity) => void;
     fetchUserData: () => Promise<void>;
     syncWithBackend: () => Promise<void>;
+    logout: () => Promise<void>;
     clearStore: () => void;
-    setSyncing: (syncing: boolean) => void; // Add this
+    setSyncing: (syncing: boolean) => void;
 }
 
 export const useUserStore = create<UserState>()(
     persist(
         (set, get) => ({
             user: null,
+            isAuthenticated: !!localStorage.getItem('authToken'),
             stats: {
                 linesWritten: 0,
                 bugsDetected: 0,
@@ -52,11 +56,12 @@ export const useUserStore = create<UserState>()(
                 xp: 0
             },
             recentActivity: [],
-            skillMatrix: [], // Add this
+            skillMatrix: [],
             loading: false,
             isSyncing: false,
 
             setUser: (user) => set({ user }),
+            setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
             setSyncing: (isSyncing) => set({ isSyncing }),
 
             updateStats: (updates) => {
@@ -159,9 +164,29 @@ export const useUserStore = create<UserState>()(
                 // but for this MVP, we'll let the components handle the the trackStats call.
             },
 
+            logout: async () => {
+                await authService.logout();
+                set({
+                    user: null,
+                    isAuthenticated: false,
+                    stats: {
+                        linesWritten: 0,
+                        bugsDetected: 0,
+                        conceptsVisualized: 0,
+                        totalScore: 0,
+                        level: "LVL 0: DETECTING...",
+                        xp: 0
+                    },
+                    recentActivity: [],
+                    skillMatrix: []
+                });
+                localStorage.removeItem('user-storage');
+            },
+
             clearStore: () => {
                 set({
                     user: null,
+                    isAuthenticated: false,
                     stats: {
                         linesWritten: 0,
                         bugsDetected: 0,

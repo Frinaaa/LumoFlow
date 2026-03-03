@@ -177,7 +177,10 @@ class AuthService {
           localStorage.setItem('github_token', res.githubAccessToken);
         }
         // Update user store
-        import('../stores/userStore').then(m => m.useUserStore.getState().setUser(res.user));
+        import('../stores/userStore').then(m => {
+          m.useUserStore.getState().setUser(res.user);
+          m.useUserStore.getState().setAuthenticated(true);
+        });
       }
       return res;
     } catch (e) {
@@ -193,6 +196,11 @@ class AuthService {
 
       if (res.success && res.token && res.user) {
         this.setSession(res.token, res.user);
+        // Update user store
+        import('../stores/userStore').then(m => {
+          m.useUserStore.getState().setUser(res.user);
+          m.useUserStore.getState().setAuthenticated(true);
+        });
       }
       return res;
     } catch (e) {
@@ -223,6 +231,7 @@ class AuthService {
   setSession(token: string, user: any) {
     localStorage.setItem('authToken', token);
     localStorage.setItem('user_info', JSON.stringify(user));
+    import('../stores/userStore').then(m => m.useUserStore.getState().setAuthenticated(true));
   }
 }
 

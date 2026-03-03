@@ -24,7 +24,8 @@ const DashboardScreen: React.FC = () => {
     user: storeUser,
     skillMatrix: storeSkills,
     isSyncing,
-    loading: storeLoading
+    loading: storeLoading,
+    logout: performLogout
   } = useUserStore();
 
   // 🟢 OPTIMIZED: Check cache immediately 
@@ -109,8 +110,8 @@ const DashboardScreen: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-    await authService.logout();
-    window.location.href = '/';
+    await performLogout();
+    navigate('/login');
   };
 
   if (loading) return <div className="loading-screen">CONNECTING...</div>;
