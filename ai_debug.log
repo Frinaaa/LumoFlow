@@ -2955,3 +2955,107 @@
 [2026-03-02T05:33:38.819Z][SESS:g6s0w8] 🏁 CYCLE_COMPLETE
 [2026-03-03T05:51:55.286Z][SESS:bpzai7] 🧪 Creating Persistent Agent Session: gpt-4.1
 [2026-03-03T05:58:27.781Z][SESS:urkxph] 🧪 Creating Persistent Agent Session: gpt-4.1
+[2026-03-18T06:12:55.697Z][SESS:vdoqc8] 🔥 Init Failed: SDK protocol version mismatch: SDK expects version 2, but server reports version 3. Please update your SDK or server to ensure compatibility.
+[2026-03-18T06:13:13.859Z][SESS:vdoqc8] 💭 USER_QUERY: "hi..."
+[2026-03-18T06:13:13.861Z][SESS:vdoqc8] 🔥 AI ERROR: Cannot read properties of null (reading 'on')
+[2026-03-18T06:13:14.414Z][SESS:vdoqc8] 🔥 Init Failed: SDK protocol version mismatch: SDK expects version 2, but server reports version 3. Please update your SDK or server to ensure compatibility.
+[2026-03-18T06:13:14.416Z][SESS:vdoqc8] 💭 USER_QUERY: "You are a coding tutor. A student ran this code an..."
+[2026-03-18T06:13:14.417Z][SESS:vdoqc8] 🔥 AI ERROR: Cannot read properties of null (reading 'on')
+[2026-03-18T06:13:23.268Z][SESS:vdoqc8] 🔥 Init Failed: SDK protocol version mismatch: SDK expects version 2, but server reports version 3. Please update your SDK or server to ensure compatibility.
+[2026-03-18T06:13:23.270Z][SESS:vdoqc8] 💭 USER_QUERY: "hi..."
+[2026-03-18T06:13:23.272Z][SESS:vdoqc8] 🔥 AI ERROR: Cannot read properties of null (reading 'on')
+[2026-03-18T06:18:33.294Z][SESS:trdikq] 🔥 Init Failed: SDK protocol version mismatch: SDK expects version 2, but server reports version 3. Please update your SDK or server to ensure compatibility.
+[2026-03-18T06:18:42.193Z][SESS:trdikq] 🔥 Init Failed: SDK protocol version mismatch: SDK expects version 2, but server reports version 3. Please update your SDK or server to ensure compatibility.
+[2026-03-18T06:18:42.194Z][SESS:trdikq] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:18:46.120Z][SESS:trdikq] 🔥 Init Failed: SDK protocol version mismatch: SDK expects version 2, but server reports version 3. Please update your SDK or server to ensure compatibility.
+[2026-03-18T06:18:46.122Z][SESS:trdikq] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:18:57.400Z][SESS:trdikq] 🔥 Init Failed: SDK protocol version mismatch: SDK expects version 2, but server reports version 3. Please update your SDK or server to ensure compatibility.
+[2026-03-18T06:18:57.402Z][SESS:trdikq] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:24:55.323Z][SESS:w4qbje] 🔥 Init Failed: SDK_LOAD_FAILED
+[2026-03-18T06:25:06.337Z][SESS:w4qbje] 🔥 Init Failed: SDK_LOAD_FAILED
+[2026-03-18T06:25:06.337Z][SESS:w4qbje] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:25:12.417Z][SESS:w4qbje] 🔥 Init Failed: SDK_LOAD_FAILED
+[2026-03-18T06:25:12.419Z][SESS:w4qbje] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:25:21.879Z][SESS:w4qbje] 🔥 Init Failed: SDK_LOAD_FAILED
+[2026-03-18T06:25:21.880Z][SESS:w4qbje] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:41:37.056Z][SESS:3g6jmd] 🔥 Init Failed: CLI server exited with code 0
+stderr: (node:17844) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `electron --trace-warnings ...` to show where the warning was created)
+[2026-03-18T06:41:46.048Z][SESS:3g6jmd] 🔥 Init Failed: CLI server exited with code 0
+stderr: (node:22624) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `electron --trace-warnings ...` to show where the warning was created)
+[2026-03-18T06:41:46.050Z][SESS:3g6jmd] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:41:50.552Z][SESS:3g6jmd] 🔥 Init Failed: CLI server exited with code 0
+stderr: (node:10136) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `electron --trace-warnings ...` to show where the warning was created)
+[2026-03-18T06:41:50.554Z][SESS:3g6jmd] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:45:54.613Z][SESS:xaod0a] 🔥 Init Failed: CLI server exited with code 0
+stderr: (node:7072) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `electron --trace-warnings ...` to show where the warning was created)
+[2026-03-18T06:46:03.647Z][SESS:xaod0a] 🔥 Init Failed: CLI server exited with code 0
+stderr: (node:17864) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `electron --trace-warnings ...` to show where the warning was created)
+[2026-03-18T06:46:03.648Z][SESS:xaod0a] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:46:08.660Z][SESS:xaod0a] 🔥 Init Failed: CLI server exited with code 0
+stderr: (node:12772) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `electron --trace-warnings ...` to show where the warning was created)
+[2026-03-18T06:46:08.662Z][SESS:xaod0a] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T06:58:13.811Z][SESS:0wyfa] 🧪 Creating Persistent Agent Session: gpt-4.1
+[2026-03-18T06:58:13.813Z][SESS:0wyfa] 🔥 Init Failed: An onPermissionRequest handler is required when creating a session. For example, to allow all permissions, use { onPermissionRequest: approveAll }.
+[2026-03-18T06:58:27.680Z][SESS:0wyfa] 🧪 Creating Persistent Agent Session: gpt-4.1
+[2026-03-18T06:58:27.681Z][SESS:0wyfa] 🔥 Init Failed: An onPermissionRequest handler is required when creating a session. For example, to allow all permissions, use { onPermissionRequest: approveAll }.
+[2026-03-18T06:58:27.682Z][SESS:0wyfa] 🔥 AI ERROR: Copilot SDK initialization failed; see logs for details.
+[2026-03-18T07:03:23.430Z][SESS:rl70ie] 🧪 Creating Persistent Agent Session: gpt-4.1
+[2026-03-18T07:03:35.668Z][SESS:rl70ie] 💭 USER_QUERY: "hi..."
+[2026-03-18T07:03:43.845Z][SESS:rl70ie] 📦 REPLY: Hello! How can I help you today? If you have any q...
+[2026-03-18T07:03:43.847Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:03:43.849Z][SESS:rl70ie] 🏁 CYCLE_COMPLETE
+[2026-03-18T07:03:55.425Z][SESS:rl70ie] 💭 USER_QUERY: "tell me a joke..."
+[2026-03-18T07:04:00.160Z][SESS:rl70ie] 📦 REPLY: Sure! Here’s a coding joke for you:  Why do progra...
+[2026-03-18T07:04:00.162Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:00.163Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:00.164Z][SESS:rl70ie] 🏁 CYCLE_COMPLETE
+[2026-03-18T07:04:21.738Z][SESS:rl70ie] 💭 USER_QUERY: "IMPORTANT: Respond with ONLY valid JSON. No markdo..."
+[2026-03-18T07:04:29.483Z][SESS:rl70ie] 📦 REPLY: {"issues":[{"line":8,"severity":"error","error":"S...
+[2026-03-18T07:04:29.484Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:29.485Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:29.486Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:29.487Z][SESS:rl70ie] 🏁 CYCLE_COMPLETE
+[2026-03-18T07:04:45.379Z][SESS:rl70ie] 💭 USER_QUERY: "fix the code..."
+[2026-03-18T07:04:49.691Z][SESS:rl70ie] 🔧 write_file tool called! Code length: 319
+[2026-03-18T07:04:49.692Z][SESS:rl70ie] ✅ Sent editor:preview-diff to active webContents
+[2026-03-18T07:04:52.351Z][SESS:rl70ie] 📦 REPLY: The code is fixed! I corrected the incomplete Set ...
+[2026-03-18T07:04:52.353Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:52.354Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:52.356Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:52.357Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:04:52.358Z][SESS:rl70ie] 🏁 CYCLE_COMPLETE
+[2026-03-18T07:05:02.250Z][SESS:rl70ie] 💭 USER_QUERY: "IMPORTANT: Respond with ONLY valid JSON. No markdo..."
+[2026-03-18T07:05:07.152Z][SESS:rl70ie] 📦 REPLY: {"issues":[{"line":8,"severity":"error","error":"S...
+[2026-03-18T07:05:07.155Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:07.157Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:07.159Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:07.160Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:07.161Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:07.162Z][SESS:rl70ie] 🏁 CYCLE_COMPLETE
+[2026-03-18T07:05:08.765Z][SESS:rl70ie] 💭 USER_QUERY: "fic the code..."
+[2026-03-18T07:05:13.973Z][SESS:rl70ie] 🔧 write_file tool called! Code length: 319
+[2026-03-18T07:05:13.973Z][SESS:rl70ie] ✅ Sent editor:preview-diff to active webContents
+[2026-03-18T07:05:16.039Z][SESS:rl70ie] 📦 REPLY: The code is fixed! I replaced let visited = new S ...
+[2026-03-18T07:05:16.040Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:16.041Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:16.042Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:16.043Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:16.044Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:16.044Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:16.045Z][SESS:rl70ie] 🏁 CYCLE_COMPLETE
+[2026-03-18T07:05:22.775Z][SESS:rl70ie] 💭 USER_QUERY: "You are a coding tutor. A student ran this code an..."
+[2026-03-18T07:05:24.834Z][SESS:rl70ie] 📦 REPLY: []...
+[2026-03-18T07:05:24.835Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:24.836Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:24.838Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:24.838Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:24.839Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:24.840Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:24.841Z][SESS:rl70ie] 💤 Session IDLE
+[2026-03-18T07:05:24.842Z][SESS:rl70ie] 🏁 CYCLE_COMPLETE

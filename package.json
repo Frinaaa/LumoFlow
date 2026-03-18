@@ -9,10 +9,11 @@
     "electron-prod": "cross-env NODE_ENV=production electron .",
     "build:win": "npm run build && electron-builder --win --publish never",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "node ./scripts/patch-vscode-jsonrpc.js"
   },
   "dependencies": {
-    "@github/copilot-sdk": "^0.1.22",
+    "@github/copilot-sdk": "^0.1.32",
     "@google/genai": "^1.41.0",
     "@google/generative-ai": "^0.24.1",
     "@monaco-editor/react": "^4.7.0",

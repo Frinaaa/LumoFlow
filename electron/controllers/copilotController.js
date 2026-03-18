@@ -16,20 +16,35 @@ function logToConsole(msg) {
 }
 
 let CopilotClient = null;
+let approveAll = null;
 let client = null;
 let session = null;
 let currentToken = null;
 let isInitializing = false;
-// 🔑 Mutable reference to always point to the LATEST webContents
 let activeWebContents = null;
 
 async function loadSDK() {
-    if (CopilotClient) return;
+    if (CopilotClient && approveAll) return { CopilotClient, approveAll };
     try {
-        const sdk = await import('@github/copilot-sdk');
-        CopilotClient = sdk.CopilotClient;
+        let sdk;
+        try {
+            sdk = require('@github/copilot-sdk');
+        } catch (requireErr) {
+            sdk = (await import('@github/copilot-sdk'))?.default || (await import('@github/copilot-sdk'));
+        }
+
+        CopilotClient = sdk?.CopilotClient || sdk?.default?.CopilotClient;
+        approveAll = sdk?.approveAll || sdk?.default?.approveAll;
+
+        if (!CopilotClient) {
+            throw new Error('CopilotClient export not found in @github/copilot-sdk');
+        }
+        return { CopilotClient, approveAll };
     } catch (error) {
-        throw new Error("SDK_LOAD_FAILED");
+        const msg = error?.message || String(error);
+        logToConsole(`🔥 SDK LOAD ERROR: ${msg}`);
+        logToConsole(error?.stack || '');
+        throw new Error(`SDK_LOAD_FAILED: ${msg}`);
     }
 }
 
@@ -44,7 +59,7 @@ const copilotController = {
 
         isInitializing = true;
         try {
-            await loadSDK();
+            const { CopilotClient, approveAll } = await loadSDK();
             if (client && currentToken !== activeToken) {
                 try { await client.stop(); } catch (e) { }
                 client = null;
@@ -61,9 +76,14 @@ const copilotController = {
 
             const model = 'gpt-4.1';
             logToConsole(`🧪 Creating Persistent Agent Session: ${model}`);
+            const permissionHandler = approveAll || (() => {
+                logToConsole('⚠️ Warning: Using fallback permission handler');
+                return { kind: 'approved' };
+            });
 
             session = await client.createSession({
                 model: model,
+                onPermissionRequest: permissionHandler,
                 systemMessage: {
                     content: `You are LumoFlow AI, a coding assistant integrated into an IDE.
 
@@ -113,7 +133,10 @@ Use markdown code blocks (\`\`\`) only for illustrative snippets in explanations
         // 🔑 Update the mutable reference so write_file tool always uses latest webContents
         activeWebContents = webContents;
         try {
-            await this.ensureInitialized(token, webContents);
+            const initialized = await this.ensureInitialized(token, webContents);
+            if (!initialized || !session) {
+                throw new Error('Copilot SDK initialization failed; see logs for details.');
+            }
             logToConsole(`💭 USER_QUERY: "${message.substring(0, 50)}..."`);
 
             const promptContent = `[CONTEXT]\nFile: ${context.currentFile}\nCode: \n${context.currentCode}\n\n[TASK]\n${message}`;
