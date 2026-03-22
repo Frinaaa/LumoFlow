@@ -72,6 +72,9 @@
     "appId": "com.lumoflow.app",
     "productName": "LumoFlow",
     "asar": true,
+    "asarUnpack": [
+      "node_modules/@github/**/*"
+    ],
     "directories": {
       "output": "release"
     },

@@ -65,8 +65,39 @@ const copilotController = {
                 client = null;
             }
 
-            if (!client) {
-                client = new CopilotClient({ githubToken: activeToken, logLevel: 'debug' });
+            if (!client) {                // Resolve the Copilot CLI path manually.
+                // In packaged Electron builds, node_modules are inside app.asar BUT
+                // @github packages are unpacked to app.asar.unpacked/ (via asarUnpack).
+                // We must point directly to the unpacked path so Node can spawn it.
+                let cliPath;
+                try {
+                    // In production: __dirname is inside app.asar, so we replace
+                    // 'app.asar' with 'app.asar.unpacked' to reach the unpacked files.
+                    const appRoot = app.getAppPath();
+                    const unpackedRoot = appRoot.replace('app.asar', 'app.asar.unpacked');
+                    const prodCliPath = path.join(unpackedRoot, 'node_modules', '@github', 'copilot', 'index.js');
+                    const devCliPath = path.join(appRoot, 'node_modules', '@github', 'copilot', 'index.js');
+
+                    if (fs.existsSync(prodCliPath)) {
+                        cliPath = prodCliPath;
+                        logToConsole(`📦 Using unpacked CLI path: ${cliPath}`);
+                    } else if (fs.existsSync(devCliPath)) {
+                        cliPath = devCliPath;
+                        logToConsole(`🔧 Using dev CLI path: ${cliPath}`);
+                    } else {
+                        logToConsole(`⚠️ CLI path not found, letting SDK auto-detect`);
+                    }
+                } catch (pathErr) {
+                    logToConsole(`⚠️ CLI path resolution error: ${pathErr.message}`);
+                }
+
+                const clientOptions = {
+                    githubToken: activeToken,
+                    logLevel: 'debug'
+                };
+                if (cliPath) clientOptions.cliPath = cliPath;
+
+                client = new CopilotClient(clientOptions);
                 await client.start();
                 currentToken = activeToken;
             }
