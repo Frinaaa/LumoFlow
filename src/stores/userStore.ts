@@ -165,7 +165,11 @@ export const useUserStore = create<UserState>()(
             },
 
             logout: async () => {
-                await authService.logout();
+                try {
+                    await authService.logout();
+                } catch (err) {
+                    console.error('Auth service logout error (ignored):', err);
+                }
                 set({
                     user: null,
                     isAuthenticated: false,
@@ -180,7 +184,12 @@ export const useUserStore = create<UserState>()(
                     recentActivity: [],
                     skillMatrix: []
                 });
+                // Clear ALL auth-related localStorage keys so the
+                // App.tsx init flow doesn't re-authenticate from cache
                 localStorage.removeItem('user-storage');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user_info');
+                localStorage.removeItem('lumoflow_workspace');
             },
 
             clearStore: () => {

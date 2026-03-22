@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../../stores/editorStore';
 import { useUserStore } from '../../../stores/userStore';
 import { useGitStore } from '../../stores/gitStore';
+import { useNavigate } from 'react-router-dom';
 
 interface ActivityBarProps {
   activeSidebar: string;
@@ -13,8 +14,21 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
   const editorStore = useEditorStore();
-  const { user } = useUserStore();
+  const { user, logout } = useUserStore();
+  const navigate = useNavigate();
   const changes = useGitStore((state: any) => state.changes);
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowAccountMenu(false);
+    try {
+      await logout();
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+    navigate('/login', { replace: true });
+  };
 
   const menuItemStyle: React.CSSProperties = {
     width: '100%',
@@ -90,7 +104,7 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeSidebar, onSidebarChang
               </button>
               <div style={{ height: '1px', background: '#333', margin: '8px 0' }}></div>
               <button
-                onClick={() => { window.location.href = '/'; }}
+                onClick={handleSignOut}
                 style={{ ...menuItemStyle, color: '#f85149' }}
               >
                 <i className="fa-solid fa-right-from-bracket" style={{ width: '20px' }}></i> Sign Out
