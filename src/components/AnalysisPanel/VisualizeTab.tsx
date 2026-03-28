@@ -53,15 +53,20 @@ const VisualizeTab: React.FC = () => {
     setSaveState('saving');
     try {
       const title = activeTab.fileName.replace(/\.[^.]+$/, '') || 'Untitled';
+      // Pre-stringify traceFrames before IPC to avoid Electron's structured-clone
+      // failing on deep/complex objects in the packaged (built) app.
+      // The controller will store this string directly, so we pass a JSON string.
+      const framesJson = JSON.stringify(traceFrames);
       const result = await (window as any).api.saveVisualization({
-        userId: user._id,
+        userId: String(user._id),   // ensure plain string, not ObjectId
         title,
         visualType: visualMode || 'UNIVERSAL',
         codeSnippet: activeTab.content,
-        traceFrames: traceFrames,
+        traceFrames: framesJson,    // send as pre-serialised string
       });
       setSaveState(result.success ? 'saved' : 'error');
-    } catch {
+    } catch (err) {
+      console.error('Save visualization error:', err);
       setSaveState('error');
     }
     setTimeout(() => setSaveState('idle'), 2500);

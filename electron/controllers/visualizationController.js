@@ -15,18 +15,25 @@ const visualizationController = {
             console.log(`   Title: ${title}`);
             console.log(`   Type: ${visualType}`);
 
+            // traceFrames may arrive as a pre-stringified JSON string (from the
+            // renderer) or as a raw array (legacy / dev mode). Store as string.
+            const framesStr = typeof traceFrames === 'string'
+                ? traceFrames
+                : JSON.stringify(traceFrames || []);
+
             const savedViz = await SavedVisualization.create({
                 userId,
                 title: title || 'Untitled Visualization',
                 codeSnippet,
                 visualType,
-                traceFrames: JSON.stringify(traceFrames)
+                traceFrames: framesStr
             });
 
             console.log(`✅ VISUALIZATION SAVED: ${savedViz._id}`);
             return { success: true, visualizationId: savedViz._id.toString() };
         } catch (err) {
-            console.error("Save Visualization Error:", err);
+            console.error("Save Visualization Error:", err.message);
+            console.error("Stack:", err.stack);
             return { success: false, msg: err.message };
         }
     },
